@@ -12,7 +12,7 @@ const section = (from, to) => {
   return source.slice(start, end);
 };
 
-assert.match(source, /const CLIENT_OU25_MIN_VOTES = 4;/);
+assert.match(source, /const CLIENT_OU25_MIN_VOTES = 3;/);
 assert.doesNotMatch(section('async function runConcileAnalysis(', 'const neutralNote ='), /getMockAnalysis/);
 assert.match(source, /delivery_from_minute:\s*officialSnapshots\.OFFICIAL_FROM_MINUTE/);
 assert.match(source, /await refreshIntegrationHealth\(\);/);

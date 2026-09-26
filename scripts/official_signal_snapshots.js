@@ -2,7 +2,7 @@
 
 const OFFICIAL_FROM_MINUTE = 35;
 const OFFICIAL_TO_MINUTE = 45;
-const MIN_CONSENSUS_VOTES = 4;
+const MIN_CONSENSUS_VOTES = 3;
 const REANALYSIS_DELAY_MS = 150000;
 
 function fixtureIdOf(match) {
@@ -152,7 +152,7 @@ function registerOfficial(db, snapshotId, options = {}) {
         throw new Error('Jev cannot invent a consensus');
     }
     if (!jevAuthorized && (activeVotes < MIN_CONSENSUS_VOTES || Number(row.consensus_votes) < MIN_CONSENSUS_VOTES
-        || concordantVotes < MIN_CONSENSUS_VOTES)) {
+        || concordantVotes < MIN_CONSENSUS_VOTES || Number(row.consensus_votes) !== concordantVotes)) {
       throw new Error(`official signal requires ${MIN_CONSENSUS_VOTES} real concordant votes`);
     }
   }

@@ -178,7 +178,7 @@
   body.tlm-page-app #chatbot{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
+<script src="/js/match-lifecycle.js?v=20260926-football-attempts"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -605,6 +605,35 @@ body.tlm-page-app .btn{
 }
 </style>
 
+
+<style id="tlm-design-v28-local">
+*{box-sizing:border-box}
+body{overflow-x:hidden}
+#match-search{width:100%!important;max-width:none!important}
+.account-bar,.user-bar,.account-info{
+ display:flex!important;
+ flex-wrap:wrap!important;
+ align-items:center!important;
+ gap:10px!important;
+ min-width:0!important
+}
+.account-bar>*,.user-bar>*,.account-info>*{
+ min-width:0!important;
+ max-width:100%!important
+}
+@media(max-width:700px){
+ .account-bar,.user-bar,.account-info{
+   display:grid!important;
+   grid-template-columns:1fr!important;
+   align-items:stretch!important
+ }
+ .account-bar>*,.user-bar>*,.account-info>*{
+   width:100%!important;
+   overflow-wrap:anywhere!important
+ }
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-app">
 
@@ -633,7 +662,7 @@ body.tlm-page-app .btn{
 
 
 <header>
-  <div class="brand"><img src="/logo192.png" alt=""><span>Tous<span>LesMatchs</span></span></div>
+  <div class="brand"><img src="" alt="" style="visibility:hidden"><span>Tous<span>LesMatchs</span></span></div>
   <div class="plan-chip" id="chip">Invité</div>
 </header>
 
@@ -648,7 +677,7 @@ body.tlm-page-app .btn{
     <p class="tlm-app-copy">Les équipes, les logos, le score et les drapeaux ci-dessous viennent du match réellement en cours.</p>
     <div class="tlm-app-match" id="app-live-stage" aria-live="polite">
       <div class="tlm-app-match-head"><span class="tlm-app-live-label" id="app-live-status">Recherche du direct</span><strong class="tlm-app-minute" id="app-live-minute">—</strong></div>
-      <div class="tlm-app-teams"><div class="tlm-app-team"><img class="tlm-app-team-logo" id="app-home-logo" src="/logo192.png" alt=""><strong id="app-home-name">Équipe à domicile</strong><span class="tlm-app-country"><img id="app-home-flag" alt="" hidden><span id="app-home-country">—</span></span></div><div class="tlm-app-score"><span id="app-live-score">— - —</span><small id="app-live-period">En attente</small></div><div class="tlm-app-team"><img class="tlm-app-team-logo" id="app-away-logo" src="/logo192.png" alt=""><strong id="app-away-name">Équipe à l'extérieur</strong><span class="tlm-app-country"><img id="app-away-flag" alt="" hidden><span id="app-away-country">—</span></span></div></div>
+      <div class="tlm-app-teams"><div class="tlm-app-team"><img class="tlm-app-team-logo" id="app-home-logo" src="" alt="" style="visibility:hidden"><strong id="app-home-name">Équipe à domicile</strong><span class="tlm-app-country"><img id="app-home-flag" alt="" hidden><span id="app-home-country">—</span></span></div><div class="tlm-app-score"><span id="app-live-score">— - —</span><small id="app-live-period">En attente</small></div><div class="tlm-app-team"><img class="tlm-app-team-logo" id="app-away-logo" src="" alt="" style="visibility:hidden"><strong id="app-away-name">Équipe à l'extérieur</strong><span class="tlm-app-country"><img id="app-away-flag" alt="" hidden><span id="app-away-country">—</span></span></div></div>
       <div class="tlm-app-ai"><div><div class="tlm-app-ai-label" id="app-ai-label">Analyse IA en cours</div><div class="tlm-app-votes" id="app-ai-votes"><button type="button" class="tlm-app-vote">1</button><button type="button" class="tlm-app-vote">2</button><button type="button" class="tlm-app-vote">3</button><button type="button" class="tlm-app-vote">4</button><button type="button" class="tlm-app-vote">5</button></div></div><div class="tlm-app-total"><strong id="app-ai-total">0/5</strong><span id="app-ai-responses">0/5 IA ont répondu</span><span id="app-ai-result">En attente d'accord</span></div></div>
       <div class="tlm-app-copy" id="app-vote-explanation" aria-live="polite"></div>
       <a class="tlm-app-cta" href="#" data-tab-link="pick">Voir le signal gratuit</a>
@@ -1042,7 +1071,7 @@ body.tlm-page-app .btn{
   function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var voted=slots.filter(function(v){return v&&v.status==='voted';}).length,over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:Number(raw.vote_count)||voted,consensusCount:Number(raw.consensus_count)||Math.max(over,under),overCount:over,underCount:under,locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute),snapshotScore:raw.snapshot_score||null,consensusAt:raw.consensus_at||null,official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,recommendationStatus:raw.recommendation_status||null,consensusDirection:raw.consensus_direction||null,officialConfidence:raw.official_confidence,officialOdd:raw.official_odd,outcome:raw.outcome||null};}
   function appVoteTime(value){var raw=String(value||'').trim();if(!raw)return '';var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
   function appResponseCount(slots){return(slots||[]).filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;}
-  function appTerminalCaption(slot){if(!slot||slot.status==='voted'||slot.status==='pending')return null;if(slot.status==='abstained')return{mark:'—',text:'Abstention explicite'};if(slot.status==='empty')return{mark:'—',text:'Réponse sans avis exploitable'};if(slot.status==='parse_error')return{mark:'—',text:'Réponse invalide'};if(slot.status==='rejected_statistical')return{mark:'—',text:'Vote écarté'};if(/délai|timeout/i.test(String(slot.reason||'')))return{mark:'—',text:'Délai dépassé'};return{mark:'—',text:'Avis indisponible'};}
+  function appTerminalCaption(slot){if(!slot||slot.status==='voted'||slot.status==='pending')return null;if(slot.status==='excluded')return{mark:'—',text:'Exclu avant Concile : '+String(slot.reason||'')};if(slot.status==='not_called')return{mark:'—',text:'IA non appelée : '+String(slot.reason||'')};if(slot.status==='collecting')return{mark:'—',text:'Vérification des données avant les IA'};if(slot.status==='abstained')return{mark:'—',text:'Abstention explicite'};if(slot.status==='empty')return{mark:'—',text:'Réponse sans avis exploitable'};if(slot.status==='parse_error')return{mark:'—',text:'Réponse invalide'};if(slot.status==='rejected_statistical')return{mark:'—',text:'Vote écarté'};if(/délai|timeout/i.test(String(slot.reason||'')))return{mark:'—',text:'Délai dépassé'};return{mark:'—',text:'Avis indisponible'};}
   var appVoteButtons=document.getElementById('app-ai-votes');
   if(appVoteButtons)appVoteButtons.addEventListener('click',function(event){var button=event.target.closest('button.tlm-app-vote');if(button)$("app-vote-explanation").textContent=button.dataset.explanation||button.getAttribute('aria-label')||'';});
   function appVotes(m){return appOu25(m).voteCount;}
@@ -1056,14 +1085,14 @@ body.tlm-page-app .btn{
       var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente')),voteTime=appVoteTime(slot&&slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;
       return '<span class="tlm-app-live-mini-vote '+(voted?'voted ':'')+dir+(terminal?' terminal':'')+(state.official&&!TLMMatchLifecycle.entryClosed(m)?'':' old')+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
-    var preserved='';if(state.official){preserved=(m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')+' · ';}else if(!state.voteCount&&(m.analysis_exclusion_reason||m.block_reason)){preserved=esc(m.analysis_exclusion_reason||m.block_reason)+' · ';}else if(TLMMatchLifecycle.phase(m)==='closed'){preserved=esc(state.recommendationStatus||'Anciennes tendances — aucun signal officiel')+' · ';}
-    return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.consensusCount+'/5 consensus · '+appResponseCount(state.slots)+'/5 IA ont répondu</span></span>';
+    var preserved=esc(TLMMatchLifecycle.statusText(m))+' · ';
+    return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+esc(TLMMatchLifecycle.marketText(m))+' · '+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.consensusCount+'/5 consensus · '+appResponseCount(state.slots)+'/5 IA ont répondu</span></span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
     var country=appCountry(m), flag=appFlagUrl(country), voteState=appOu25(m), votes=voteState.voteCount, status=$("app-live-status");
     if(!m){
-      status.textContent='Aucun match actuellement dans la fenêtre d’analyse à partir de la 35e minute';$("app-live-minute").textContent='—';$("app-live-period").textContent='Actualisation automatique';$("app-live-score").textContent='— - —';$("app-home-name").textContent='Équipe à domicile';$("app-away-name").textContent="Équipe à l'extérieur";$("app-home-country").textContent='';$("app-away-country").textContent='';$("app-ai-total").textContent='0/5';$("app-ai-responses").textContent='0/5 IA ont répondu';$("app-ai-label").textContent='Les 5 IA attendent le prochain match';$("app-ai-result").textContent='Aucun signal affiché sans match réel';
+      status.textContent='Aucun match actuellement dans la fenêtre d’analyse à partir de la 35e minute';$("app-live-minute").textContent='—';$("app-live-period").textContent='Actualisation automatique';$("app-live-score").textContent='— - —';$("app-home-name").textContent='';$("app-away-name").textContent='';$("app-home-country").textContent='';$("app-away-country").textContent='';$("app-ai-total").textContent='0/5';$("app-ai-responses").textContent='0/5 IA ont répondu';$("app-ai-label").textContent='Les 5 IA attendent le prochain match';$("app-ai-result").textContent='Aucun signal affiché sans match réel';
       $("app-vote-explanation").textContent='';appLogo($("app-home-logo"),'/logo192.png','TousLesMatchs');appLogo($("app-away-logo"),'/logo192.png','TousLesMatchs');[$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(img)img.hidden=true;});Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){el.classList.remove('on','over','under','terminal','old');el.textContent=String(i+1);el.removeAttribute('title');el.removeAttribute('aria-label');delete el.dataset.explanation;});return;
     }
     status.textContent='En direct';$("app-live-minute").textContent=m.minute?esc(m.minute)+"'":'Live';
@@ -1084,8 +1113,7 @@ body.tlm-page-app .btn{
     if(TLMMatchLifecycle.entryClosed(m))$("app-ai-label").textContent='Analyse historique — entrée fermée';
     $("app-ai-result").textContent=voteState.official?(m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
       :votes&&analysisClosed?'Anciennes tendances — aucun signal officiel'
-      :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(aligned<4?' · consensus insuffisant':'')
-      :votes&&aligned<4?'Consensus insuffisant — aucun signal'
+      :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
       :votes?(m.diffusion_block||exclusionReason||'Tendance — autres critères non remplis, aucun signal')
       :exclusionReason||m.block_reason||m.data_notice||(analysisWaiting?'Analyse en cours — affichage à partir de la 35e minute':'En attente des IA');
     $("app-vote-explanation").textContent='';
@@ -1155,7 +1183,7 @@ body.tlm-page-app .btn{
   function fetchAppHistory(maxRows) {
     var all=[],offset=0,pageSize=100,first=null,maximum=Math.max(pageSize,Number(maxRows)||2000);
     function next(){
-      return get('/api/analysis-history?limit='+pageSize+'&offset='+offset+'&t='+Date.now()).then(flagOffline).then(function(d){
+      return get('/analysis-history?limit='+pageSize+'&offset='+offset+'&t='+Date.now()).then(flagOffline).then(function(d){
         if(!d||!d.ok) throw new Error((d&&d.error)||'Historique indisponible');
         if(!first) first=d;
         var page=d.analyses||[];
@@ -1470,7 +1498,7 @@ $("perf-kpis").innerHTML =
   function kpi(v,l,c){return '<div class="kpi"><div class="v '+(c||"")+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div></div>';}
   function renderPerf(){
     var kp=document.getElementById("perf-kpis"), list=document.getElementById("perf-list"); if(!kp||!list)return;
-    Promise.all([get("/api/analysis-history?limit=300").catch(function(){return {analyses:[]};}),get("/api/goal05/latest").catch(function(){return {};})]).then(function(all){
+    Promise.all([get("/analysis-history?limit=300").catch(function(){return {analyses:[]};}),get("/api/goal05/latest").catch(function(){return {};})]).then(function(all){
       var rows=((all[0].analyses)||[]).filter(is05);
       [all[1].signal,all[1].lastSignal].forEach(function(s){var r=norm(s);if(r)rows.unshift(r);});
       var done=rows.filter(function(a){return a.outcome==="win"||a.outcome==="loss";});
@@ -1924,8 +1952,9 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
    var finished =
      votes>=5 ||
      String(o.analysis_state||"")==="completed" ||
-     (votes>0 && aligned>=4 && !!reason);
+     (['completed','excluded','failed_before_providers','failed','archived'].indexOf(String(o.analysis_state||''))!==-1);
 
+   if(!votes && finished)return {type:'wait',title:'ANALYSE NON RETENUE',detail:TLMMatchLifecycle.statusText(match)};
    if(!finished){
      return {
        type:"wait",

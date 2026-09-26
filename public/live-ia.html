@@ -346,7 +346,224 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 @keyframes tlmConsensusGood{50%{opacity:.55;text-shadow:0 0 12px rgba(34,211,238,.9)}}
 @media(prefers-reduced-motion:reduce){.consensus-insufficient,.consensus-valid{animation:none!important}}
 </style>
-<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
+<script src="/js/match-lifecycle.js?v=20260926-football-attempts"></script>
+
+<style id="tlm-live-layout-fix-v27">
+@media (min-width:700px){
+  .account-bar,.user-bar,.account-info{
+    flex-wrap:wrap!important;
+    gap:10px!important;
+  }
+}
+#match-search{
+  width:100%!important;
+  box-sizing:border-box!important;
+}
+@media (max-width:700px){
+  .account-bar,.user-bar,.account-info{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:9px!important;
+  }
+  .account-bar > *,.user-bar > *,.account-info > *{
+    max-width:100%!important;
+    min-width:0!important;
+  }
+}
+</style>
+
+
+<style id="tlm-design-v28-local">
+*{box-sizing:border-box}
+body{overflow-x:hidden}
+#match-search{width:100%!important;max-width:none!important}
+.account-bar,.user-bar,.account-info{
+ display:flex!important;
+ flex-wrap:wrap!important;
+ align-items:center!important;
+ gap:10px!important;
+ min-width:0!important
+}
+.account-bar>*,.user-bar>*,.account-info>*{
+ min-width:0!important;
+ max-width:100%!important
+}
+@media(max-width:700px){
+ .account-bar,.user-bar,.account-info{
+   display:grid!important;
+   grid-template-columns:1fr!important;
+   align-items:stretch!important
+ }
+ .account-bar>*,.user-bar>*,.account-info>*{
+   width:100%!important;
+   overflow-wrap:anywhere!important
+ }
+}
+</style>
+
+
+<style id="tlm-live-spacing-final">
+
+/* Ligne compte utilisateur */
+.account-bar,
+.user-bar,
+.account-info{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:wrap!important;
+  column-gap:28px!important;
+  row-gap:14px!important;
+  padding:14px 16px!important;
+  min-height:72px!important;
+}
+
+/* Chaque élément respire */
+.account-bar > *,
+.user-bar > *,
+.account-info > *{
+  margin:0!important;
+  flex-shrink:0!important;
+}
+
+/* Email */
+.account-bar [class*="email"],
+.user-bar [class*="email"],
+.account-info [class*="email"]{
+  margin-right:18px!important;
+  line-height:1.5!important;
+}
+
+/* Compteur analyses */
+.account-bar [class*="credit"],
+.account-bar [class*="counter"],
+.user-bar [class*="credit"],
+.user-bar [class*="counter"],
+.account-info [class*="credit"],
+.account-info [class*="counter"]{
+  padding:10px 16px!important;
+  min-width:205px!important;
+  line-height:1.35!important;
+}
+
+/* Recherche séparée de la ligne du compte */
+#match-search{
+  display:block!important;
+  width:100%!important;
+  clear:both!important;
+  margin-top:14px!important;
+  min-height:46px!important;
+  padding:0 16px!important;
+}
+
+/* Mobile */
+@media(max-width:700px){
+  .account-bar,
+  .user-bar,
+  .account-info{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:12px!important;
+    padding:14px!important;
+  }
+
+  .account-bar > *,
+  .user-bar > *,
+  .account-info > *{
+    width:100%!important;
+    max-width:100%!important;
+  }
+
+  #match-search{
+    margin-top:12px!important;
+  }
+}
+</style>
+
+
+<style id="tlm-auth-final-layout">
+
+#auth-info{
+  display:grid!important;
+  grid-template-columns:auto minmax(180px,1fr) auto!important;
+  align-items:center!important;
+  column-gap:26px!important;
+  width:auto!important;
+  min-width:0!important;
+}
+
+.tlm-auth-plan{
+  white-space:nowrap!important;
+  line-height:1.4!important;
+}
+
+.tlm-auth-email{
+  min-width:180px!important;
+  padding:0 8px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  line-height:1.4!important;
+}
+
+.tlm-auth-tokens{
+  display:flex!important;
+  align-items:center!important;
+  margin-left:10px!important;
+}
+
+#token-counter{
+  margin:0!important;
+  min-width:215px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:12px!important;
+}
+
+/* Déconnexion reste séparée à droite */
+#auth-btn{
+  margin-left:auto!important;
+  min-width:130px!important;
+}
+
+/* Mobile */
+@media(max-width:760px){
+  #auth-info{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:12px!important;
+    width:100%!important;
+  }
+
+  .tlm-auth-email{
+    min-width:0!important;
+    width:100%!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    padding:0!important;
+  }
+
+  .tlm-auth-tokens{
+    margin-left:0!important;
+    width:100%!important;
+  }
+
+  #token-counter{
+    width:100%!important;
+    min-width:0!important;
+  }
+
+  #auth-btn{
+    width:100%!important;
+    margin-left:0!important;
+  }
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-live">
 
@@ -816,7 +1033,10 @@ function updateAuthBar() {
         + '<span style="font-size:13px;color:var(--muted2);font-weight:600">analyses<br>aujourd\'hui</span>'
         + '</div>';
     }
-    info.innerHTML = "🟣 <strong>" + planName + "</strong> — " + userAuth.email + tokens;
+    info.innerHTML =
+      '<div class="tlm-auth-plan">🟣 <strong>' + planName + '</strong></div>' +
+      '<div class="tlm-auth-email">' + userAuth.email + '</div>' +
+      '<div class="tlm-auth-tokens">' + tokens + '</div>';
     btn.textContent = "Déconnexion";
     btn.onclick = doLogout;
   } else {
@@ -832,6 +1052,7 @@ function loadMatches(force) {
   var headers=liveAuthHeaders();
   fetch(url,{headers:headers}).then(function(r){ return r.json(); }).then(function(d) {
     if (d.ok && d.matches) {
+      renderOwnerShadow(d.owner_shadow);
       allMatches = d.matches.filter(tlmSoccerOnly);
       renderMatches();
       document.getElementById("last-update").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -903,6 +1124,27 @@ function liveOu25State(m) {
   return { slots: slots, voteCount: Number(raw.vote_count)||over+under, overCount: over, underCount: under, windowStatus: String(raw.window_status || "unknown"),locked:raw.locked!==false,official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,statusText:raw.recommendation_status||null,consensusDirection:raw.consensus_direction||null,consensusCount:Number(raw.consensus_count)||Math.max(over,under),confidence:raw.official_confidence,odd:raw.official_odd,outcome:raw.outcome||null };
 }
 
+function renderOwnerShadow(rows) {
+  var el=document.getElementById('owner-shadow');
+  if(!rows){if(el)el.hidden=true;return;}
+  if(!el){el=document.createElement('section');el.id='owner-shadow';document.getElementById('matches-wrap').after(el);}
+  el.hidden=false;
+  el.innerHTML='<h3>Shadow propriétaire — aucune diffusion client</h3>'+rows.map(function(r){
+    return '<details><summary>SHADOW '+escHtml(r.sport.toUpperCase())+' · '+Number(r.analysed_today||0)+' analysés aujourd’hui · '+Number(r.predictions||0)+' pronostics · '+Number(r.won||0)+' gagnés / '+Number(r.lost||0)+' perdus · '+Number(r.pending||0)+' en attente · réussite '+(r.win_rate==null?'non calculable':Math.round(r.win_rate*100)+'%')+' · ROI théorique '+(r.roi==null?'cotes/résultats insuffisants':(r.roi*100).toFixed(1)+'%')+'</summary>'+r.rows.slice(0,30).map(function(m){return '<p>'+escHtml(m.home+' — '+m.away+' · '+m.competition)+'<br>'+escHtml(m.selection==='home'?m.home:m.selection==='away'?m.away:m.status)+' · '+escHtml(m.reason||'Observation en cours')+' · cote '+(m.odd==null?'indisponible':Number(m.odd).toFixed(2))+' · confiance '+(m.confidence==null?'non évaluée':Number(m.confidence)+'%')+' · '+escHtml(m.result||'non résolu')+'</p>';}).join('')+'</details>';
+  }).join('');
+}
+
+function renderOwnerAnalysis(m) {
+  var a=m&&m.owner_analysis;if(!a)return '';
+  var lines=[];
+  if(a.selection)lines.push("J'AURAIS JOUE : "+a.selection+' · '+a.consensus+'/5 · confiance '+a.confidence+'/100');
+  lines.push('Cote réelle : '+(a.real_odd==null?'indisponible':Number(a.real_odd).toFixed(2)));
+  lines.push(a.stats_available?'Statistiques live vérifiées':a.stats_reason==='coverage_unavailable'?'Statistiques live non couvertes':a.reason);
+  if(a.jev)lines.push('Jev '+a.jev.final_decision+' · réponse '+a.jev.decision+' · confiance '+Math.round(a.jev.confidence*100)+'%');
+  if(!a.official)lines.push(a.reason);
+  return '<div class="mc-owner-analysis" style="font-size:12px;color:#b8c2d8;line-height:1.6;margin:8px 0">'+lines.map(escHtml).join('<br>')+'</div>';
+}
+
 function renderLiveOu25Details(m) {
   var state = liveOu25State(m);
   var entryClosed=TLMMatchLifecycle.entryClosed(m);
@@ -911,23 +1153,24 @@ function renderLiveOu25Details(m) {
   var responseCount=state.slots.filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;
   var minute=Number(m&&m.minute),directionText=consensusDirection?consensusDirection+' 2,5 — '+consensusCount+'/5':'Consensus '+consensusCount+'/5';
   var verdict=state.official?(m&&m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
-    :state.voteCount&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(consensusCount<4?' · consensus insuffisant':'')
-    :state.voteCount&&consensusCount<4?'Consensus insuffisant — aucun signal'
+    :state.voteCount&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
+
     :state.voteCount?(m&&(m.diffusion_block||m.analysis_exclusion_reason)||'Tendance — autres critères non remplis, aucun signal')
     :(m&&(m.analysis_exclusion_reason||m.block_reason)||'Aucun vote enregistré pour le moment');
-  if(state.voteCount)verdict=directionText+' · '+verdict;
+  if(state.voteCount)verdict=TLMMatchLifecycle.marketText(m)+' · '+verdict;
   if(state.official&&!state.locked)verdict+=' · confiance '+state.confidence+'/100 · '+(state.odd==null?'cote indisponible':'cote '+Number(state.odd).toFixed(2))+(state.outcome==='win'?' · gagné':state.outcome==='loss'?' · perdu':'');
   if(!state.official&&state.windowStatus==='closed'&&state.statusText)verdict=state.statusText;
-  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";
+  if(!state.voteCount)verdict=TLMMatchLifecycle.statusText(m);
+  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason || (m.ou25 && m.ou25.attempt && m.ou25.attempt.reason)) || "";
   if (!reason && !state.voteCount) {
     if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre de vote débute à la 35e minute.";
     else if (state.windowStatus === "after_window" || state.windowStatus === "closed") reason = "La fenêtre de vote est terminée : fin de première mi-temps.";
     else reason = "Les cinq IA n’ont pas encore enregistré de vote exploitable.";
   }
   var seats = state.slots.map(function(slot, i) {
-    var voted = slot && slot.status === "voted" && (slot.direction === "over" || slot.direction === "under");
+    var voted = slot && slot.status === "voted";
     var dir = voted&&!state.locked ? slot.direction : "";
-    var failure=slot&&slot.status==='abstained'?'Abstention explicite':slot&&slot.status==='empty'?'Réponse sans avis exploitable':slot&&slot.status==='parse_error'?'Réponse invalide':slot&&slot.status==='rejected_statistical'?'Vote écarté':/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé':slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
+    var failure=slot&&slot.status==='excluded'?'Exclu avant Concile':slot&&slot.status==='not_called'?'IA non appelée':slot&&slot.status==='collecting'?'Vérification des données':slot&&slot.status==='abstained'?'Abstention explicite':slot&&slot.status==='empty'?'Réponse sans avis exploitable':slot&&slot.status==='parse_error'?'Réponse invalide':slot&&slot.status==='rejected_statistical'?'Vote écarté':/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé':slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
     var shortLabel = voted ? (state.locked ? "✓" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : failure==='En attente'?String(i+1):'—';
     var choice = voted ? (state.locked ? "Vote enregistré · direction Premium" : dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "Vote enregistré") : failure;
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
@@ -1053,6 +1296,7 @@ function renderMatches() {
     html += '  <div class="mc-team away"><div class="mc-name">' + escHtml(m.away) + '</div><div class="mc-logo">' + awayLogo + '</div></div>';
     html += '</div>';
     html += renderLiveOu25Details(m);
+    html += renderOwnerAnalysis(m);
 
     if (m.pinnedSignal) {
       html += '<div class="mc-analysis visible">';

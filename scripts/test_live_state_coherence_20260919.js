@@ -55,8 +55,8 @@ async function main() {
   await sandbox.get(101,{...state,score:'2-0'});assert.equal(requests,2);
   await sandbox.get(101,{...state,minute:44});assert.equal(requests,3);
   sandbox.httpGet=async()=>({response:[{team:{id:999},statistics:[]}]});
-  assert.equal(await sandbox.get(101,{...state,minute:45}),null);
-  const expose={liveStateCoherence:coherence,getStoredLiveOu25VoteState:()=>previous};
+  await assert.rejects(()=>sandbox.get(101,{...state,minute:45}),{diagnostic_category:'teams_missing'});
+  const expose={liveStateCoherence:coherence,getStoredLiveOu25VoteState:()=>previous,footballAttempts:{latest:()=>null},footballObserverExclusionReason:()=>null};
   vm.createContext(expose);
   vm.runInContext(section('function getLiveOu25VoteState(match)', 'function getStoredLiveOu25VoteState'),expose);
   assert.equal(expose.getLiveOu25VoteState(changed).vote_count,0);

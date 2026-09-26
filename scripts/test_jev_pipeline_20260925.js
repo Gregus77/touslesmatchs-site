@@ -23,7 +23,7 @@ async function scenario({choice='SEND',traditional=false,closed=false,changeScor
     market TEXT,vote_count INTEGER,ok INTEGER,error TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE signal_delivery_expectations(match_key TEXT,channel TEXT,UNIQUE(match_key,channel));`);
   const match={fixtureId:42,id:42,home:'Home',away:'Away',sport:'Football',competition:'Allowed league',minute:38,score_home:0,score_away:0};
-  const confidence=traditional?85:60,odd=traditional?1.7:2.8,votes=traditional?4:2;
+  const confidence=traditional?85:60,odd=1.7,votes=traditional?4:2;
   const snapshot=official.capture(db,{id:'new-snapshot',match,analysisMatchKey:'new-match',minute:38,scoreHome:0,scoreAway:0,
     votes:Array.from({length:5},(_,i)=>({agent:`seat${i}`,direction:i<votes?'under':i===4?'over':null,status:i<votes||i===4?'voted':'unavailable'})),
     consensus:'under',consensusVotes:votes,confidence,realOdd:odd,realOddSource:'real bookmaker',ruleVersion:'test',

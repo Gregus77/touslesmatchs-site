@@ -26,6 +26,8 @@ const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
 const jevDecisionEngine = require("./jev_decision_engine");
 const liveStateCoherence = require("./live_state_coherence");
+const tlmOperations = require("./tlm_operations");
+const multisportShadow = require("./multisport_shadow");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
@@ -287,7 +289,7 @@ const ADMIN_READONLY_PATHS = new Set([
   // performance par segment, et depense IA quotidienne. Aucune donnee
   // personnelle ni credential, mais de quoi renseigner un concurrent.
   "/admin/stats", "/admin/funnel-report", "/admin/segment-report",
-  "/admin/ai-budget-stats", "/admin/jev-status",
+  "/admin/ai-budget-stats", "/admin/jev-status", "/admin/operations-status",
 ]);
 app.use((req, res, next) => {
   if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
@@ -301,7 +303,9 @@ app.use((req, res, next) => {
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
+tlmOperations.init(db);
 officialSnapshots.init(db);
+const footballAttempts = liveStateCoherence.createAttemptStore(db);
 const jevEngine = jevDecisionEngine.createEngine({db, logger: event => console.log('[jev]', JSON.stringify(event))});
 const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
 const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 18 * 60 * 60 * 1000);
@@ -1969,32 +1973,67 @@ function parseShadowResponse(text) {
 }
 
 function buildShadowPrompt(match) {
+  const sport = String(match.sport || "Football");
   const scoreStr = (match.score_home != null && match.score_away != null)
     ? `\nScore actuel : ${match.score_home}-${match.score_away}${match.minute ? ` (${match.minute}')` : ""}`
     : "";
+
+  let directive;
+  if (sport === "Hockey") {
+    directive = `Analyse uniquement le hockey.
+Privilégie vainqueur/moneyline et total de buts si les données le permettent.
+Ne propose jamais BTTS football, double chance football ou marché mi-temps football.`;
+  } else if (sport === "Basketball") {
+    directive = `Analyse uniquement le basketball.
+Privilégie vainqueur/moneyline. N'invente aucun handicap ou total de points absent des données.
+Ne propose jamais BTTS ou marchés de buts football.`;
+  } else if (sport === "Baseball") {
+    directive = `Analyse uniquement le baseball.
+Privilégie vainqueur/moneyline. N'invente aucune ligne de runs absente des données.
+Ne propose jamais BTTS ou marchés de buts football.`;
+  } else {
+    directive = `DIRECTIVE : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible.
+Si écart >= 2 buts OU 2+ buts avant 45' → préfère Over 2.5 ou Victoire.`;
+  }
+
+  if (sport !== "Football") {
+    return `Tu participes à un test à blanc interne TousLesMatchs.
+Aucune recommandation ne sera publiée aux clients.
+
+Sport : ${sport}
+Match : ${match.home} vs ${match.away}
+Compétition : ${match.competition || match.league || "inconnue"}${scoreStr}
+
+${directive}
+
+Réponds UNIQUEMENT :
+ANALYSE : [Victoire domicile / Victoire extérieur / NO BET]
+CONFIANCE : [0-100]
+RAISON : [1 phrase maximum]`;
+  }
+
   return `Tu es un analyste sportif expert. Analyse ce match et donne ta recommandation.
 
 Match : ${match.home} vs ${match.away}
 Compétition : ${match.competition || match.league || "inconnue"}
-Sport : ${match.sport || "Football"}${scoreStr}
+Sport : ${sport}${scoreStr}
 
-DIRECTIVE : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts avant 45' → préfère Over 2.5 ou Victoire.
+${directive}
 
 Réponds UNIQUEMENT dans ce format :
-ANALYSE : [ex: Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
+ANALYSE : [Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
 CONFIANCE : [0-100]
 RAISON : [1 phrase maximum]
 MARCHES : buts=o2.5:70,btts=oui:60,resultat=dom:65,mt1=oui:55
 
-Pour MARCHES (avis rapide sur chaque marché, codes courts + confiance 40-90) :
-- buts : o2.5 (plus de 2.5) ou u2.5 (moins de 2.5)
-- btts : oui ou non (les deux équipes marquent)
+Pour MARCHES :
+- buts : o2.5 ou u2.5
+- btts : oui ou non
 - resultat : dom, ext ou nul
-- mt1 : oui ou non (but en 1ère mi-temps)
+- mt1 : oui ou non
 
-Ne mets rien d'autre. Si tu n'es pas sûr du pick principal, réponds NO BET (mais donne quand même MARCHES).`;
+Ne mets rien d'autre.`;
 }
-
 // Plafond journalier des tests à blanc — garde-fou de budget OpenRouter.
 // 20 matchs/jour suffisent largement : la promotion d'un challenger exige 50 picks
 // résolus, soit moins de 3 jours d'échantillon. Payer plus n'apporte rien.
@@ -2661,7 +2700,7 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // Produit client unique : les cinq sieges votent tous sur Over/Under 2,5.
 // Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
-const CLIENT_OU25_MIN_VOTES = 4;
+const CLIENT_OU25_MIN_VOTES = 3;
 const CLIENT_OU25_MIN_CONFIDENCE = Math.max(80, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 80));
 const OFFICIAL_SNAPSHOT_RULE_VERSION = "ou25-snapshot-v1-20260912";
 // Mode Recovery : garde-fous statistiques supplémentaires, sans redéfinir le
@@ -2788,7 +2827,7 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   const voteLabel = unanimous
     ? "5/5 unanime O/U 2,5"
     : voteCount >= CLIENT_OU25_MIN_VOTES
-      ? "4/5 signal fort O/U 2,5"
+      ? `${voteCount}/5 signal valide O/U 2,5`
       : voteCount >= 3
         ? "3/5 tendance IA — quorum non atteint"
         : !complete
@@ -3484,14 +3523,29 @@ function ownerExpandedLeagueAllowed(match) {
   ];
   return allowed.some(([country,league]) => country.test(c) && league.test(l));
 }
+// Match existing entries without changing any whitelist. Only the two audited
+// league identities get structural matching; other entries retain their rules.
+function matchesExistingLeagueRule(match, keyword, originalText) {
+  const raw = typeof match === 'string' ? [match] : [match?.league, match?.competition];
+  const fields = raw.filter(value => typeof value === 'string').map(recoveryNormalize);
+  const country = recoveryNormalize(match?.country || fields.map(v => v.split(' · ')[1] || '').find(Boolean));
+  if (['nb i', 'nb1', 'otp bank liga', 'hungary · nb', 'hungarian nb'].includes(keyword)) {
+    return fields.some(value => /^(?:(?:hungary|hungarian)\s*[·:]?\s*)?(?:nb\s*i|nb1|otp bank liga)(?:\s*·\s*hungary)?$/.test(value));
+  }
+  if (keyword === 'segunda division' && /^(spain|espana|espagne)$/.test(country)) {
+    return fields.some(value => /^(?:segunda division|la\s?liga\s?2)(?:\s*·\s*(?:spain|espana|espagne))?$/.test(value));
+  }
+  return (originalText ?? competitionFilterText(match)).includes(keyword);
+}
+
 // trusted_major | trusted_secondary | watchlist_shadow | null (non classee)
 function leagueTier(match) {
   const h = leagueHaystack(match);
   if (!h) return null;
   if (ownerExpandedLeagueAllowed(match)) return 'trusted_major';
   if (LEAGUE_TIER_WATCHLIST.some(k => h.includes(k))) return "watchlist_shadow";
-  if (LEAGUE_TIER_SECONDARY.some(k => h.includes(k))) return "trusted_secondary";
-  if (TRUSTED_COMPETITIONS.some(k => h.includes(k))) return "trusted_major";
+  if (LEAGUE_TIER_SECONDARY.some(k => matchesExistingLeagueRule(match, k, h))) return "trusted_secondary";
+  if (TRUSTED_COMPETITIONS.some(k => matchesExistingLeagueRule(match, k, h))) return "trusted_major";
   return null;
 }
 
@@ -3583,13 +3637,13 @@ function isLowTrustCompetition(matchOrCompetition = "") {
   const value = competitionFilterText(matchOrCompetition);
   if (isCategoryBanned(matchOrCompetition) || hasLowTrustCompetitionKeyword(matchOrCompetition)) return true;
   if (ownerExpandedLeagueAllowed(matchOrCompetition)) return false;
-  if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
+  if (TRUSTED_COMPETITIONS.some(tc => matchesExistingLeagueRule(matchOrCompetition, tc, value))) return false;
   // Ligues classees secondaire ou en observation (07/08/2026) : elles ne sont
   // pas "de confiance" au sens du regime normal, mais elles doivent pouvoir
   // etre ANALYSEES. Ce sont les barrieres de DIFFUSION, plus bas, qui decident
   // ce qui sort — cote reelle obligatoire, confiance rehaussee, et aucune
   // diffusion du tout pour l'observation.
-  if (LEAGUE_TIER_SECONDARY.some(k => value.includes(k))) return false;
+  if (LEAGUE_TIER_SECONDARY.some(k => matchesExistingLeagueRule(matchOrCompetition, k, value))) return false;
   if (LEAGUE_TIER_WATCHLIST.some(k => value.includes(k))) return false;
   return true;
 }
@@ -4227,6 +4281,7 @@ function getVerifiedFixtureId(match) {
 function buildStatsStatus(match, stats, reason) {
   return {
     available: !!stats,
+    status: stats ? "available" : "unavailable",
     source: stats ? "api-sports" : null,
     fixtureId: getVerifiedFixtureId(match),
     reason: stats ? null : reason,
@@ -4447,13 +4502,15 @@ async function fetchFromApiSports() {
   // sur des sports dont aucune analyse n'est de toute facon diffusee).
   try {
     if (AUTO_CONCILE_MULTISPORT && !shouldSkipApiSportsSport("basketball") && !shouldSkipSecondarySportPoll("basketball")) {
-    const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const data = await httpGet(`https://v1.basketball.api-sports.io/games?date=${new Date().toISOString().slice(0,10)}`, { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("basketball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
       source: "api-sports",
       sourceId: String(g.id),
       fixtureId: null,
+      leagueId:g.league?.id,leagueSeason:g.league?.season,stage:g.stage||g.league?.stage||null,
+      homeId:g.teams?.home?.id,awayId:g.teams?.away?.id,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home?.total ?? null, score_away: g.scores?.away?.total ?? null,
@@ -4473,13 +4530,15 @@ async function fetchFromApiSports() {
   // Hockey live — desactive quand AUTO_CONCILE_MULTISPORT=0 (voir basketball ci-dessus)
   try {
     if (AUTO_CONCILE_MULTISPORT && !shouldSkipApiSportsSport("hockey") && !shouldSkipSecondarySportPoll("hockey")) {
-    const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const data = await httpGet(`https://v1.hockey.api-sports.io/games?date=${new Date().toISOString().slice(0,10)}`, { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("hockey", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
       source: "api-sports",
       sourceId: String(g.id),
       fixtureId: null,
+      leagueId:g.league?.id,leagueSeason:g.league?.season,stage:g.stage||g.league?.stage||null,
+      homeId:g.teams?.home?.id,awayId:g.teams?.away?.id,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home ?? null, score_away: g.scores?.away ?? null,
@@ -4501,13 +4560,15 @@ async function fetchFromApiSports() {
   const BASEBALL_LIVE_ENABLED = true;
   try {
     if (AUTO_CONCILE_MULTISPORT && BASEBALL_LIVE_ENABLED && !shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
-    const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const data = await httpGet(`https://v1.baseball.api-sports.io/games?date=${new Date().toISOString().slice(0,10)}`, { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("baseball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bb-" + g.id, sport: "Baseball",
       source: "api-sports",
       sourceId: String(g.id),
       fixtureId: null,
+      leagueId:g.league?.id,leagueSeason:g.league?.season,stage:g.stage||g.league?.stage||null,
+      homeId:g.teams?.home?.id,awayId:g.teams?.away?.id,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home?.total ?? g.scores?.home ?? null,
@@ -5001,6 +5062,9 @@ async function fetchLiveMatches() {
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
 
+  tlmOperations.observe(db,matches,m=>({eligible:m.sport==='Football'&&shouldAutoObserveMatch(m)&&isClientOu25MatchEligible(m,true),
+    reason:publicLiveFilterReason(m)||footballObserverExclusionReason(m)||clientOu25StaticExclusionReason(m)||(liveStateCoherence.analysisWindow(m).open?null:liveStateCoherence.analysisWindow(m).reason)}));
+  secondaryShadowEngine.observe(matches);
   const productMatches = matches.filter(isPublicFootballScopeMatch);
   const visibleMatches = productMatches.filter(m => !isFinishedOrUnavailableForLiveDisplay(m));
   for (const match of matches) {
@@ -5086,6 +5150,26 @@ async function requireVerifiedLiveMatch(input) {
 
 const matchStatsCache = new Map();
 
+// Coverage is consulted only after an empty statistics response, never as invented data.
+const footballStatsCoverageCache = new Map();
+async function footballStatisticsCovered(state) {
+  if (!state?.leagueId || !state?.season) return null;
+  const key = `${state.leagueId}:${state.season}`;
+  const cached = footballStatsCoverageCache.get(key);
+  if (cached && Date.now() - cached.ts < 86400000) return cached.covered;
+  if (!apiSportsBudgetOk()) return null;
+  try {
+    const data = await httpGet(`https://v3.football.api-sports.io/leagues?id=${encodeURIComponent(state.leagueId)}&season=${encodeURIComponent(state.season)}`, {"x-apisports-key":API_SPORTS_KEY});
+    if (apiSportsErrors(data)) return null;
+    const league = (data.response || []).find(row => String(row.league?.id) === String(state.leagueId));
+    const season = (league?.seasons || []).find(row => String(row.year) === String(state.season));
+    const covered = season?.coverage?.fixtures?.statistics_fixtures;
+    if (typeof covered !== 'boolean') return null;
+    footballStatsCoverageCache.set(key,{covered,ts:Date.now()});
+    return covered;
+  } catch (_) { return null; }
+}
+
 async function fetchMatchStats(fixtureId, state = null) {
   if (!API_SPORTS_KEY || !fixtureId) return null;
   const id = String(fixtureId);
@@ -5097,51 +5181,56 @@ async function fetchMatchStats(fixtureId, state = null) {
   if (cached && Date.now() - cached.ts < (state ? 15000 : 60000)) return cached.data;
 
   try {
-    if (!apiSportsBudgetOk()) return null;
+    if (!apiSportsBudgetOk()) {
+      if (state) throw liveStateCoherence.statsFailure('quota');
+      return null;
+    }
     const data = await httpGet(
       `https://v3.football.api-sports.io/fixtures/statistics?fixture=${id}`,
       { "x-apisports-key": API_SPORTS_KEY }
     );
-    if (state) {
-      const rows = data?.response || [];
-      const home = rows.filter(row => row.team?.id === state.home);
-      const away = rows.filter(row => row.team?.id === state.away);
-      if (home.length !== 1 || away.length !== 1) return null;
-      data.response = [home[0], away[0]];
-    }
+    if (state) data.response = liveStateCoherence.verifiedStatsRows(data, state);
     const stats = parseMatchStats(data);
     for (const [key, value] of matchStatsCache) if (Date.now() - value.ts > 60000) matchStatsCache.delete(key);
     matchStatsCache.set(ck, { data: stats, ts: Date.now() });
     return stats;
   } catch (e) {
-    console.error("[match-stats] Erreur:", e.message);
+    if (state) {
+      if (liveStateCoherence.diagnosticCategory(e) === 'empty_response' && await footballStatisticsCovered(state) === false)
+        throw liveStateCoherence.statsFailure('coverage_unavailable');
+      throw liveStateCoherence.statsFailure(liveStateCoherence.diagnosticCategory(e));
+    }
+    console.error('[match-stats]', liveStateCoherence.diagnosticCategory(e));
     return null;
   }
 }
 
 const liveStateCollector = liveStateCoherence.createCollector({
   fetchFixture: async id => {
-    if (!API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('fixture_unavailable');
+    if (!API_SPORTS_KEY) throw liveStateCoherence.statsFailure('configuration');
+    if (!apiSportsBudgetOk()) throw liveStateCoherence.statsFailure('quota');
     const data = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), { "x-apisports-key": API_SPORTS_KEY });
-    if (apiSportsErrors(data)) throw new Error('fixture_unavailable');
+    if (apiSportsErrors(data)) throw liveStateCoherence.statsFailure('provider_error');
     return (data.response || []).find(f => String(f.fixture?.id) === String(id));
   },
   fetchStats: (id, state) => fetchMatchStats(id, state),
 });
 async function fetchMatchStatsForMatch(match) {
   const fixtureId = getVerifiedFixtureId(match);
-  if (!API_SPORTS_KEY) return buildStatsStatus(match, null, "api_sports_key_missing");
-  if (!fixtureId) return buildStatsStatus(match, null, "missing_api_sports_fixture");
-  if (!apiSportsBudgetOk()) return buildStatsStatus(match, null, "api_sports_budget_horaire_atteint");
+  if (String(match?.sport || 'Football') !== 'Football') return buildStatsStatus(match, null, 'missing_api_sports_fixture');
   try {
+    if (!API_SPORTS_KEY) throw liveStateCoherence.statsFailure('configuration');
+    if (!fixtureId) throw liveStateCoherence.statsFailure('fixture_unknown');
+    if (!apiSportsBudgetOk()) throw liveStateCoherence.statsFailure('quota');
     const collected = await liveStateCollector.collect(match, fixtureId);
     return { ...buildStatsStatus({ ...match, fixtureId }, collected.stats, null),
       observation: collected.observation };
   } catch (error) {
-    const reason = error.code === 'LIVE_STATE_UNVERIFIED' ? error.message
-      : 'Synchronisation score/statistiques indisponible : analyse suspendue.';
-    setLiveAnalysisNotice(match, reason);
-    const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;
+    const failure = liveStateCoherence.statsFailure(liveStateCoherence.diagnosticCategory(error));
+    console.error('[football-stats]', JSON.stringify({fixture_id: fixtureId,
+      minute: liveStateCoherence.liveMinute(match.minute), category: failure.diagnostic_category}));
+    setLiveAnalysisNotice(match, failure.message);
+    throw failure;
   }
 }
 
@@ -6615,6 +6704,21 @@ function hoteDuProvider(pv) {
 }
 
 async function runConcileAnalysis(match) {
+  const track = String(match?.sport || 'Football') === 'Football'
+    && ['IN_PLAY', 'LIVE'].includes(String(match?.status || '').toUpperCase())
+    && liveStateCoherence.analysisWindow(match).open;
+  const attemptId = track ? footballAttempts.start(match) : null;
+  try {
+    const result = await runConcileAnalysisCore({...match, __footballAttemptId: attemptId});
+    if (attemptId) footballAttempts.finish(attemptId);
+    return result;
+  } catch (error) {
+    if (attemptId) footballAttempts.fail(attemptId, error);
+    throw error;
+  }
+}
+
+async function runConcileAnalysisCore(match) {
   match = { ...match }; // Freeze the score used by every seat for this analysis.
   // Plafond de replis de secours pour CETTE analyse (5 agents = 5 maximum).
   // Empeche qu'un incident fournisseur transforme une analyse en rafale
@@ -7194,7 +7298,8 @@ Réponds en JSON pur (pas de markdown):
   }
 
   // Phase 1 : cinq appels parallèles, puis photographie des cinq états une fois
-  // tous les appels bornés terminés. Le quorum métier reste strictement 4/5.
+  // tous les appels bornés terminés. Le quorum propriétaire est de 3/5 ; les cinq appels restent bornés.
+  if (match.__footballAttemptId) footballAttempts.providers(match.__footballAttemptId);
   const agentPromises = AGENT_INDEXES.map(i => runSingleAgent(i));
   const collected = await collectAgentsUntilOu25Quorum(agentPromises, (result) => {
     if (result && !result.failed) {
@@ -7753,7 +7858,7 @@ Réponds en JSON pur (pas de markdown):
   });
 
   // The historical decision stays complete, including the later odds/window gates.
-  const traditionalOddOk = !_coteReelle || (recordedOdd >= TIER_MIN_REAL_ODD && recordedOdd <= TIER_MAX_REAL_ODD);
+  const traditionalOddOk = _coteReelle && (recordedOdd >= TIER_MIN_REAL_ODD && recordedOdd <= TIER_MAX_REAL_ODD);
   const traditionalBlock = traditionalCriteriaBlock || (!traditionalOddOk ? "real_odd_outside_traditional_range" : null);
   const traditionalEligible = !traditionalBlock;
   const structuralAllowed = clientOu25MatchEligible && ou25Only && !isWomen && !lowTrust
@@ -7860,10 +7965,10 @@ Réponds en JSON pur (pas de markdown):
       const sigTier = computeSignalTier(analysisResult.best_bet, analysisResult.confidence, minute);
       const tierBadge = sigTier === "standard" ? "🥇 STANDARD" : sigTier === "premium" ? "🥈 PREMIUM" : "🥉 ELITE";
       console.log(`[signal-fort] Palier: ${tierBadge} (${sigTier}) — ${analysisResult.best_bet} ${analysisResult.confidence}% min=${minute}`);
-      // Décision propriétaire : une cote absente est affichée comme telle et ne
-      // bloque pas seule. Une vraie cote connue reste soumise à la plage produit.
-      const bookmakerPlayable = true;
-      if (!_coteReelle) console.log(`[signal-fort] Cote indisponible — admissibilite sportive conservee, aucun calcul de rentabilite`);
+      // Une diffusion client exige toujours une cote bookmaker reelle dans la plage produit.
+      // Jev peut arbitrer les criteres quantitatifs, jamais contourner ce garde-fou commercial.
+      const bookmakerPlayable = Boolean(_coteReelle && _bmSig);
+      if (!bookmakerPlayable) console.log(`[signal-fort] Cote bookmaker reelle indisponible — diffusion bloquee`);
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = signalsSentToday("sig_sent_free"); }
 
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
@@ -7875,7 +7980,7 @@ Réponds en JSON pur (pas de markdown):
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
       const conf = Number(analysisResult.confidence) || 0;
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
-      const oddOk = !_coteReelle || (realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD);
+      const oddOk = _coteReelle && (realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD);
       const sportLc = String(match.sport || "Football").toLowerCase();
       // Produit client recentre : football O/U 2,5 uniquement et au moins
       // quatre votes réels concordants. Une cinquième absence reste distincte
@@ -7889,9 +7994,10 @@ Réponds en JSON pur (pas de markdown):
         && officialStrongQuorum
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE;
-      const diffusable = jevSendAuthorized
-        ? structuralAllowed && firstHalfOpen && officialWindowEligible
-        : traditionalDiffusable;
+      const diffusable = bookmakerPlayable && oddOk && sportDiffusable
+        && (jevSendAuthorized
+          ? structuralAllowed && firstHalfOpen && officialWindowEligible
+          : traditionalDiffusable);
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
@@ -10051,6 +10157,13 @@ function livePickBlockReason(match) {
   return null;
 }
 
+function footballObserverExclusionReason(match) {
+  if (match?.scoreConflict) return 'Scores contradictoires entre les sources.';
+  if (isUnderperformingCompetition(match)) return 'Championnat écarté : résultats historiques insuffisants.';
+  if (isMatchDecided(match)) return 'Match à finalité connue (écart de 3 buts ou plus).';
+  return null;
+}
+
 function shouldAutoObserveMatch(match) {
   if (!match || match.scoreConflict) return false;
   if (!isPublicFootballScopeMatch(match)) return false;
@@ -10086,8 +10199,7 @@ function shouldAutoObserveMatch(match) {
   if (isWomenMatch(match)) return false;
   if (isCategoryBanned(match)) return false;
   if (isBlacklistedForLiveDisplay(match)) return false;
-  if (isUnderperformingCompetition(match)) return false;
-  if (isMatchDecided(match)) return false;
+  if (footballObserverExclusionReason(match)) return false;
   return liveStateCoherence.analysisWindow(match).open;
 }
 
@@ -10260,11 +10372,32 @@ function scheduleJevReobservation(match, snapshotId) {
   jevReobservationTimers.set(scope,timer);
 }
 
+const secondaryShadowEngine = multisportShadow.create({
+  db,
+  read: async (sport, resource) => {
+    const cfg=ODDS_ENDPOINT_BY_SPORT[String(sport).toLowerCase()];
+    if(!cfg || !API_SPORTS_KEY || shouldSkipApiSportsSport(cfg.key) || !apiSportsBudgetOk())return null;
+    try { const data=await httpGet(`https://${cfg.host}/${resource}`,{"x-apisports-key":API_SPORTS_KEY});
+      return handleApiSportsErrors(cfg.key,data)?null:data;
+    } catch (_) { return null; }
+  },
+  fetchOdds: match => apiSportsBudgetOk()?fetchRealOdds(match):Promise.resolve(null),
+  agent: () => SHADOW_AGENTS.find(a=>a.name==='OR-KimiK3'&&a.enabled()),
+  call: (agent,prompt,context)=>analysisEngine.guardedShadowCall(db,agent,prompt,context),
+  quota: () => {
+    const persisted=db.prepare("SELECT count(*) n FROM multisport_shadow WHERE date(analysed_at)=date('now')").get().n;
+    const legacy=db.prepare("SELECT count(DISTINCT match_key) n FROM shadow_evals WHERE date(created_at)=date('now')").get().n;
+    return persisted+legacy<SHADOW_DAILY_CAP && shadowQuotaAllows();
+  },
+  paused: ()=>!AUTO_CONCILE_MULTISPORT || require('./ai_budget_guard').backgroundPaused(),
+});
+
 async function runAutoConcileObserver() {
   if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
   autoConcileObserverRunning = true;
   try {
     const matches = await fetchLiveMatches();
+
     const observed = matches
       .filter(shouldAutoObserveMatch)
       // Le filtre produit doit preceder les cinq appels du Concile. Le 27/08,
@@ -10310,10 +10443,11 @@ async function runAutoConcileObserver() {
         await runConcileAnalysis(match);
         if (!getLiveOu25VoteState(match).vote_count) setLiveAnalysisNotice(match, 'Aucun vote IA exploitable reçu.');
       } catch (e) {
-        setLiveAnalysisNotice(match, 'Analyse interrompue : réponse IA indisponible.');
+        setLiveAnalysisNotice(match, liveStateCoherence.statsFailure(liveStateCoherence.diagnosticCategory(e)).message);
         console.error("[auto-concile] analyse:", e.message);
       }
     }
+    try { await secondaryShadowEngine.tick(); } catch (_) { console.error('[shadow-multisport] cycle indisponible'); }
   } catch (e) {
     console.error("[auto-concile] cycle:", e.message);
   } finally {
@@ -10543,7 +10677,7 @@ function getMonthlyPickStats() {
 }
 
 function renewalEmailHtml(row, daysLeft, stats) {
-  const planLabel = row.plan === "elite" ? "Elite" : "Pro";
+  const planLabel = row.plan === "free" ? "Gratuit" : "Premium";
   const expDate = new Date(row.expires_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
   const urgency = daysLeft <= 1 ? "🔴 DERNIER JOUR" : daysLeft <= 3 ? "🟡 Plus que " + daysLeft + " jours" : "📅 Dans " + daysLeft + " jours";
   const pickRows = stats.recent.map(p => {
@@ -10651,7 +10785,7 @@ function runExpiryCron() {
       if ([7, 3, 1].includes(diff) && !sentSet.has(diff)) {
         const subjects = {
           7: `📊 Dans 7 jours — voici ce que tu aurais gagné ce mois sur TousLesMatchs`,
-          3: `⏳ Plus que 3 jours — renouvelle ton abonnement ${row.plan === "elite" ? "Elite" : "Pro"}`,
+          3: `⏳ Plus que 3 jours — renouvelle ton abonnement ${row.plan === "free" ? "Gratuit" : "Premium"}`,
           1: `🔴 Dernier jour — ton accès TousLesMatchs expire demain`,
         };
         brevoSendEmail(row.email, subjects[diff], renewalEmailHtml(row, diff, stats), { critical: true })
@@ -12323,7 +12457,7 @@ app.post("/verify-code", (req, res) => {
     }
 
     // Sync with Brevo asynchronously (don't block the response)
-    const tag = row.plan === "free" ? "FREE" : row.plan === "premium" ? "PREMIUM" : row.plan === "elite" ? "ELITE" : "VIP";
+    const tag = row.plan === "free" ? "FREE" : "PREMIUM";
     brevoAddContact(row.email, tag, "FR", null, { LAST_LOGIN_AT: new Date().toISOString() }).catch(() => {});
 
     return res.json({ valid: true, plan: row.plan, credits_left, credits_max: row.credits_max, email: row.email, session_token: sessionToken });
@@ -12849,7 +12983,7 @@ app.post("/bankroll/bets/add", (req, res) => {
     "INSERT INTO user_bets (email, label, stake, odds, result, profit) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(auth.email, lbl, Math.round(s * 100) / 100, Math.round(o * 100) / 100, result, profit);
   // Nurturing : s'assurer que l'email est bien dans Brevo
-  const tag = auth.plan === "free" ? "FREE" : auth.plan === "premium" ? "PREMIUM" : auth.plan === "elite" ? "ELITE" : "VIP";
+  const tag = auth.plan === "free" ? "FREE" : "PREMIUM";
   brevoAddContact(auth.email, tag).catch(() => {});
   res.json({ ok: true, ...bankrollHistory(auth.email) });
 });
@@ -13760,7 +13894,9 @@ function ou25TerminalReason(status, call) {
   return 'Fournisseur indisponible ou coupe-circuit actif.';
 }
 function getLiveOu25VoteState(match) {
-  return liveStateCoherence.publicState(match, getStoredLiveOu25VoteState(match));
+  const state = liveStateCoherence.publicState(match, getStoredLiveOu25VoteState(match));
+  return liveStateCoherence.attemptState(match, state, footballAttempts.latest(match),
+    footballObserverExclusionReason(match));
 }
 
 function getStoredLiveOu25VoteState(match) {
@@ -13979,7 +14115,7 @@ function clientOu25VisibilityEligibility(match, ou25) {
 // ── Live matches ──────────────────────────────────────────────────────────────
 // The homepage receives only the fields it displays. Paid directions are never
 // included in its anonymous response, including labels and tooltips.
-function homepageLiveMatch(match, canReveal) {
+function homepageLiveMatch(match, canReveal, ownerDiagnostics = false) {
   const out = {};
   for (const key of ['id','fixtureId','fixture_id','sourceId','home','away','country',
     'competition','league','sport','status','period','minute','utcDate','home_logo','away_logo',
@@ -14011,6 +14147,7 @@ function homepageLiveMatch(match, canReveal) {
     rule_version: raw.rule_version || null,
     outcome: raw.outcome || null,
     analysis_state: raw.analysis_state || null,
+    attempt: raw.attempt || null,
     synchronization_reason: raw.synchronization_reason || null,
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
@@ -14022,6 +14159,19 @@ function homepageLiveMatch(match, canReveal) {
       confidence: canReveal ? v.confidence : null,
     })),
   };
+  if (ownerDiagnostics) out.owner_analysis = tlmOperations.evidence(db,match,raw);
+  if (!ownerDiagnostics) {
+    out.ou25.attempt = null;
+    out.ou25.synchronization_reason = null;
+    const state = raw.analysis_state;
+    const message = state === 'excluded' ? 'Non retenu'
+      : ['failed_before_providers','failed'].includes(state) ? (raw.attempt?.reason_category === 'coverage_unavailable' ? 'Non analysable — statistiques live non couvertes pour cette compétition' : 'Analyse interrompue — statistiques indisponibles') : null;
+    for (const key of ['block_reason','analysis_exclusion_reason','data_notice','diffusion_block']) {
+      if (out[key]) out[key] = message || 'Analyse non disponible';
+    }
+    if (message) out.ou25.recommendation_status = message;
+    out.ou25.votes = out.ou25.votes.map(v => ({...v,reason: v.reason ? (message || 'Avis indisponible') : null}));
+  }
   if (canReveal && match.selection_evidence) {
     out.selection_evidence = {
       home_rank: match.selection_evidence.home_rank,
@@ -14037,6 +14187,9 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
     const cacheOnly = req.query.cache_only === "1";
+    const diagnosticEmail = String(req.headers["x-tlm-email"] || "");
+    const diagnosticCode = String(req.headers["x-tlm-code"] || "");
+    const ownerDiagnostics = !!(diagnosticEmail && diagnosticCode && isAdmin(diagnosticEmail, diagnosticCode));
     if (!cacheOnly && req.query.force === "1") {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
@@ -14154,7 +14307,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const visibility = {
         client_product_eligible: clientProductEligible,
         client_display_eligible: isClientOu25MatchEligible(m, false),
-        analysis_started: Number(ou25.vote_count || 0) > 0 || ['running','completed'].includes(ou25.analysis_state),
+        analysis_started: !!ou25.attempt || Number(ou25.vote_count || 0) > 0 || ['running','completed'].includes(ou25.analysis_state),
         analysis_verified: homepageDisplayEligible,
         homepage_display_eligible: homepageDisplayEligible,
         signal_delivered: telegramDeliveryProven,
@@ -14167,28 +14320,29 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const noCycleReason = Number(ou25.vote_count || 0) === 0 && !['running','completed'].includes(ou25.analysis_state)
         && (parseLiveMinuteValue(m.minute) === null || parseLiveMinuteValue(m.minute) > CLIENT_OU25_CLIENT_MAX_MINUTE)
         ? livePickBlockReason(m) : null;
-      const analysisExclusionReason = ou25.synchronization_reason || liveAnalysisNotice(m)
+      const analysisExclusionReason = ou25.attempt_reason || ou25.synchronization_reason || liveAnalysisNotice(m)
         || staticExclusionReason
         || (allSeatsFinishedWithoutVote ? 'Analyse terminée : aucun vote IA exploitable reçu.' : null)
         || m.analysis_exclusion_reason || m.data_notice || noCycleReason || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
-      const reason = livePickBlockReason(m)
+      const reason = ou25.attempt_reason || livePickBlockReason(m)
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
         || (!clientProductEligible ? 'Championnat ou catégorie hors du périmètre d’analyse.' : null)
         || analysisExclusionReason;
       return { ...m, analysable: acceptingClientVotes && !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
 
+    const ownerShadow=ownerDiagnostics?[multisportShadow.footballReport(db),...multisportShadow.report(db)]:undefined;
     if (cacheOnly) {
-      const canReveal = !!paidGoal05Account(req);
+      const canReveal = ownerDiagnostics || !!paidGoal05Account(req);
       res.set('Vary','Authorization, X-TLM-Email');
-      return res.json({ok:true, locked:!canReveal, cache_only:true,
-        matches:withVerdict.filter(isPublicFootballScopeMatch).map(m=>homepageLiveMatch(m,canReveal))});
+      return res.json({ok:true, locked:!canReveal, cache_only:true, owner_shadow:ownerShadow,
+        matches:withVerdict.filter(isPublicFootballScopeMatch).map(m=>homepageLiveMatch(m,canReveal,ownerDiagnostics))});
     }
     if (req.path === '/homepage-live') {
       const account = paidGoal05Account(req);
       const expiry = account?.expires_at;
-      const canReveal = !!account && (!expiry || (Number.isFinite(Date.parse(expiry)) && Date.parse(expiry) > Date.now()));
+      const canReveal = ownerDiagnostics || (!!account && (!expiry || (Number.isFinite(Date.parse(expiry)) && Date.parse(expiry) > Date.now())));
       const publicMatches = withVerdict.filter(isPublicFootballScopeMatch);
       const evidenceCandidates = publicMatches
         .filter(m => m.homepage_display_eligible === true)
@@ -14221,7 +14375,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       }
       res.set('Vary', 'Authorization, X-TLM-Email');
       return res.json({ok: true, locked: !canReveal,
-        matches: publicMatches.map(m => homepageLiveMatch(m, canReveal))});
+        matches: publicMatches.map(m => homepageLiveMatch(m, canReveal,ownerDiagnostics))});
     }
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le
@@ -14263,11 +14417,11 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       if (legacyAuth?.valid && String(legacyAuth.plan || 'free').toLowerCase() !== 'free') liveAccount = legacyAuth;
     }
     const liveExpiry = liveAccount?.expires_at;
-    const liveCanReveal = !!liveAccount && (!liveExpiry || (Number.isFinite(Date.parse(liveExpiry)) && Date.parse(liveExpiry) > Date.now()));
+    const liveCanReveal = ownerDiagnostics || (!!liveAccount && (!liveExpiry || (Number.isFinite(Date.parse(liveExpiry)) && Date.parse(liveExpiry) > Date.now())));
     res.set('Vary', 'Authorization, X-TLM-Email, X-TLM-Code');
-    res.json({ ok: true, locked: !liveCanReveal, matches: strictMatches.map(match => ({
+    res.json({ ok: true, locked: !liveCanReveal, owner_shadow:ownerShadow, matches: strictMatches.map(match => ({
       ...match,
-      ou25: homepageLiveMatch(match, liveCanReveal).ou25,
+      ...homepageLiveMatch(match, liveCanReveal, ownerDiagnostics),
     })) });
   } catch (e) {
     res.json({ ok: true, matches: [] });
@@ -16346,7 +16500,7 @@ app.post("/admin/create-code", (req, res) => {
   const { email: adminEmail, code: adminCode } = req.query;
   if (!isAdmin(adminEmail, adminCode)) return res.json({ ok: false, error: "Accès admin requis" });
 
-  const { target_email, plan = "elite", duration_days = 32 } = req.body || {};
+  const { target_email, plan = "premium", duration_days = 32 } = req.body || {};
   if (!target_email) return res.json({ ok: false, error: "target_email requis" });
 
   const creditsMax = defaultCreditsMaxForPlan(plan);
@@ -18762,6 +18916,17 @@ function checkAnalyticsSchedule() {
     sendHermesOperationalBilan("21").catch(e => console.error("[hermes-bilan-21]", e.message));
   }
 
+  // Rapport apprentissage quotidien — 23h15 Europe/Paris.
+  // Proposition uniquement : aucune modification automatique des règles.
+  const parisMinute = parseInt(timePart.split(":")[1]);
+  if (hour === 23 && parisMinute >= 15 && _lastLearningReportDate !== todayKey) {
+    _lastLearningReportDate = todayKey;
+    console.log("[learning-report] Envoi quotidien 23h15 Europe/Paris...");
+    sendLearningReportTelegram()
+      .then(ok => console.log(`[learning-report] ${ok ? "OK" : "ECHEC"}`))
+      .catch(e => console.error("[learning-report]", e.message));
+  }
+
   // AUTO 2 — paliers à sec, contrôlé toutes les 6h (0h / 6h / 12h / 18h)
   if (hour % 6 === 0) checkDryTiers();
 
@@ -19456,6 +19621,13 @@ app.get("/admin/ai-budget-stats", (req, res) => {
     const guard = require("./ai_budget_guard");
     res.json({ ok: true, stats: guard.getDailyStats(db) });
   } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/admin/operations-status', (req,res)=>{
+ const usage=db.prepare("SELECT coalesce(sum(count),0) used FROM api_sports_usage WHERE bucket LIKE ?").get(new Date().toISOString().slice(0,10)+'%');
+ res.json({ok:true,api_sports:{internal_used_today:usage.used,internal_daily_budget:API_SPORTS_DAILY_BUDGET,blocked_until:apiSportsBlockedUntil},
+  min_votes:CLIENT_OU25_MIN_VOTES,jev_enabled:process.env.JEV_ENABLED==='1',jev_production:process.env.JEV_PRODUCTION_MODE==='1',
+  shadow_daily_cap:SHADOW_DAILY_CAP,shadow_background_paused:require('./ai_budget_guard').backgroundPaused()});
 });
 
 app.get("/admin/guardian-state", (req, res) => {

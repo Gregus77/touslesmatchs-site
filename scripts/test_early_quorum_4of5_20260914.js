@@ -10,7 +10,7 @@ const end = source.indexOf('\n// Un timeout ou une erreur HTTP', start);
 assert(start >= 0 && end > start, 'quorum functions missing');
 const context = {
   CONCILE_AGENT_NAMES: ['A', 'B', 'C', 'D', 'E'],
-  CLIENT_OU25_MIN_VOTES: 4,
+  CLIENT_OU25_MIN_VOTES: 3,
   isOu25Bet: bet => /^(Over|Under) 2\.5 buts$/.test(String(bet || '')),
   console: { error() {} },
 };
@@ -41,7 +41,7 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   seats[1].resolve(vote('B', 'o2.5'));
   seats[2].resolve(vote('C', 'o2.5'));
   await tick();
-  assert.equal(finished, false, '3/5 must remain an intermediate trend');
+  assert.equal(finished, false, 'all bounded seats must settle before freezing a snapshot');
   assert.equal(progressivelyPersisted.length, 3, 'each received vote must be persisted before quorum');
   seats[3].resolve(vote('D', 'o2.5'));
   await tick();
@@ -76,8 +76,8 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
     {name:'D',marches:vote('D','o2.5')._ou25Markets},
   ], [vote('A','o2.5'),vote('B','o2.5'),vote('C','o2.5'),vote('D','o2.5',{statistically_rejected:true})]);
   assert.equal(rejected.vote_count, 3);
-  assert.equal(rejected.recommended, false);
+  assert.equal(rejected.recommended, true);
   assert.equal(rejected.votes.find(row => row.agent === 'D').status, 'rejected_statistical');
 
-  console.log('PASS quorum: 3/5 blocked, 4/5 accepted only after all five bounded seats settle, statistical rejection excluded');
+  console.log('PASS quorum: 3/5 accepted only after all five bounded seats settle, statistical rejection excluded');
 })().catch(error => { console.error(error); process.exitCode = 1; });

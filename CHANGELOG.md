@@ -467,3 +467,19 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - 99 contrôles de filtre et sept suites hors réseau réussis, dont 30 scénarios Jev simulés ; aucune inférence ni Telegram réel de test.
 - API seule déployée depuis l’image active, uniquement server.js remplacé ; sauvegarde et rollback conservés, trois autres services inchangés. Jev enabled/production=1 et roster réel vérifiés.
 - Rapport : `docs/audits/2026-09-25-filter-false-positives.md`.
+
+
+## 2026-09-26 — Restauration ciblée O/U 2,5 (préparée, non déployée)
+
+- Quorum 3/5 réaffirmé par le propriétaire : rétabli dans l’API et le registre officiel ; aucun autre seuil changé. Les cinq réponses bornées restent attendues.
+- Lecture du marché réel d’un snapshot sur les trois surfaces, sans dépendre d’une livraison Telegram. Protection AGENTS.md et test automatique de non-régression.
+- Une réponse statistique vide déclenche une vérification de couverture par compétition/saison, cachée et soumise au budget existant ; couverture absente explicitement distinguée, sans inventer de statistiques.
+
+
+## 2026-09-26 — Codex — supervision et Shadow propriétaire
+
+- Preuve naturelle Tenerife–Cadiz : cinq votes, consensus OVER 2,5 à 4/5, Jev WAIT ; aucune livraison inventée.
+- Diagnostics propriétaire issus du snapshot et motifs persistés ; statut statistiques corrigé sans contourner leur validation.
+- Shadow vainqueur multisport séparé du registre officiel, sous quotas existants, sans diffusion client.
+- Supervision en lecture seule et rapport propriétaire ; télécommande préparée mais inactive sans utilisateur explicitement autorisé.
+- Tests hors réseau Football, Jev, budgets, Shadow, résolution et contrôle d’accès.

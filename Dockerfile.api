@@ -37,6 +37,8 @@ COPY scripts/official_signal_snapshots.js ./official_signal_snapshots.js
 COPY scripts/jev_decision_engine.js ./jev_decision_engine.js
 COPY scripts/first_half_delivery.js ./first_half_delivery.js
 COPY scripts/live_state_coherence.js ./live_state_coherence.js
+COPY scripts/tlm_operations.js ./tlm_operations.js
+COPY scripts/multisport_shadow.js ./multisport_shadow.js
 COPY scripts/long_history.js ./long_history.js
 COPY scripts/bookmakers.config.js ./bookmakers.config.js
 COPY scripts/analysis_engine.js ./analysis_engine.js

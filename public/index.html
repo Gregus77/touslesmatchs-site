@@ -381,7 +381,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
+<script src="/js/match-lifecycle.js?v=20260926-football-attempts"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1091,6 +1091,31 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 }
 </style>
 
+
+<style id="tlm-empty-card-final">
+#hero-home-flag[hidden],
+#hero-away-flag[hidden]{
+  display:none!important;
+}
+#hero-home-country:empty,
+#hero-away-country:empty{
+  display:none!important;
+}
+#hero-live-minute{
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  min-width:max-content!important;
+}
+#hero-live-score:empty{
+  display:none!important;
+}
+#hero-home-logo,
+#hero-away-logo{
+  visibility:visible!important;
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -1169,17 +1194,17 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
           <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
-          <p class="tlm-hero-lead">Entre la 15e et la 45e minute, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 4 avis concordants sur 5 et les autres critères de qualité.</p>
-          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
+          <p class="tlm-hero-lead">De la 35e minute à la fin réelle de la première mi-temps, arrêts de jeu compris, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 3 avis concordants sur 5 et les autres critères de qualité.</p>
+          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">3 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
         </div>
         <div class="tlm-match-stage" id="hero-live-match" aria-live="polite">
           <div class="tlm-stage-head"><div><span class="tlm-stage-live" id="hero-live-status">Recherche du match en direct</span> <span id="hero-live-date"></span></div><strong class="tlm-stage-minute" id="hero-live-minute">—</strong></div>
           <div class="tlm-stage-teams">
-            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-home-logo" src="/logo192.png" alt=""><strong id="hero-home-name">Équipe à domicile</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-home-flag" alt="" hidden><span id="hero-home-country">—</span></span></div>
+            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-home-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-home-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-home-flag" alt="" hidden><span id="hero-home-country">—</span></span></div>
             <div class="tlm-stage-score"><span id="hero-live-score">— - —</span><small class="tlm-stage-period" id="hero-live-period">En attente</small></div>
-            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt=""><strong id="hero-away-name">Équipe à l'extérieur</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
+            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-away-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
           </div>
           <div class="tlm-ai-box">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
@@ -1191,7 +1216,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           </div>
         </div>
       </div>
-      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 4 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
+      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 3 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
     </section>
 
   </div>
@@ -1213,7 +1238,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       </select>
 
       <div id="tlm-panel-live" class="tlm-home-panel" role="tabpanel" data-home-panel="live">
-        <div class="live-panel-head"><div class="live-panel-title"><span class="dot"></span>Matchs réellement analysés</div><a href="/live-ia" class="live-panel-link">Voir Live IA →</a></div>
+        <div class="live-panel-head"><div class="live-panel-title"><span class="dot"></span>Matchs suivis en direct</div><a href="/live-ia" class="live-panel-link">Voir Live IA →</a></div>
         <div id="live-rows"><div class="empty-note">Chargement…</div></div>
       </div>
       <div id="tlm-panel-upcoming" class="tlm-home-panel" role="tabpanel" data-home-panel="upcoming" hidden>
@@ -1637,7 +1662,7 @@ function fmtEur(n){return (n<0?'':'+')+n+'€';}
 async function fetchAllAnalysisHistory(maxRows){
   var all=[],offset=0,pageSize=100,first=null,maximum=Math.max(pageSize,Number(maxRows)||2000);
   while(all.length<maximum){
-    var r=await fetch('/api/analysis-history?limit='+pageSize+'&offset='+offset+'&t='+Date.now(),{cache:'no-store'});
+    var r=await fetch('/analysis-history?limit='+pageSize+'&offset='+offset+'&t='+Date.now(),{cache:'no-store'});
     var d=await r.json();
     if(!d||!d.ok) throw new Error((d&&d.error)||'Historique indisponible');
     if(!first) first=d;
@@ -1794,7 +1819,7 @@ function heroResponseCount(slots){
 }
 function heroTerminalCaption(slot){
   if(!slot||slot.status==='voted'||slot.status==='pending')return null;
-  if(slot.status==='abstained')return {mark:'—',label:'Abstention explicite'};
+  if(slot.status==='excluded')return{mark:'—',label:'Non retenu'};if(slot.status==='not_called')return{mark:'—',label:'IA non appelée'};if(slot.status==='collecting')return{mark:'—',label:'Vérification des données avant les IA'};if(slot.status==='abstained')return {mark:'—',label:'Abstention explicite'};
   if(slot.status==='empty')return {mark:'—',label:'Réponse sans avis exploitable'};
   if(slot.status==='parse_error')return {mark:'—',label:'Réponse invalide'};
   if(slot.status==='rejected_statistical')return {mark:'—',label:'Vote écarté'};
@@ -1830,7 +1855,7 @@ function tlmVotesAreOld(m){
 }
 function tlmVoteCirclesHtml(m){
   var state=heroOu25(m),old=tlmVotesAreOld(m);
-  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)+'<div class="tlm-row-votes'+(old?' stale':'')+'"'+(TLMMatchLifecycle.entryClosed(m)?' style="filter:grayscale(1);opacity:.65"':'')+' aria-label="Votes IA">'+state.slots.map(function(slot,index){
+  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-analysis-market">'+esc(TLMMatchLifecycle.marketText(m))+'</span><div class="tlm-row-votes'+(old?' stale':'')+'"'+(TLMMatchLifecycle.entryClosed(m)?' style="filter:grayscale(1);opacity:.65"':'')+' aria-label="Votes IA">'+state.slots.map(function(slot,index){
     var voted=slot&&slot.status==='voted',direction=state.locked?null:slot.direction;
     var terminal=heroTerminalCaption(slot),mark=voted?(state.locked?'✓':direction==='over'?'O':direction==='under'?'U':'?'):terminal?terminal.mark:String(index+1);
     var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'')+(terminal?' terminal':'');
@@ -1854,7 +1879,7 @@ function renderAnalyzedList(rows){
     var fid=encodeURIComponent(m.fixtureId||m.fixture_id||m.id||(m.home+'_'+m.away));
     return '<a class="tlm-analysis-row" href="/live-ia?fixture='+fid+'" style="color:inherit;text-decoration:none">'
       +'<div class="tlm-analysis-teams">'+esc(m.home)+' — '+esc(m.away)+'<div class="tlm-analysis-meta">'+esc(current)+' · '+esc(score)+(snapshot?' · '+esc(snapshot):'')+(m.data_notice?' · '+esc(m.data_notice):'')+'</div></div>'
-      +tlmVoteCirclesHtml(m)+'</a>';
+      +'<span class="tlm-analysis-meta">'+esc(TLMMatchLifecycle.statusText(m))+'</span>'+tlmVoteCirclesHtml(m)+'</a>';
   }).join('')+'</div>';
 }
 function heroConsensusDetail(m){
@@ -1903,7 +1928,7 @@ function renderHeroLive(m){
   if(!m){
     if(status)status.textContent='Aucun match entre la 35e minute et la fin de première mi-temps';
     setHeroText('hero-live-minute','—');setHeroText('hero-live-period','Prochaine actualisation automatique');
-    setHeroText('hero-home-name','Équipe à domicile');setHeroText('hero-away-name',"Équipe à l'extérieur");setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','— - —');setHeroText('hero-consensus-current','0/5');
+    setHeroText('hero-home-name','En attente');setHeroText('hero-away-name','En attente');setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','');setHeroText('hero-consensus-current','0/5');
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
     if(analysisLink){analysisLink.href='/live-ia';analysisLink.setAttribute('aria-label','Ouvrir Live IA');}
     var emptyVotes=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var ev=0;ev<emptyVotes.length;ev++){emptyVotes[ev].classList.remove('on','over','under','terminal');emptyVotes[ev].removeAttribute('title');emptyVotes[ev].removeAttribute('aria-label');delete emptyVotes[ev].dataset.explanation;var emptyMark=emptyVotes[ev].querySelector('i');if(emptyMark)emptyMark.textContent=String(ev+1);if(emptyVotes[ev].lastChild&&emptyVotes[ev].lastChild.nodeType===3)emptyVotes[ev].lastChild.textContent='IA '+(ev+1);}
@@ -1950,10 +1975,9 @@ function renderHeroLive(m){
   var decisionText=deliveryProven&&voteState.official?'Envoyé sur Telegram'
     :voteState.official?'Signal validé — livraison en attente'
     :votes&&tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel'
-    :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(alignedCount<4?' · consensus insuffisant':'')
-    :votes&&alignedCount<4?'Consensus insuffisant — aucun signal'
+    :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
     :votes?(m.diffusion_block||m.analysis_exclusion_reason||'Tendance — autres critères non remplis, aucun signal')
-    :(m.analysis_exclusion_reason||m.block_reason||m.data_notice||(analysisWaiting?'À partir de la 35e minute':'En attente des IA'));
+    :TLMMatchLifecycle.statusText(m);
   setHeroText('hero-consensus-label',decisionText+(voteState.official&&!voteState.locked&&paidExplanation?' · '+paidExplanation:''));
   setHeroText('hero-vote-explanation','');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');
@@ -2090,7 +2114,7 @@ async function loadUpcoming(){
   if(!box)return;
   var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},12000);
   try{
-    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{cache:'no-store',signal:controller.signal});
+    var r=await fetch('/upcoming-picks?t='+Date.now(),{cache:'no-store',signal:controller.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     var source=(d.fixtures&&d.fixtures.length)?d.fixtures:(d.picks||[]);
@@ -2134,7 +2158,7 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var loaded=await Promise.all([fetch('/api/analysis-history?limit=500&offset=0&t='+Date.now(),{cache:'no-store',headers:heroAuthHeaders()}).then(function(r){if(!r.ok)throw new Error('history');return r.json();}),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
+    var loaded=await Promise.all([fetch('/analysis-history?limit=500&offset=0&t='+Date.now(),{cache:'no-store',headers:heroAuthHeaders()}).then(function(r){if(!r.ok)throw new Error('history');return r.json();}),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
     var d=loaded[0],dailyStats={};
     if(loaded[1]&&loaded[1].ok)(loaded[1].daily_concile||[]).forEach(function(r){dailyStats[r.jour]=r;});
     var cutoff=new Date();cutoff.setDate(cutoff.getDate()-29);cutoff.setHours(0,0,0,0);
@@ -2797,8 +2821,9 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
    var finished =
      votes>=5 ||
      String(o.analysis_state||"")==="completed" ||
-     (votes>0 && aligned>=4 && !!reason);
+     (['completed','excluded','failed_before_providers','failed','archived'].indexOf(String(o.analysis_state||''))!==-1);
 
+   if(!votes && finished)return {type:'wait',title:'ANALYSE NON RETENUE',detail:TLMMatchLifecycle.statusText(match)};
    if(!finished){
      return {
        type:"wait",

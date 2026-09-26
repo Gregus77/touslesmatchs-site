@@ -401,3 +401,13 @@ rend l'argument multi-sport honnête. Prévoir aussi des marchés adaptés : « 
 
 ## Exigence propriétaire du 05/09/2026 — historique des championnats
 Lire `docs/HISTORY_REQUIREMENT.md` avant toute modification des données utilisées par les pronostics. Ne jamais déclarer cinq saisons couvertes sans vérifier `/api/historical-coverage`.
+
+
+## GARDE-FOU PRODUIT PERMANENT — décision propriétaire du 26/09/2026
+
+Le marché officiel OVER/UNDER 2,5, ses votes et son affichage ne peuvent être supprimés, désactivés ou remplacés par une future IA/mise à jour sans accord explicite écrit du propriétaire.
+
+- Tout snapshot valide conserve ses cinq sièges réels, sa direction et sa confiance autorisée sur Accueil, Live IA, application et API, y compris après la première mi-temps. Les droits d’accès existants restent respectés.
+- Le quorum propriétaire réaffirmé est 3/5 (historique : commit propriétaire 82054ec, réaffirmation du 26/09/2026). Ne pas le confondre avec la fin des cinq appels bornés ni modifier les autres garde-fous.
+- Aucune donnée statistique ni aucun vote ne doit être inventé. Une couverture fournisseur absente est un blocage de collecte, jamais un accord IA.
+- Exécuter scripts/test_ou25_product_guard_20260926.js et les tests SQLite de snapshots avant toute livraison affectant le pipeline ou les trois surfaces. La CI vérifie ce garde-fou sur chaque push et pull request.
