@@ -1091,6 +1091,31 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 }
 </style>
 
+
+<style id="tlm-empty-card-final">
+#hero-home-flag[hidden],
+#hero-away-flag[hidden]{
+  display:none!important;
+}
+#hero-home-country:empty,
+#hero-away-country:empty{
+  display:none!important;
+}
+#hero-live-minute{
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  min-width:max-content!important;
+}
+#hero-live-score:empty{
+  display:none!important;
+}
+#hero-home-logo,
+#hero-away-logo{
+  visibility:visible!important;
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -1177,9 +1202,9 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <div class="tlm-match-stage" id="hero-live-match" aria-live="polite">
           <div class="tlm-stage-head"><div><span class="tlm-stage-live" id="hero-live-status">Recherche du match en direct</span> <span id="hero-live-date"></span></div><strong class="tlm-stage-minute" id="hero-live-minute">—</strong></div>
           <div class="tlm-stage-teams">
-            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-home-logo" src="/logo192.png" alt=""><strong id="hero-home-name">Équipe à domicile</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-home-flag" alt="" hidden><span id="hero-home-country">—</span></span></div>
+            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-home-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-home-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-home-flag" alt="" hidden><span id="hero-home-country">—</span></span></div>
             <div class="tlm-stage-score"><span id="hero-live-score">— - —</span><small class="tlm-stage-period" id="hero-live-period">En attente</small></div>
-            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt=""><strong id="hero-away-name">Équipe à l'extérieur</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
+            <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-away-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
           </div>
           <div class="tlm-ai-box">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
@@ -1637,7 +1662,7 @@ function fmtEur(n){return (n<0?'':'+')+n+'€';}
 async function fetchAllAnalysisHistory(maxRows){
   var all=[],offset=0,pageSize=100,first=null,maximum=Math.max(pageSize,Number(maxRows)||2000);
   while(all.length<maximum){
-    var r=await fetch('/api/analysis-history?limit='+pageSize+'&offset='+offset+'&t='+Date.now(),{cache:'no-store'});
+    var r=await fetch('/analysis-history?limit='+pageSize+'&offset='+offset+'&t='+Date.now(),{cache:'no-store'});
     var d=await r.json();
     if(!d||!d.ok) throw new Error((d&&d.error)||'Historique indisponible');
     if(!first) first=d;
@@ -1903,7 +1928,7 @@ function renderHeroLive(m){
   if(!m){
     if(status)status.textContent='Aucun match entre la 35e minute et la fin de première mi-temps';
     setHeroText('hero-live-minute','—');setHeroText('hero-live-period','Prochaine actualisation automatique');
-    setHeroText('hero-home-name','Équipe à domicile');setHeroText('hero-away-name',"Équipe à l'extérieur");setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','— - —');setHeroText('hero-consensus-current','0/5');
+    setHeroText('hero-home-name','En attente');setHeroText('hero-away-name','En attente');setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','');setHeroText('hero-consensus-current','0/5');
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
     if(analysisLink){analysisLink.href='/live-ia';analysisLink.setAttribute('aria-label','Ouvrir Live IA');}
     var emptyVotes=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var ev=0;ev<emptyVotes.length;ev++){emptyVotes[ev].classList.remove('on','over','under','terminal');emptyVotes[ev].removeAttribute('title');emptyVotes[ev].removeAttribute('aria-label');delete emptyVotes[ev].dataset.explanation;var emptyMark=emptyVotes[ev].querySelector('i');if(emptyMark)emptyMark.textContent=String(ev+1);if(emptyVotes[ev].lastChild&&emptyVotes[ev].lastChild.nodeType===3)emptyVotes[ev].lastChild.textContent='IA '+(ev+1);}
@@ -2089,7 +2114,7 @@ async function loadUpcoming(){
   if(!box)return;
   var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},12000);
   try{
-    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{cache:'no-store',signal:controller.signal});
+    var r=await fetch('/upcoming-picks?t='+Date.now(),{cache:'no-store',signal:controller.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     var source=(d.fixtures&&d.fixtures.length)?d.fixtures:(d.picks||[]);
@@ -2133,7 +2158,7 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var loaded=await Promise.all([fetch('/api/analysis-history?limit=500&offset=0&t='+Date.now(),{cache:'no-store',headers:heroAuthHeaders()}).then(function(r){if(!r.ok)throw new Error('history');return r.json();}),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
+    var loaded=await Promise.all([fetch('/analysis-history?limit=500&offset=0&t='+Date.now(),{cache:'no-store',headers:heroAuthHeaders()}).then(function(r){if(!r.ok)throw new Error('history');return r.json();}),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
     var d=loaded[0],dailyStats={};
     if(loaded[1]&&loaded[1].ok)(loaded[1].daily_concile||[]).forEach(function(r){dailyStats[r.jour]=r;});
     var cutoff=new Date();cutoff.setDate(cutoff.getDate()-29);cutoff.setHours(0,0,0,0);

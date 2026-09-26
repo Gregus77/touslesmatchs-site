@@ -1973,32 +1973,67 @@ function parseShadowResponse(text) {
 }
 
 function buildShadowPrompt(match) {
+  const sport = String(match.sport || "Football");
   const scoreStr = (match.score_home != null && match.score_away != null)
     ? `\nScore actuel : ${match.score_home}-${match.score_away}${match.minute ? ` (${match.minute}')` : ""}`
     : "";
+
+  let directive;
+  if (sport === "Hockey") {
+    directive = `Analyse uniquement le hockey.
+Privilégie vainqueur/moneyline et total de buts si les données le permettent.
+Ne propose jamais BTTS football, double chance football ou marché mi-temps football.`;
+  } else if (sport === "Basketball") {
+    directive = `Analyse uniquement le basketball.
+Privilégie vainqueur/moneyline. N'invente aucun handicap ou total de points absent des données.
+Ne propose jamais BTTS ou marchés de buts football.`;
+  } else if (sport === "Baseball") {
+    directive = `Analyse uniquement le baseball.
+Privilégie vainqueur/moneyline. N'invente aucune ligne de runs absente des données.
+Ne propose jamais BTTS ou marchés de buts football.`;
+  } else {
+    directive = `DIRECTIVE : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible.
+Si écart >= 2 buts OU 2+ buts avant 45' → préfère Over 2.5 ou Victoire.`;
+  }
+
+  if (sport !== "Football") {
+    return `Tu participes à un test à blanc interne TousLesMatchs.
+Aucune recommandation ne sera publiée aux clients.
+
+Sport : ${sport}
+Match : ${match.home} vs ${match.away}
+Compétition : ${match.competition || match.league || "inconnue"}${scoreStr}
+
+${directive}
+
+Réponds UNIQUEMENT :
+ANALYSE : [Victoire domicile / Victoire extérieur / NO BET]
+CONFIANCE : [0-100]
+RAISON : [1 phrase maximum]`;
+  }
+
   return `Tu es un analyste sportif expert. Analyse ce match et donne ta recommandation.
 
 Match : ${match.home} vs ${match.away}
 Compétition : ${match.competition || match.league || "inconnue"}
-Sport : ${match.sport || "Football"}${scoreStr}
+Sport : ${sport}${scoreStr}
 
-DIRECTIVE : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts avant 45' → préfère Over 2.5 ou Victoire.
+${directive}
 
 Réponds UNIQUEMENT dans ce format :
-ANALYSE : [ex: Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
+ANALYSE : [Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
 CONFIANCE : [0-100]
 RAISON : [1 phrase maximum]
 MARCHES : buts=o2.5:70,btts=oui:60,resultat=dom:65,mt1=oui:55
 
-Pour MARCHES (avis rapide sur chaque marché, codes courts + confiance 40-90) :
-- buts : o2.5 (plus de 2.5) ou u2.5 (moins de 2.5)
-- btts : oui ou non (les deux équipes marquent)
+Pour MARCHES :
+- buts : o2.5 ou u2.5
+- btts : oui ou non
 - resultat : dom, ext ou nul
-- mt1 : oui ou non (but en 1ère mi-temps)
+- mt1 : oui ou non
 
-Ne mets rien d'autre. Si tu n'es pas sûr du pick principal, réponds NO BET (mais donne quand même MARCHES).`;
+Ne mets rien d'autre.`;
 }
-
 // Plafond journalier des tests à blanc — garde-fou de budget OpenRouter.
 // 20 matchs/jour suffisent largement : la promotion d'un challenger exige 50 picks
 // résolus, soit moins de 3 jours d'échantillon. Payer plus n'apporte rien.
@@ -4467,7 +4502,7 @@ async function fetchFromApiSports() {
   // sur des sports dont aucune analyse n'est de toute facon diffusee).
   try {
     if (AUTO_CONCILE_MULTISPORT && !shouldSkipApiSportsSport("basketball") && !shouldSkipSecondarySportPoll("basketball")) {
-    const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const data = await httpGet(`https://v1.basketball.api-sports.io/games?date=${new Date().toISOString().slice(0,10)}`, { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("basketball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
@@ -4495,7 +4530,7 @@ async function fetchFromApiSports() {
   // Hockey live — desactive quand AUTO_CONCILE_MULTISPORT=0 (voir basketball ci-dessus)
   try {
     if (AUTO_CONCILE_MULTISPORT && !shouldSkipApiSportsSport("hockey") && !shouldSkipSecondarySportPoll("hockey")) {
-    const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const data = await httpGet(`https://v1.hockey.api-sports.io/games?date=${new Date().toISOString().slice(0,10)}`, { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("hockey", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
@@ -4525,7 +4560,7 @@ async function fetchFromApiSports() {
   const BASEBALL_LIVE_ENABLED = true;
   try {
     if (AUTO_CONCILE_MULTISPORT && BASEBALL_LIVE_ENABLED && !shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
-    const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const data = await httpGet(`https://v1.baseball.api-sports.io/games?date=${new Date().toISOString().slice(0,10)}`, { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("baseball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bb-" + g.id, sport: "Baseball",
@@ -10641,7 +10676,7 @@ function getMonthlyPickStats() {
 }
 
 function renewalEmailHtml(row, daysLeft, stats) {
-  const planLabel = row.plan === "elite" ? "Elite" : "Pro";
+  const planLabel = row.plan === "free" ? "Gratuit" : "Premium";
   const expDate = new Date(row.expires_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
   const urgency = daysLeft <= 1 ? "🔴 DERNIER JOUR" : daysLeft <= 3 ? "🟡 Plus que " + daysLeft + " jours" : "📅 Dans " + daysLeft + " jours";
   const pickRows = stats.recent.map(p => {
@@ -10749,7 +10784,7 @@ function runExpiryCron() {
       if ([7, 3, 1].includes(diff) && !sentSet.has(diff)) {
         const subjects = {
           7: `📊 Dans 7 jours — voici ce que tu aurais gagné ce mois sur TousLesMatchs`,
-          3: `⏳ Plus que 3 jours — renouvelle ton abonnement ${row.plan === "elite" ? "Elite" : "Pro"}`,
+          3: `⏳ Plus que 3 jours — renouvelle ton abonnement ${row.plan === "free" ? "Gratuit" : "Premium"}`,
           1: `🔴 Dernier jour — ton accès TousLesMatchs expire demain`,
         };
         brevoSendEmail(row.email, subjects[diff], renewalEmailHtml(row, diff, stats), { critical: true })
@@ -12421,7 +12456,7 @@ app.post("/verify-code", (req, res) => {
     }
 
     // Sync with Brevo asynchronously (don't block the response)
-    const tag = row.plan === "free" ? "FREE" : row.plan === "premium" ? "PREMIUM" : row.plan === "elite" ? "ELITE" : "VIP";
+    const tag = row.plan === "free" ? "FREE" : "PREMIUM";
     brevoAddContact(row.email, tag, "FR", null, { LAST_LOGIN_AT: new Date().toISOString() }).catch(() => {});
 
     return res.json({ valid: true, plan: row.plan, credits_left, credits_max: row.credits_max, email: row.email, session_token: sessionToken });
@@ -12947,7 +12982,7 @@ app.post("/bankroll/bets/add", (req, res) => {
     "INSERT INTO user_bets (email, label, stake, odds, result, profit) VALUES (?, ?, ?, ?, ?, ?)"
   ).run(auth.email, lbl, Math.round(s * 100) / 100, Math.round(o * 100) / 100, result, profit);
   // Nurturing : s'assurer que l'email est bien dans Brevo
-  const tag = auth.plan === "free" ? "FREE" : auth.plan === "premium" ? "PREMIUM" : auth.plan === "elite" ? "ELITE" : "VIP";
+  const tag = auth.plan === "free" ? "FREE" : "PREMIUM";
   brevoAddContact(auth.email, tag).catch(() => {});
   res.json({ ok: true, ...bankrollHistory(auth.email) });
 });
@@ -16464,7 +16499,7 @@ app.post("/admin/create-code", (req, res) => {
   const { email: adminEmail, code: adminCode } = req.query;
   if (!isAdmin(adminEmail, adminCode)) return res.json({ ok: false, error: "Accès admin requis" });
 
-  const { target_email, plan = "elite", duration_days = 32 } = req.body || {};
+  const { target_email, plan = "premium", duration_days = 32 } = req.body || {};
   if (!target_email) return res.json({ ok: false, error: "target_email requis" });
 
   const creditsMax = defaultCreditsMaxForPlan(plan);
@@ -18878,6 +18913,17 @@ function checkAnalyticsSchedule() {
   if (dueBilanSlot === "21" && _lastHermesEveningBilanDate !== todayKey) {
     _lastHermesEveningBilanDate = todayKey;
     sendHermesOperationalBilan("21").catch(e => console.error("[hermes-bilan-21]", e.message));
+  }
+
+  // Rapport apprentissage quotidien — 23h15 Europe/Paris.
+  // Proposition uniquement : aucune modification automatique des règles.
+  const parisMinute = parseInt(timePart.split(":")[1]);
+  if (hour === 23 && parisMinute >= 15 && _lastLearningReportDate !== todayKey) {
+    _lastLearningReportDate = todayKey;
+    console.log("[learning-report] Envoi quotidien 23h15 Europe/Paris...");
+    sendLearningReportTelegram()
+      .then(ok => console.log(`[learning-report] ${ok ? "OK" : "ECHEC"}`))
+      .catch(e => console.error("[learning-report]", e.message));
   }
 
   // AUTO 2 — paliers à sec, contrôlé toutes les 6h (0h / 6h / 12h / 18h)
