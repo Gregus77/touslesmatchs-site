@@ -832,6 +832,7 @@ function loadMatches(force) {
   var headers=liveAuthHeaders();
   fetch(url,{headers:headers}).then(function(r){ return r.json(); }).then(function(d) {
     if (d.ok && d.matches) {
+      renderOwnerShadow(d.owner_shadow);
       allMatches = d.matches.filter(tlmSoccerOnly);
       renderMatches();
       document.getElementById("last-update").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -901,6 +902,27 @@ function liveOu25State(m) {
   var over = slots.filter(function(v){ return v && v.status === "voted" && v.direction === "over"; }).length;
   var under = slots.filter(function(v){ return v && v.status === "voted" && v.direction === "under"; }).length;
   return { slots: slots, voteCount: Number(raw.vote_count)||over+under, overCount: over, underCount: under, windowStatus: String(raw.window_status || "unknown"),locked:raw.locked!==false,official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,statusText:raw.recommendation_status||null,consensusDirection:raw.consensus_direction||null,consensusCount:Number(raw.consensus_count)||Math.max(over,under),confidence:raw.official_confidence,odd:raw.official_odd,outcome:raw.outcome||null };
+}
+
+function renderOwnerShadow(rows) {
+  var el=document.getElementById('owner-shadow');
+  if(!rows){if(el)el.hidden=true;return;}
+  if(!el){el=document.createElement('section');el.id='owner-shadow';document.getElementById('matches-wrap').after(el);}
+  el.hidden=false;
+  el.innerHTML='<h3>Shadow propriétaire — aucune diffusion client</h3>'+rows.map(function(r){
+    return '<details><summary>SHADOW '+escHtml(r.sport.toUpperCase())+' · '+Number(r.analysed_today||0)+' analysés aujourd’hui · '+Number(r.predictions||0)+' pronostics · '+Number(r.won||0)+' gagnés / '+Number(r.lost||0)+' perdus · '+Number(r.pending||0)+' en attente · réussite '+(r.win_rate==null?'non calculable':Math.round(r.win_rate*100)+'%')+' · ROI théorique '+(r.roi==null?'cotes/résultats insuffisants':(r.roi*100).toFixed(1)+'%')+'</summary>'+r.rows.slice(0,30).map(function(m){return '<p>'+escHtml(m.home+' — '+m.away+' · '+m.competition)+'<br>'+escHtml(m.selection==='home'?m.home:m.selection==='away'?m.away:m.status)+' · '+escHtml(m.reason||'Observation en cours')+' · cote '+(m.odd==null?'indisponible':Number(m.odd).toFixed(2))+' · confiance '+(m.confidence==null?'non évaluée':Number(m.confidence)+'%')+' · '+escHtml(m.result||'non résolu')+'</p>';}).join('')+'</details>';
+  }).join('');
+}
+
+function renderOwnerAnalysis(m) {
+  var a=m&&m.owner_analysis;if(!a)return '';
+  var lines=[];
+  if(a.selection)lines.push("J'AURAIS JOUE : "+a.selection+' · '+a.consensus+'/5 · confiance '+a.confidence+'/100');
+  lines.push('Cote réelle : '+(a.real_odd==null?'indisponible':Number(a.real_odd).toFixed(2)));
+  lines.push(a.stats_available?'Statistiques live vérifiées':a.stats_reason==='coverage_unavailable'?'Statistiques live non couvertes':a.reason);
+  if(a.jev)lines.push('Jev '+a.jev.final_decision+' · réponse '+a.jev.decision+' · confiance '+Math.round(a.jev.confidence*100)+'%');
+  if(!a.official)lines.push(a.reason);
+  return '<div class="mc-owner-analysis" style="font-size:12px;color:#b8c2d8;line-height:1.6;margin:8px 0">'+lines.map(escHtml).join('<br>')+'</div>';
 }
 
 function renderLiveOu25Details(m) {
@@ -1054,6 +1076,7 @@ function renderMatches() {
     html += '  <div class="mc-team away"><div class="mc-name">' + escHtml(m.away) + '</div><div class="mc-logo">' + awayLogo + '</div></div>';
     html += '</div>';
     html += renderLiveOu25Details(m);
+    html += renderOwnerAnalysis(m);
 
     if (m.pinnedSignal) {
       html += '<div class="mc-analysis visible">';

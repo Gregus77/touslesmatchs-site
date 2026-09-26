@@ -1923,8 +1923,9 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
    var finished =
      votes>=5 ||
      String(o.analysis_state||"")==="completed" ||
-     (votes>0 && aligned>=4 && !!reason);
+     (['completed','excluded','failed_before_providers','failed','archived'].indexOf(String(o.analysis_state||''))!==-1);
 
+   if(!votes && finished)return {type:'wait',title:'ANALYSE NON RETENUE',detail:TLMMatchLifecycle.statusText(match)};
    if(!finished){
      return {
        type:"wait",

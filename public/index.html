@@ -1169,7 +1169,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
           <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
-          <p class="tlm-hero-lead">Entre la 15e et la 45e minute, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 4 avis concordants sur 5 et les autres critères de qualité.</p>
+          <p class="tlm-hero-lead">De la 35e minute à la fin réelle de la première mi-temps, arrêts de jeu compris, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 3 avis concordants sur 5 et les autres critères de qualité.</p>
           <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">3 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
@@ -2796,8 +2796,9 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
    var finished =
      votes>=5 ||
      String(o.analysis_state||"")==="completed" ||
-     (votes>0 && aligned>=4 && !!reason);
+     (['completed','excluded','failed_before_providers','failed','archived'].indexOf(String(o.analysis_state||''))!==-1);
 
+   if(!votes && finished)return {type:'wait',title:'ANALYSE NON RETENUE',detail:TLMMatchLifecycle.statusText(match)};
    if(!finished){
      return {
        type:"wait",
