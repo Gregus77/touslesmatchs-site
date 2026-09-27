@@ -2,7 +2,7 @@
 const assert = require('assert');
 const Database = require('better-sqlite3');
 const { validateCaptureBatch, validateExtraction, classifyCandidate, fuseCouncilVotes,
-  createLiveCaptureStore } = require('./live_capture_analysis');
+  createLiveCaptureStore, registerLiveCaptureRoutes, parseStrictJson, buildVisionPrompt, buildCouncilPrompt } = require('./live_capture_analysis');
 
 function capture(category, overrides = {}) {
   return { category, mimeType: 'image/jpeg', sizeBytes: 500000, dataUrl: 'data:image/jpeg;base64,AA==', ...overrides };
@@ -101,3 +101,158 @@ store.saveExtraction(overLimit.id, source);
 assert.throws(() => store.confirmSnapshot(overLimit.id, source), /Limite quotidienne atteinte/);
 db.close();
 console.log('PASS live capture validation, bookmaker guard, labels and anonymous fusion');
+
+
+async function postJson(base, route, body, admin = true) {
+  const response = await fetch(base + route, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(admin ? { 'x-test-admin': 'yes' } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  return { status: response.status, body: await response.json() };
+}
+
+async function runRouteContract() {
+  assert.strictEqual(typeof registerLiveCaptureRoutes, 'function',
+    'registerLiveCaptureRoutes must be exported for the admin integration');
+
+  const express = require('express');
+  const os = require('os');
+  const fs = require('fs');
+  const path = require('path');
+  const routeDb = new Database(':memory:');
+  const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tlm-live-capture-'));
+  const extraction = {
+    match: { home: 'Serbie', away: 'Pays-Bas', minute: 55, scoreHome: 1, scoreAway: 1 },
+    screenshots: [
+      { category: 'odds', bookmaker: 'Winamax' },
+      { category: 'odds', bookmaker: 'Winamax' },
+      { category: 'odds', bookmaker: 'Winamax' },
+      { category: 'stats' },
+    ],
+    markets: [{ market: '1X2', selection: 'away', odd: 1.8 }],
+    stats: { shotsHome: 7, shotsAway: 10 },
+  };
+  let visionCalls = 0;
+  assert.throws(() => parseStrictJson('{malformed'), /Unexpected token|JSON/);
+  const visionPrompt = buildVisionPrompt([{ category: 'odds' }, { category: 'stats' }]);
+  assert.match(visionPrompt, /N invente aucune/);
+  const councilPrompt = buildCouncilPrompt({ markets: extraction.markets, match: extraction.match });
+  assert.match(councilPrompt, /Analyse exclusivement le JSON confirme/);
+  assert.strictEqual(councilPrompt.includes('Perplexity'), false);
+
+  const councilInputs = [];
+  const app = express();
+  app.use(express.json({ limit: '20mb' }));
+  registerLiveCaptureRoutes({
+    app,
+    db: routeDb,
+    storageDir,
+    enabled: () => true,
+    requireAdmin: (req) => req.headers['x-test-admin'] === 'yes' ? 'greg-admin' : null,
+    callVision: async ({ captures }) => {
+      visionCalls += 1;
+      assert.strictEqual(captures.length, 4);
+      return { text: JSON.stringify(extraction), usage: { tokensIn: 100, tokensOut: 40, costUsd: 0.01 } };
+    },
+    callCouncil: async ({ seat, confirmed }) => {
+      councilInputs.push({ seat, confirmed });
+      if (seat === 'seat-5') return { text: '{malformed' };
+      if (seat === 'seat-4') return { text: JSON.stringify({ market: 'marche invente', selection: 'oui', probability: 0.99 }) };
+      return {
+        text: JSON.stringify({
+          market: '1X2',
+          selection: 'away',
+          probability: 0.6 + councilInputs.length / 100,
+          reasoningShort: 'Donnees confirmees uniquement',
+        }),
+        usage: { tokensIn: 50, tokensOut: 20, costUsd: 0.001 },
+      };
+    },
+  });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.once('listening', resolve));
+  const base = 'http://127.0.0.1:' + server.address().port;
+  const routeCaptures = [
+    capture('odds', { sizeBytes: 1 }),
+    capture('odds', { sizeBytes: 1 }),
+    capture('odds', { sizeBytes: 1 }),
+    capture('stats', { sizeBytes: 1 }),
+  ];
+
+  try {
+    const denied = await postJson(base, '/admin/live-capture/sessions', { captures: routeCaptures }, false);
+    assert.strictEqual(denied.status, 403);
+    assert.strictEqual(routeDb.prepare('SELECT COUNT(*) n FROM live_capture_sessions').get().n, 0,
+      'non-admin must be rejected before session or file creation');
+    assert.deepStrictEqual(fs.readdirSync(storageDir), []);
+
+    const created = await postJson(base, '/admin/live-capture/sessions', { captures: routeCaptures });
+    assert.strictEqual(created.status, 201);
+    assert.strictEqual(created.body.session.status, 'extracted');
+    assert.strictEqual(visionCalls, 1, 'vision is called exactly once for a session');
+    assert.deepStrictEqual(fs.readdirSync(storageDir), [], 'ephemeral images are removed after extraction');
+
+    const confirmedRoute = await postJson(
+      base,
+      '/admin/live-capture/sessions/' + created.body.session.id + '/confirm',
+      { confirmed: extraction },
+    );
+    assert.strictEqual(confirmedRoute.status, 200);
+    assert.strictEqual(confirmedRoute.body.session.status, 'confirmed');
+
+    const analysedRoute = await postJson(
+      base,
+      '/admin/live-capture/sessions/' + created.body.session.id + '/analyse',
+      {},
+    );
+    assert.strictEqual(analysedRoute.status, 200);
+    assert.strictEqual(analysedRoute.body.session.status, 'analysed');
+    assert.strictEqual(councilInputs.length, 5, 'all five existing seats receive one confirmed JSON analysis');
+    assert.ok(councilInputs.every((entry) => JSON.stringify(entry.confirmed) === JSON.stringify(confirmedRoute.body.session.confirmed)));
+    assert.strictEqual(JSON.stringify(analysedRoute.body).includes('seat-'), false,
+      'provider and seat identities never reach the admin response');
+    assert.strictEqual(analysedRoute.body.session.verdict.best.agreement, 3,
+      'malformed and out-of-snapshot seats are excluded without invented ballots');
+    assert.strictEqual(JSON.stringify(analysedRoute.body).includes('marche invente'), false);
+    assert.deepStrictEqual(analysedRoute.body.session.usage, {
+      tokensIn: 250,
+      tokensOut: 100,
+      costUsd: 0.013000000000000001,
+    }, 'vision and only valid council usage are accounted together');
+
+    const duplicate = await postJson(
+      base,
+      '/admin/live-capture/sessions/' + created.body.session.id + '/analyse',
+      {},
+    );
+    assert.strictEqual(duplicate.status, 409);
+    assert.strictEqual(councilInputs.length, 5, 'duplicate analysis never bills the council twice');
+
+    const createdMismatch = await postJson(base, '/admin/live-capture/sessions', { captures: routeCaptures });
+    assert.strictEqual(createdMismatch.status, 201);
+    const mismatch = JSON.parse(JSON.stringify(extraction));
+    mismatch.screenshots[1].bookmaker = 'Betclic';
+    const rejected = await postJson(
+      base,
+      '/admin/live-capture/sessions/' + createdMismatch.body.session.id + '/confirm',
+      { confirmed: mismatch },
+    );
+    assert.strictEqual(rejected.status, 400);
+    assert.match(rejected.body.error, /meme bookmaker/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    routeDb.close();
+    fs.rmSync(storageDir, { recursive: true, force: true });
+  }
+}
+
+runRouteContract()
+  .then(() => console.log('PASS admin live capture routes, one vision extraction, five anonymous seats and cleanup'))
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

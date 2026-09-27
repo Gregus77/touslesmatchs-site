@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Analyse Live privee — TousLesMatchs</title>
+  <link rel="stylesheet" href="/css/analyse-live.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">TousLes<span>Matchs</span></a>
+    <span class="private-badge">Administration privee</span>
+  </header>
+  <main>
+    <section class="hero">
+      <h1>Analyse Live par captures</h1>
+      <p>Une extraction visuelle, votre confirmation obligatoire, puis cinq avis anonymes sur le seul instantane confirme. Aucun envoi externe.</p>
+    </section>
+    <div id="status" role="status" aria-live="polite">Identifiez-vous puis ajoutez vos captures.</div>
+    <section class="grid">
+      <article class="card">
+        <h2>1. Acces administrateur</h2>
+        <label for="admin-email">Email</label>
+        <input id="admin-email" type="email" autocomplete="username">
+        <label for="admin-code">Code administrateur</label>
+        <input id="admin-code" type="password" autocomplete="current-password">
+        <div class="actions"><button id="save-auth" type="button">Enregistrer pour cette session</button></div>
+        <p class="hint">Les identifiants restent dans cet onglet et sont transmis uniquement par en-tetes securises.</p>
+      </article>
+      <article class="card">
+        <h2>2. Captures</h2>
+        <input id="captures" type="file" accept="image/png,image/jpeg,image/webp" multiple>
+        <p class="hint">4 a 10 images, dont au moins 3 captures de cotes du meme bookmaker et 1 capture de statistiques. Maximum 1,5 Mo par image apres compression.</p>
+        <div id="file-list"></div>
+        <div class="actions"><button id="extract-btn" type="button">Extraire les donnees</button></div>
+      </article>
+      <article class="card wide">
+        <h2>3. Verification humaine</h2>
+        <div id="session-id"></div>
+        <textarea id="editor" spellcheck="false" aria-label="JSON extrait a verifier"></textarea>
+        <div class="actions">
+          <button id="confirm-btn" type="button" disabled>Confirmer cet instantane</button>
+          <button id="analyse-btn" type="button" class="secondary" disabled>Lancer les cinq avis</button>
+        </div>
+      </article>
+      <article class="card wide">
+        <h2>Verdict prive</h2>
+        <div id="verdict" aria-live="polite"></div>
+      </article>
+    </section>
+  </main>
+  <script src="/js/analyse-live.js"></script>
+</body>
+</html>

@@ -22,6 +22,7 @@ const crypto = require("crypto");
 // Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
+const { registerLiveCaptureRoutes } = require("./live_capture_analysis");
 const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
 const jevDecisionEngine = require("./jev_decision_engine");
@@ -19096,6 +19097,95 @@ app.get("/admin/dashboard-data", (req, res) => {
     console.error("[admin-dashboard]", e.message);
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+
+async function callLiveCaptureVision({ captures, prompt }) {
+  if (!OPENAI_API_KEY) throw new Error('Fournisseur vision indisponible');
+  const content = [{ type: 'text', text: prompt }];
+  for (const capture of captures) {
+    const bytes = fs.readFileSync(capture.path);
+    content.push({
+      type: 'image_url',
+      image_url: { url: 'data:' + capture.mimeType + ';base64,' + bytes.toString('base64'), detail: 'high' },
+    });
+  }
+  const response = await httpPost('https://api.openai.com/v1/chat/completions', {
+    model: process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini',
+    messages: [{ role: 'user', content }],
+    max_tokens: 1200,
+    temperature: 0,
+    response_format: { type: 'json_object' },
+  }, { Authorization: 'Bearer ' + OPENAI_API_KEY }, 90000);
+  const text = response && response.choices && response.choices[0]
+    && response.choices[0].message && response.choices[0].message.content;
+  if (!text) throw new Error('Reponse IA vision invalide');
+  return {
+    text,
+    usage: {
+      tokensIn: Number(response.usage && response.usage.prompt_tokens || 0),
+      tokensOut: Number(response.usage && response.usage.completion_tokens || 0),
+      costUsd: 0,
+    },
+  };
+}
+
+async function callLiveCaptureCouncil({ seat, prompt, sessionId }) {
+  const configs = {
+    'seat-1': { label: 'Perplexity-Web', modelKey: 'perplexity', model: resolveModel('perplexity/sonar-pro') },
+    'seat-2': { label: 'DeepSeek-V3', modelKey: 'deepseek', model: resolveModel('deepseek/deepseek-chat') },
+    'seat-3': { label: 'Mistral-Large', modelKey: 'mistral', model: resolveModel(process.env.OR_MISTRAL_MODEL || 'mistralai/mistral-small-2603') },
+    'seat-4': { label: 'OpenRouter-Luna', modelKey: 'luna', model: resolveModel(process.env.OR_LUNA_MODEL || 'openai/gpt-5.6-luna') },
+    'seat-5': { label: 'OpenRouter-Qwen', modelKey: 'qwen', model: resolveModel(process.env.OR_QWEN_MODEL || 'qwen/qwen3.7-max') },
+  };
+  const config = configs[seat];
+  if (!config || !OPENROUTER_API_KEY) throw new Error('Fournisseur Concile indisponible');
+  const matchKey = 'live_capture_' + String(sessionId || crypto.randomUUID());
+  const allowed = analysisEngine.allowOfficialOpenRouterFallback(db, {
+    agentLabel: config.label,
+    matchKey,
+    competition: 'admin-live-capture',
+    modelKey: config.modelKey,
+  });
+  if (!allowed) throw new Error('Fournisseur Concile refuse par le garde-fou');
+  const body = {
+    model: config.model,
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 320,
+    temperature: 0.2,
+    response_format: { type: 'json_object' },
+  };
+  if (seat === 'seat-4' || seat === 'seat-5') body.reasoning = { effort: 'none' };
+  const response = await httpPost('https://openrouter.ai/api/v1/chat/completions', body, {
+    Authorization: 'Bearer ' + OPENROUTER_API_KEY,
+    'HTTP-Referer': 'https://touslesmatchs.com',
+    'X-Title': 'TousLesMatchs Admin Live Capture',
+  }, 60000);
+  const text = response && response.choices && response.choices[0]
+    && response.choices[0].message && response.choices[0].message.content;
+  if (!text) throw new Error('Reponse Concile invalide');
+  return {
+    text,
+    usage: {
+      tokensIn: Number(response.usage && response.usage.prompt_tokens || 0),
+      tokensOut: Number(response.usage && response.usage.completion_tokens || 0),
+      costUsd: Number(response.usage && response.usage.cost || 0),
+    },
+  };
+}
+
+registerLiveCaptureRoutes({
+  app,
+  db,
+  storageDir: '/data/live-capture-uploads',
+  enabled: () => process.env.LIVE_CAPTURE_ADMIN_ENABLED === '1',
+  requireAdmin: (req) => {
+    const email = String(req.headers['x-tlm-email'] || req.query && req.query.email || '').trim().toLowerCase();
+    const code = String(req.headers['x-tlm-code'] || req.query && req.query.code || '').trim();
+    return isAdmin(email, code) ? email : null;
+  },
+  callVision: callLiveCaptureVision,
+  callCouncil: callLiveCaptureCouncil,
 });
 
 if (require.main === module) {

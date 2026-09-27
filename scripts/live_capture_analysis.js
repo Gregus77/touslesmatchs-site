@@ -199,13 +199,15 @@ function createLiveCaptureStore({ db, now = () => new Date().toISOString() }) {
     return publicSession(rowFor(id));
   }
 
-  function saveExtraction(id, extraction) {
+  function saveExtraction(id, extraction, usage = {}) {
     const row = rowFor(id);
     if (row.status !== 'draft') throw new Error('Extraction deja enregistree');
     const valid = validateExtraction(extraction);
     if (!valid.ok) throw new Error(valid.error);
-    db.prepare(`UPDATE live_capture_sessions SET status='extracted',extraction_json=?,extracted_at=? WHERE id=?`)
-      .run(JSON.stringify(valid.data), now(), id);
+    db.prepare(`UPDATE live_capture_sessions SET status='extracted',extraction_json=?,
+      tokens_in=?,tokens_out=?,cost_usd=?,extracted_at=? WHERE id=?`)
+      .run(JSON.stringify(valid.data), Number(usage.tokensIn || 0), Number(usage.tokensOut || 0),
+        Number(usage.costUsd || 0), now(), id);
     return publicSession(rowFor(id));
   }
 
@@ -242,14 +244,206 @@ function createLiveCaptureStore({ db, now = () => new Date().toISOString() }) {
     const timestamp = now();
     persistVotes(id, validVotes, timestamp);
     db.prepare(`UPDATE live_capture_sessions SET status='analysed',verdict_json=?,tokens_in=?,tokens_out=?,cost_usd=?,analysed_at=? WHERE id=?`)
-      .run(JSON.stringify(verdict), Number(usage.tokensIn || 0), Number(usage.tokensOut || 0), Number(usage.costUsd || 0), timestamp, id);
+      .run(JSON.stringify(verdict), Number(row.tokens_in || 0) + Number(usage.tokensIn || 0),
+        Number(row.tokens_out || 0) + Number(usage.tokensOut || 0),
+        Number(row.cost_usd || 0) + Number(usage.costUsd || 0), timestamp, id);
     return publicSession(rowFor(id));
   }
 
   return { createSession, saveExtraction, confirmSnapshot, saveVotes, getSession: (id) => publicSession(rowFor(id)), dailyCount };
 }
 
+
+function parseStrictJson(text) {
+  if (text && typeof text === 'object') return text;
+  const cleaned = String(text || '').trim()
+    .replace(/^\x60\x60\x60(?:json)?\s*/i, '')
+    .replace(/\s*\x60\x60\x60$/, '');
+  if (!cleaned) throw new Error('Reponse IA vide');
+  const parsed = JSON.parse(cleaned);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Reponse IA invalide');
+  }
+  return parsed;
+}
+
+function buildVisionPrompt(captures) {
+  return [
+    'Tu extrais uniquement les donnees visibles dans les captures sportives jointes.',
+    'N invente aucune equipe, statistique, cote, minute, score ou bookmaker.',
+    'Retourne un JSON pur avec match, screenshots, markets et stats.',
+    'Chaque capture de cote doit indiquer son bookmaker; conserve les valeurs illisibles a null.',
+    'Schema: {"match":{"home":"","away":"","minute":null,"scoreHome":null,"scoreAway":null},',
+    '"screenshots":[{"category":"odds|stats","bookmaker":""}],',
+    '"markets":[{"market":"","selection":"","odd":1.01}],"stats":{}}',
+    'Categories attendues: ' + captures.map((item) => item.category).join(', '),
+  ].join('\n');
+}
+
+function buildCouncilPrompt(confirmed) {
+  return [
+    'Tu es un siege independant du Concile TousLesMatchs.',
+    'Analyse exclusivement le JSON confirme ci-dessous. Ne cherche pas ailleurs et n invente aucune valeur absente.',
+    'Choisis seulement un marche et une selection presents dans confirmed.markets.',
+    'Retourne un JSON pur: {"market":"","selection":"","probability":0.5,"reasoningShort":""}.',
+    'probability doit etre strictement comprise entre 0 et 1.',
+    'JSON_CONFIRME:',
+    JSON.stringify(confirmed),
+  ].join('\n');
+}
+
+function decodeCapture(item, index) {
+  const mimeType = String(item && item.mimeType || '').toLowerCase();
+  const prefix = 'data:' + mimeType + ';base64,';
+  const dataUrl = String(item && item.dataUrl || '');
+  if (!dataUrl.startsWith(prefix)) throw new Error('Contenu image invalide');
+  let bytes;
+  try {
+    bytes = Buffer.from(dataUrl.slice(prefix.length), 'base64');
+  } catch (_) {
+    throw new Error('Contenu image invalide');
+  }
+  if (!bytes.length || bytes.length !== Number(item.sizeBytes)) throw new Error('Taille image incoherente');
+  if (bytes.length > IMAGE_MAX_BYTES) throw new Error('Chaque image doit peser au maximum 1,5 Mo');
+  const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
+  return { index, category: item.category, mimeType, sizeBytes: bytes.length, bytes, extension };
+}
+
+function routeErrorStatus(error) {
+  const message = String(error && error.message || error || '');
+  if (/introuvable/i.test(message)) return 404;
+  if (/Limite quotidienne/i.test(message)) return 429;
+  if (/deja|non confirmee|non extraite/i.test(message)) return 409;
+  if (/Aucun bulletin valide|Reponse IA|fournisseur/i.test(message)) return 502;
+  return 400;
+}
+
+function registerLiveCaptureRoutes({
+  app,
+  db,
+  requireAdmin,
+  callVision,
+  callCouncil,
+  storageDir,
+  enabled = () => false,
+}) {
+  if (!app || !db || typeof requireAdmin !== 'function') throw new Error('Integration admin incomplete');
+  if (typeof callVision !== 'function' || typeof callCouncil !== 'function') throw new Error('Integration IA incomplete');
+  const root = String(storageDir || '/data/live-capture-uploads');
+  const store = createLiveCaptureStore({ db });
+  const seatKeys = ['seat-1', 'seat-2', 'seat-3', 'seat-4', 'seat-5'];
+
+  function gate(req, res) {
+    if (!enabled()) {
+      res.status(404).json({ ok: false, error: 'Fonctionnalite indisponible' });
+      return null;
+    }
+    const owner = requireAdmin(req);
+    if (!owner) {
+      res.status(403).json({ ok: false, error: 'Acces admin requis' });
+      return null;
+    }
+    return String(owner);
+  }
+
+  app.post('/admin/live-capture/sessions', async (req, res) => {
+    const owner = gate(req, res);
+    if (!owner) return;
+    let sessionDir = null;
+    try {
+      const captures = Array.isArray(req.body && req.body.captures) ? req.body.captures : [];
+      const valid = validateCaptureBatch(captures);
+      if (!valid.ok) throw new Error(valid.error);
+      const decoded = captures.map(decodeCapture);
+      const session = store.createSession({ owner, captures });
+      sessionDir = require('path').join(root, session.id);
+      require('fs').mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
+      const visionCaptures = decoded.map((item) => {
+        const filePath = require('path').join(sessionDir, String(item.index) + '.' + item.extension);
+        require('fs').writeFileSync(filePath, item.bytes, { mode: 0o600 });
+        return { category: item.category, mimeType: item.mimeType, sizeBytes: item.sizeBytes, path: filePath };
+      });
+      const vision = await callVision({ captures: visionCaptures, prompt: buildVisionPrompt(visionCaptures) });
+      const extraction = parseStrictJson(vision && (vision.text || vision.data || vision));
+      const extracted = store.saveExtraction(session.id, extraction, vision && vision.usage || {});
+      return res.status(201).json({ ok: true, session: extracted });
+    } catch (error) {
+      return res.status(routeErrorStatus(error)).json({ ok: false, error: String(error.message || error) });
+    } finally {
+      if (sessionDir) require('fs').rmSync(sessionDir, { recursive: true, force: true });
+    }
+  });
+
+  app.get('/admin/live-capture/sessions/:id', (req, res) => {
+    if (!gate(req, res)) return;
+    try {
+      return res.json({ ok: true, session: store.getSession(req.params.id) });
+    } catch (error) {
+      return res.status(routeErrorStatus(error)).json({ ok: false, error: String(error.message || error) });
+    }
+  });
+
+  app.post('/admin/live-capture/sessions/:id/confirm', (req, res) => {
+    if (!gate(req, res)) return;
+    try {
+      const session = store.confirmSnapshot(req.params.id, req.body && req.body.confirmed);
+      return res.json({ ok: true, session });
+    } catch (error) {
+      return res.status(routeErrorStatus(error)).json({ ok: false, error: String(error.message || error) });
+    }
+  });
+
+  app.post('/admin/live-capture/sessions/:id/analyse', async (req, res) => {
+    if (!gate(req, res)) return;
+    try {
+      const current = store.getSession(req.params.id);
+      if (current.status !== 'confirmed') throw new Error('Session non confirmee ou deja analysee');
+      const prompt = buildCouncilPrompt(current.confirmed);
+      const results = await Promise.all(seatKeys.map(async (seat) => {
+        try {
+          const response = await callCouncil({ seat, confirmed: current.confirmed, prompt, sessionId: req.params.id });
+          const parsed = parseStrictJson(response && (response.text || response.data || response));
+          const probability = Number(parsed.probability);
+          const market = String(parsed.market || '').trim();
+          const selection = String(parsed.selection || '').trim();
+          const offered = (Array.isArray(current.confirmed.markets) ? current.confirmed.markets : []).some((row) => row
+            && String(row.market || '').trim().toLowerCase() === market.toLowerCase()
+            && String(row.selection || '').trim().toLowerCase() === selection.toLowerCase());
+          if (!market || !selection || !offered
+              || !Number.isFinite(probability) || probability <= 0 || probability >= 1) return null;
+          return {
+            vote: {
+              seat,
+              market,
+              selection,
+              probability,
+              reasoningShort: String(parsed.reasoningShort || '').slice(0, 300),
+            },
+            usage: response && response.usage || {},
+          };
+        } catch (_) {
+          return null;
+        }
+      }));
+      const valid = results.filter(Boolean);
+      if (!valid.length) throw new Error('Aucun bulletin valide');
+      const usage = valid.reduce((sum, item) => ({
+        tokensIn: sum.tokensIn + Number(item.usage.tokensIn || 0),
+        tokensOut: sum.tokensOut + Number(item.usage.tokensOut || 0),
+        costUsd: sum.costUsd + Number(item.usage.costUsd || 0),
+      }), { tokensIn: 0, tokensOut: 0, costUsd: 0 });
+      const session = store.saveVotes(req.params.id, valid.map((item) => item.vote), usage);
+      return res.json({ ok: true, session });
+    } catch (error) {
+      return res.status(routeErrorStatus(error)).json({ ok: false, error: String(error.message || error) });
+    }
+  });
+
+  return { store };
+}
+
 module.exports = {
   validateCaptureBatch, validateExtraction, classifyCandidate, fuseCouncilVotes,
-  createLiveCaptureStore, initLiveCaptureSchema,
+  createLiveCaptureStore, initLiveCaptureSchema, registerLiveCaptureRoutes,
+  parseStrictJson, buildVisionPrompt, buildCouncilPrompt,
 };

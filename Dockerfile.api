@@ -40,6 +40,7 @@ COPY scripts/live_state_coherence.js ./live_state_coherence.js
 COPY scripts/long_history.js ./long_history.js
 COPY scripts/bookmakers.config.js ./bookmakers.config.js
 COPY scripts/analysis_engine.js ./analysis_engine.js
+COPY scripts/live_capture_analysis.js ./live_capture_analysis.js
 COPY scripts/halftime_entry_shadow.js ./halftime_entry_shadow.js
 COPY scripts/ai_budget_guard.js ./ai_budget_guard.js
 COPY scripts/ai_models.config.js ./ai_models.config.js
