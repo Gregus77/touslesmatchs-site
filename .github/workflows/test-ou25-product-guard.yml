@@ -1,0 +1,16 @@
+name: Protected OVER-UNDER product
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  product-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Owner rule, real votes and all three surfaces (no network calls)
+        run: node scripts/test_ou25_product_guard_20260926.js
+      - name: Statistics coverage never invents data (mocked transport)
+        run: node scripts/test_stats_coverage_20260926.js

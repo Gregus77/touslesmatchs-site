@@ -33,6 +33,9 @@ RUN mkdir -p /data
 
 COPY scripts/api_server.js ./server.js
 COPY scripts/telegram_client.js ./telegram_client.js
+COPY scripts/signal_funnel_counter.js ./signal_funnel_counter.js
+COPY scripts/api_sports_quota_guard.js ./api_sports_quota_guard.js
+COPY scripts/singleflight.js ./singleflight.js
 COPY scripts/official_signal_snapshots.js ./official_signal_snapshots.js
 COPY scripts/jev_decision_engine.js ./jev_decision_engine.js
 COPY scripts/first_half_delivery.js ./first_half_delivery.js
@@ -46,6 +49,7 @@ COPY scripts/ai_budget_guard.js ./ai_budget_guard.js
 COPY scripts/ai_models.config.js ./ai_models.config.js
 COPY scripts/beta_waitlist.js ./beta_waitlist.js
 COPY scripts/hermes_mail_bot.js ./hermes_mail_bot.js
+COPY scripts/tlm_learning_safe.js ./tlm_learning_safe.js
 
 EXPOSE 3001
 CMD ["node", "server.js"]

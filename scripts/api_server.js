@@ -27,6 +27,9 @@ const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
 const jevDecisionEngine = require("./jev_decision_engine");
 const liveStateCoherence = require("./live_state_coherence");
+const { createSignalFunnelCounter } = require("./signal_funnel_counter");
+const { createApiSportsQuotaGuard, quotaBlockDurationMs } = require("./api_sports_quota_guard");
+const { createSingleFlight } = require("./singleflight");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
@@ -288,7 +291,7 @@ const ADMIN_READONLY_PATHS = new Set([
   // performance par segment, et depense IA quotidienne. Aucune donnee
   // personnelle ni credential, mais de quoi renseigner un concurrent.
   "/admin/stats", "/admin/funnel-report", "/admin/segment-report",
-  "/admin/ai-budget-stats", "/admin/jev-status",
+  "/admin/ai-budget-stats", "/admin/jev-status", "/admin/signal-funnel",
 ]);
 app.use((req, res, next) => {
   if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
@@ -302,6 +305,7 @@ app.use((req, res, next) => {
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
+const signalFunnel = createSignalFunnelCounter({ db });
 officialSnapshots.init(db);
 const jevEngine = jevDecisionEngine.createEngine({db, logger: event => console.log('[jev]', JSON.stringify(event))});
 const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
@@ -1215,6 +1219,7 @@ const validateFirstHalfDelivery = firstHalfDelivery.createValidator({
 const clientTelegramPublisher = telegramClient.createPublisher({
   validateSignal: validateFirstHalfDelivery,
   paymentAvailable:()=>Date.now()<telegramPaymentVerifiedUntil,
+  funnelCounter: signalFunnel,
   db, env: process.env,
   onDelivered: row => {
     _integrationHealth.telegram.last_delivery_at = row.created_at || new Date().toISOString();
@@ -2265,6 +2270,7 @@ function saveProofs(proofs) {
 
 // Cache live matches pour limiter les appels API-Sports tout en gardant le live lisible.
 let liveMatchesCache = { data: null, ts: 0 };
+const runLiveMatchesFetchSingleFlight = createSingleFlight();
 const CACHE_TTL = 60 * 1000; // 60 s : cache global partage, evite de bruler le quota multi-sport.
 const API_SPORTS_QUOTA_BLOCK_MS = 12 * 60 * 60 * 1000;
 const apiSportsBlockedUntil = { football: 0, basketball: 0, hockey: 0, baseball: 0 };
@@ -2340,18 +2346,39 @@ function apiSportsDynamicHourlyBudget() {
   return Math.max(1, Math.ceil(remainingBudget / hoursRemaining));
 }
 function apiSportsBudgetOk() {
-  try {
-    const bucket = new Date().toISOString().slice(0, 13); // "YYYY-MM-DDTHH"
-    const dynamicBudget = apiSportsDynamicHourlyBudget();
-    const row = db.prepare("SELECT count FROM api_sports_usage WHERE bucket = ?").get(bucket);
-    const used = row ? row.count : 0;
-    if (used >= dynamicBudget) return false;
-    db.prepare("INSERT INTO api_sports_usage (bucket, count) VALUES (?, 1) ON CONFLICT(bucket) DO UPDATE SET count = count + 1").run(bucket);
-    return true;
-  } catch (e) {
-    console.error("[api-sports-budget]", e.message);
-    return true; // en cas d'erreur de comptage, ne jamais bloquer un appel reel
-  }
+  try { return apiSportsQuotaGuard.canRequest(); }
+  catch (e) { console.error("[api-sports-budget]", e.message); return true; }
+}
+function readApiSportsUsage() {
+  const now = new Date();
+  const prefix = now.toISOString().slice(0, 10);
+  const daily = db.prepare("SELECT COALESCE(SUM(count),0) total FROM api_sports_usage WHERE bucket LIKE ?").get(`${prefix}%`)?.total || 0;
+  const hourly = db.prepare("SELECT COALESCE(count,0) count FROM api_sports_usage WHERE bucket=?").get(now.toISOString().slice(0, 13))?.count || 0;
+  return { daily, hourly };
+}
+function addApiSportsUsage(amount) {
+  if (!(amount > 0)) return;
+  const bucket = new Date().toISOString().slice(0, 13);
+  db.prepare("INSERT INTO api_sports_usage (bucket,count) VALUES (?,?) ON CONFLICT(bucket) DO UPDATE SET count=count+excluded.count").run(bucket, amount);
+}
+function addApiSportsReconciledUsage(amount) {
+  if (!(amount > 0)) return;
+  const bucket = new Date().toISOString().slice(0, 10) + "Tprovider";
+  db.prepare("INSERT INTO api_sports_usage (bucket,count) VALUES (?,?) ON CONFLICT(bucket) DO UPDATE SET count=count+excluded.count").run(bucket, amount);
+}
+const apiSportsQuotaGuard = createApiSportsQuotaGuard({
+  dailyBudget: API_SPORTS_DAILY_BUDGET,
+  readUsage: readApiSportsUsage,
+  addUsage: addApiSportsUsage,
+  addReconciledUsage: addApiSportsReconciledUsage,
+});
+function recordApiSportsRequest() {
+  try { apiSportsQuotaGuard.recordRequest(); }
+  catch (e) { console.error("[api-sports-counter]", e.message); }
+}
+function reconcileApiSportsProviderUsage(used) {
+  try { apiSportsQuotaGuard.reconcileProviderUsage(used); }
+  catch (e) { console.error("[api-sports-reconcile]", e.message); }
 }
 
 // ── Quota REEL du plan API-Sports (pas juste notre estimation interne) ──────
@@ -2363,6 +2390,7 @@ function apiSportsBudgetOk() {
 // pour le savoir AVANT que les signaux s'arretent, pas apres coup dans les
 // logs d'erreur.
 let _apiQuotaAlertSentDate = "";
+let _apiSportsRealQuotaSnapshot = null;
 async function checkApiSportsRealQuota() {
   // Renvoie toujours un objet { error } explicite en cas d'échec, jamais null
   // silencieux — sinon /admin/api-quota-status affiche un message générique
@@ -2377,6 +2405,9 @@ async function checkApiSportsRealQuota() {
     }
     const used = Number(req.current) || 0;
     const limit = Number(req.limit_day) || 0;
+    _apiSportsRealQuotaSnapshot = { used, limit, checkedAt: Date.now() };
+    reconcileApiSportsProviderUsage(used);
+    if (limit > used) apiSportsBlockedUntil.football = 0;
     const pct = limit > 0 ? Math.round((used / limit) * 100) : 0;
     const today = getTodayStr();
     if (pct >= 85 && _apiQuotaAlertSentDate !== today && TELEGRAM_ADMIN_CHAT_ID) {
@@ -2488,8 +2519,13 @@ function deductToken(userId) {
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 function httpGet(url, headers = {}, timeoutMs = 15000) {
+  const opts = new URL(url);
+  const isFootballApiSports = opts.hostname === "v3.football.api-sports.io";
+  const isQuotaStatus = isFootballApiSports && opts.pathname === "/status";
+  if (isFootballApiSports && !isQuotaStatus && !apiSportsBudgetOk()) {
+    return Promise.resolve({ errors: { quota: "internal daily budget reached" }, __internalBudgetBlocked: true });
+  }
   return new Promise((resolve, reject) => {
-    const opts = new URL(url);
     const req = https.request({ hostname: opts.hostname, path: opts.pathname + opts.search, headers }, (res) => {
       let data = "";
       res.on("data", (c) => (data += c));
@@ -2500,6 +2536,7 @@ function httpGet(url, headers = {}, timeoutMs = 15000) {
     });
     req.setTimeout(timeoutMs, () => req.destroy(new Error("HTTP GET timeout")));
     req.on("error", reject);
+    if (isFootballApiSports) recordApiSportsRequest();
     req.end();
   });
 }
@@ -2526,7 +2563,10 @@ function handleApiSportsErrors(sport, data) {
   const errors = apiSportsErrors(data);
   if (!errors) return false;
   console.warn(`[live-matches] API-Sports ${sport} indisponible: ${JSON.stringify(errors)}`);
-  if (isApiSportsQuotaError(errors)) apiSportsBlockedUntil[sport] = Date.now() + API_SPORTS_QUOTA_BLOCK_MS;
+  if (isApiSportsQuotaError(errors) && !data?.__internalBudgetBlocked) {
+    const duration = quotaBlockDurationMs({ sport, snapshot: _apiSportsRealQuotaSnapshot });
+    apiSportsBlockedUntil[sport] = Date.now() + duration;
+  }
   return true;
 }
 
@@ -4987,6 +5027,7 @@ async function fetchLiveMatches() {
     if (cachedInScope.length !== liveMatchesCache.data.length) liveMatchesCache = { data: cachedInScope, ts: liveMatchesCache.ts };
     return await enrichFootballOnlyLiveCache(cachedInScope);
   }
+  return runLiveMatchesFetchSingleFlight(async () => {
   const [footballDataMatches, apiSportsMatches, theSportsDbMatches] = await Promise.all([
     fetchFromFootballData(),
     fetchFromApiSports(),
@@ -5015,6 +5056,7 @@ async function fetchLiveMatches() {
   console.log(`[live-filter] avant=${matches.length} apres_scope=${productMatches.length} apres_statut=${visibleMatches.length}`);
   liveMatchesCache = { data: visibleMatches, ts: Date.now() };
   return visibleMatches;
+  });
 }
 
 function getMockMatches() {
@@ -7812,6 +7854,7 @@ Réponds en JSON pur (pas de markdown):
   }
   const jevSendAuthorized = jevEvaluation?.decision === 'SEND' && jevEvaluation?.final_decision === 'SEND'
     && jevEvaluation?.decision_source === 'jev_production';
+  let _signalFunnelOfficialRegistered = false;
 
   if (!_blockReason) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
@@ -7924,6 +7967,7 @@ Réponds en JSON pur (pas de markdown):
         const officialSnapshot = officialSnapshots.registerOfficial(db, capturedVoteSnapshot.id,
           jevSendAuthorized ? {jevDecisionId:jevEvaluation.id} : {});
         criteriaSnapshot.official_signal_snapshot_id = officialSnapshot.id;
+        _signalFunnelOfficialRegistered = true;
         const data = {matchKey:_ligneAnalysee, officialSignalSnapshotId:officialSnapshot.id, home:match.home, away:match.away,
           competition:match.competition || match.league || '', minute:match.minute,
           scoreHome:match.score_home ?? '?', scoreAway:match.score_away ?? '?',
@@ -7957,6 +8001,31 @@ Réponds en JSON pur (pas de markdown):
       _tierBlock = "signal officiel déjà enregistré ou mis en file pour cette heure";
     }
   }
+
+  const _signalFunnelKey = persistedAnalysisMatchKey || getPredictionSnapshotKey(match);
+  const _signalFunnelStages = ["fixtures_seen"];
+  if (hasRealData) _signalFunnelStages.push("live_stats_available");
+  if (clientOu25MatchEligible) _signalFunnelStages.push("minute_window_valid");
+  if (firstHalfOpen) _signalFunnelStages.push("first_half_confirmed");
+  if (Number(voteInfo.vote_active || 0) > 0) _signalFunnelStages.push("votes_received");
+  if (voteCountForSignal >= 4) _signalFunnelStages.push("consensus_4_of_5");
+  if (Number(analysisResult.confidence || 0) >= CLIENT_OU25_MIN_CONFIDENCE) _signalFunnelStages.push("confidence_ge_80");
+  if (_coteReelle) _signalFunnelStages.push("real_odd_present");
+  if (_coteReelle && traditionalOddOk) _signalFunnelStages.push("real_odd_in_range");
+  if (_signalFunnelOfficialRegistered) {
+    _signalFunnelStages.push("official_registry");
+  }
+  const _signalFunnelRejection = _signalFunnelOfficialRegistered ? null
+    : !hasRealData ? "live_stats_unavailable"
+    : !clientOu25MatchEligible ? "minute_window_invalid"
+    : !firstHalfOpen ? "first_half_unconfirmed"
+    : Number(voteInfo.vote_active || 0) < 1 ? "votes_absent"
+    : voteCountForSignal < 4 ? "consensus_below_4_of_5"
+    : Number(analysisResult.confidence || 0) < CLIENT_OU25_MIN_CONFIDENCE ? "confidence_below_80"
+    : !_coteReelle ? "real_odd_absent"
+    : !traditionalOddOk ? "real_odd_out_of_range"
+    : "official_registry_not_reached";
+  signalFunnel.recordPipeline(_signalFunnelKey, _signalFunnelStages, _signalFunnelRejection);
 
   appendSignalDecisionEvent(match, "evaluation", {
     matchKey: persistedAnalysisMatchKey,
@@ -10266,6 +10335,10 @@ async function runAutoConcileObserver() {
   autoConcileObserverRunning = true;
   try {
     const matches = await fetchLiveMatches();
+    for (const match of matches) {
+      try { signalFunnel.recordStage("fixtures_seen", getPredictionSnapshotKey(match)); }
+      catch (e) { console.error("[signal-funnel] fixture:", e.message); }
+    }
     const observed = matches
       .filter(shouldAutoObserveMatch)
       // Le filtre produit doit preceder les cinq appels du Concile. Le 27/08,
@@ -14179,12 +14252,22 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         || analysisExclusionReason;
       return { ...m, analysable: acceptingClientVotes && !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
+    const markSiteExposed = (rows) => {
+      for (const row of rows) {
+        const snapshotId = row.ou25?.official_signal_snapshot_id;
+        if (!snapshotId) continue;
+        try { signalFunnel.recordStage("site_exposed", `official:${snapshotId}`); }
+        catch (e) { console.error("[signal-funnel] site:", e.message); }
+      }
+    };
 
     if (cacheOnly) {
       const canReveal = !!paidGoal05Account(req);
+      const publicRows = withVerdict.filter(isPublicFootballScopeMatch);
+      markSiteExposed(publicRows);
       res.set('Vary','Authorization, X-TLM-Email');
       return res.json({ok:true, locked:!canReveal, cache_only:true,
-        matches:withVerdict.filter(isPublicFootballScopeMatch).map(m=>homepageLiveMatch(m,canReveal))});
+        matches:publicRows.map(m=>homepageLiveMatch(m,canReveal))});
     }
     if (req.path === '/homepage-live') {
       const account = paidGoal05Account(req);
@@ -14220,6 +14303,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
           m.h2h_last3 = { sample_size: 3, over25_count: Number(h2h.last3Over25Count) };
         }
       }
+      markSiteExposed(publicMatches);
       res.set('Vary', 'Authorization, X-TLM-Email');
       return res.json({ok: true, locked: !canReveal,
         matches: publicMatches.map(m => homepageLiveMatch(m, canReveal))});
@@ -14265,6 +14349,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
     }
     const liveExpiry = liveAccount?.expires_at;
     const liveCanReveal = !!liveAccount && (!liveExpiry || (Number.isFinite(Date.parse(liveExpiry)) && Date.parse(liveExpiry) > Date.now()));
+    markSiteExposed(strictMatches);
     res.set('Vary', 'Authorization, X-TLM-Email, X-TLM-Code');
     res.json({ ok: true, locked: !liveCanReveal, matches: strictMatches.map(match => ({
       ...match,
@@ -19402,6 +19487,16 @@ app.get("/admin/scheduler-state", (req, res) => {
 // ===== End M007 =====
 
 // ===== M008: Data Guardian state =====
+// Compteur diagnostique persistant, agrege et sans identifiants de match.
+app.get("/admin/signal-funnel", (req, res) => {
+  try {
+    const jours = Math.min(7, Math.max(1, parseInt(req.query.jours, 10) || 7));
+    res.json(signalFunnel.report(jours));
+  } catch (e) {
+    res.status(500).json({ ok: false, error: "signal_funnel_unavailable" });
+  }
+});
+
 // Ou meurent les signaux : repartition des motifs de non-diffusion. Repond
 // factuellement a "pourquoi 0 signal payant aujourd'hui ?" — chaque motif
 // appelle une correction differente, et sans cette vue on corrige a l'aveugle.

@@ -1,0 +1,65 @@
+'use strict';
+const assert = require('assert');
+const { validateCaptureBatch, validateExtraction, classifyCandidate, fuseCouncilVotes } = require('./live_capture_analysis');
+
+function capture(category, overrides = {}) {
+  return { category, mimeType: 'image/jpeg', sizeBytes: 500000, dataUrl: 'data:image/jpeg;base64,AA==', ...overrides };
+}
+
+assert.deepStrictEqual(
+  validateCaptureBatch([capture('odds'), capture('odds'), capture('odds'), capture('stats')]),
+  { ok: true, oddsCount: 3, statsCount: 1, totalBytes: 2000000 },
+);
+assert.strictEqual(
+  validateCaptureBatch([capture('odds'), capture('odds'), capture('stats')]).error,
+  'Ajoutez une capture des cotes',
+);
+assert.strictEqual(
+  validateCaptureBatch([capture('odds'), capture('odds'), capture('odds'), capture('odds')]).error,
+  'Ajoutez une capture des statistiques',
+);
+assert.strictEqual(
+  validateCaptureBatch(Array.from({ length: 11 }, (_, i) => capture(i < 9 ? 'odds' : 'stats'))).error,
+  'Maximum 10 captures',
+);
+assert.strictEqual(
+  validateCaptureBatch([capture('odds'), capture('odds'), capture('odds'), capture('stats', { mimeType: 'image/svg+xml' })]).error,
+  'Format image non autorise',
+);
+
+const source = {
+  match: { home: 'Serbie', away: 'Pays-Bas', minute: 55, scoreHome: 1, scoreAway: 1 },
+  screenshots: [
+    { category: 'odds', bookmaker: 'Winamax' },
+    { category: 'odds', bookmaker: ' winamax ' },
+    { category: 'odds', bookmaker: 'WINAMAX' },
+    { category: 'stats' },
+  ],
+  markets: [{ market: '1X2', selection: 'away', odd: 1.8 }],
+};
+const extracted = validateExtraction(source);
+assert.strictEqual(extracted.ok, true);
+assert.strictEqual(extracted.bookmaker, 'Winamax');
+assert.strictEqual(
+  validateExtraction({ ...source, screenshots: [{ category: 'odds', bookmaker: 'A' }, { category: 'odds', bookmaker: 'B' }] }).error,
+  'Les captures de cotes doivent provenir du meme bookmaker',
+);
+
+assert.strictEqual(classifyCandidate(0.6, 1.8).label, 'VALUE');
+assert.strictEqual(classifyCandidate(0.55, 1.8).label, 'COHERENT');
+assert.strictEqual(classifyCandidate(0.4, 1.8).label, 'RISQUE');
+
+const verdict = fuseCouncilVotes([
+  { seat: 'internal-a', market: '1X2', selection: 'away', probability: 0.60 },
+  { seat: 'internal-b', market: '1X2', selection: 'away', probability: 0.58 },
+  { seat: 'internal-c', market: '1X2', selection: 'away', probability: 0.62 },
+  { seat: 'internal-d', market: '1X2', selection: 'draw', probability: 0.30 },
+  { seat: 'internal-e', market: '1X2', selection: 'away', probability: 0.56 },
+], [{ market: '1X2', selection: 'away', odd: 1.8 }]);
+assert.strictEqual(verdict.best.market, '1X2');
+assert.strictEqual(verdict.best.selection, 'away');
+assert.strictEqual(verdict.best.agreement, 4);
+assert.strictEqual(verdict.best.totalValidSeats, 5);
+assert.strictEqual(verdict.best.probability, 0.59);
+assert.strictEqual(JSON.stringify(verdict).includes('internal-a'), false);
+console.log('PASS live capture validation, bookmaker guard, labels and anonymous fusion');

@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('assert'),fs=require('fs');
+const api=fs.readFileSync('/app/scripts/api_server.js','utf8');
+const tg=fs.readFileSync('/app/scripts/telegram_client.js','utf8');
+const docker=fs.readFileSync('/app/Dockerfile.api','utf8');
+assert.match(docker,/COPY scripts\/signal_funnel_counter\.js \.\/signal_funnel_counter\.js/);
+assert.match(api,/createSignalFunnelCounter/);
+assert.match(api,/signalFunnel\.recordPipeline/);
+assert.match(api,/signalFunnel\.recordStage\(["']site_exposed["']/);
+assert.match(api,/['"]\/admin\/signal-funnel['"]/);
+assert.match(api,/signalFunnel\.report/);
+assert.match(api,/funnelCounter:\s*signalFunnel/);
+assert.match(tg,/funnelCounter/);
+assert.match(tg,/telegram_attempted/);
+assert.match(tg,/telegram_succeeded/);
+console.log('PASS signal funnel integration wiring');
