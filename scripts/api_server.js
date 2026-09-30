@@ -15954,8 +15954,9 @@ async function sendTransparentDailyRecap() {
   const at=Date.now();
   if(!telegramClient.recapDue(at))return false;
   const queued=clientTelegramPublisher.queueDailyRecap(telegramClient.parisParts(at).day);
+  const queuedPlus05=clientTelegramPublisher.queuePlus05Recap(telegramClient.parisParts(at).day);
   await clientTelegramPublisher.flush();
-  return queued;
+  return queued||queuedPlus05;
 }
 
 function winsSafe(rows) {

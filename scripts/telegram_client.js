@@ -83,6 +83,17 @@ function render(kind,data,dest) {
         :`📈 ${esc(data.favName)} a marqué dans ${esc(data.favScoredIn)}/5 derniers matchs (${esc(data.favGoals5)} buts) · adversaire : but encaissé dans ${esc(data.oppConcededIn)}/5`,
       ru?`📊 Таблица: ${esc(data.favRank)}-е место против ${esc(data.oppRank)}-го из ${esc(data.totalTeams)}`:`📊 Classement : ${esc(data.favRank)}e face à ${esc(data.oppRank)}e sur ${esc(data.totalTeams)}`,
       ru?'ℹ️ Коэффициент ориентировочный: проверьте его у своего оператора перед игрой.':'ℹ️ Cote indicative : vérifiez-la chez votre opérateur avant de jouer.');
+  } else if(kind==='plus05_recap') {
+    const rows=(data.rows||[]).filter(r=>r.outcome==='win'||r.outcome==='loss');
+    const wins=rows.filter(r=>r.outcome==='win').length,losses=rows.length-wins;
+    const net=rows.reduce((n,r)=>n+(r.outcome==='win'?10*(Number(r.odd)-1):-10),0);
+    const eurRub=Math.max(1,Number(process.env.EUR_RUB_DISPLAY_RATE||100));
+    lines=[`📊 <b>${ru?'ИТОГИ ДНЯ +0,5 ГОЛА':'BILAN DU JOUR +0,5 BUT'} — ${esc(data.day)}</b>`,
+      `${ru?'Результаты дня':'Résultats du jour'} : ${ru?'выиграно':'gagnés'} ${wins} · ${ru?'проиграно':'perdus'} ${losses}`,
+      ru?`💰 Условная ставка: ${10*eurRub} ₽ на сигнал · Чистый результат: ${net>=0?'+':''}${Math.round(net*eurRub)} ₽`:`💰 Mise théorique : 10 € par signal · Résultat net : ${net>=0?'+':''}${net.toFixed(2)} €`,
+      ru?'Расчёт — прозрачная симуляция на основе ориентировочных коэффициентов.':'Simulation transparente calculée avec les cotes indicatives relevées au moment du signal.'];
+    for(const r of rows.slice(0,25)) lines.push(`• ${esc(r.riskEmoji)} ${esc(r.home)} — ${esc(r.away)} : ${esc(r.scoreHome)}-${esc(r.scoreAway)} ${r.outcome==='win'?'✅':'❌'}${free?'':` · ${esc(r.favName)} +0,5 · ${ru?'коэф.':'cote'} ${Number(r.odd).toFixed(2)}`}`);
+    if(rows.length>25) lines.push(`… +${rows.length-25}`);
   } else if(kind==='plus05_result') {
     const won=data.outcome==='win';
     lines=[`${won?'✅':'❌'} <b>${ru?(won?'+0,5 ГОЛА: ВЫИГРЫШ':'+0,5 ГОЛА: ПРОИГРЫШ'):(won?'+0,5 BUT VALIDÉ':'+0,5 BUT NON VALIDÉ')}</b>`,match(),
@@ -212,11 +223,34 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
       if(unresolved)return false;
       const claim=db.prepare('INSERT OR IGNORE INTO client_recap_runs(day,queued_at) VALUES (?,?)').run(day,now());
       if(!claim.changes)return false;
+      // Circuit Over/Under 2,5 arrete le 30/09/2026 : aucun signal 2,5 ce jour-la, sur aucun salon = pas de bilan « aucun signal ».
+      if(targets.every(dest=>!recapRows(db,day,dest.channel).length))return false;
       for(const dest of targets) {
         const rows=recapRows(db,day,dest.channel);
         for(let i=0;i<Math.max(1,rows.length);i+=10)
           enqueue('recap',{day,rows:rows.slice(i,i+10),part:Math.floor(i/10)+1,parts:Math.max(1,Math.ceil(rows.length/10))},dest,`${day}:${i/10}`);
       }
+      return true;
+    }).immediate();
+  }
+
+  // Bilan quotidien de la strategie +0,5 but (30/09/2026) : uniquement les jours avec signaux reels,
+  // envoye une fois que tous les resultats du jour sont connus.
+  function plus05RecapRows(day) {
+    const b=parisDayBounds(day);
+    try { return db.prepare('SELECT * FROM plus05_signals WHERE dry_run=0 AND sent_at>=? AND sent_at<? ORDER BY sent_at').all(Date.parse(b.start),Date.parse(b.end)); }
+    catch { return []; }
+  }
+  function queuePlus05Recap(day=parisParts(now()).day) {
+    return db.transaction(()=>{
+      const rows=plus05RecapRows(day);
+      if(!rows.length||rows.some(r=>r.outcome==='pending'))return false;
+      const claim=db.prepare('INSERT OR IGNORE INTO client_recap_runs(day,queued_at) VALUES (?,?)').run('plus05:'+day,now());
+      if(!claim.changes)return false;
+      const emoji={vert:'🟢',orange:'🟠',rouge:'🔴'};
+      const data={day,rows:rows.map(r=>({home:r.home,away:r.away,favName:r.fav_name,outcome:r.outcome,odd:r.odd,
+        scoreHome:r.final_home,scoreAway:r.final_away,riskEmoji:emoji[r.risk_color]||'⚪'}))};
+      for(const dest of targets) enqueue('plus05_recap',data,dest,day);
       return true;
     }).immediate();
   }
@@ -262,7 +296,7 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
       return true;
     } finally {busy=false;}
   }
-  return {targets,enqueue,flush,queueDailyRecap};
+  return {targets,enqueue,flush,queueDailyRecap,queuePlus05Recap};
 }
 async function verifiedPrice(stripe,priceId) {
   const price=await stripe.prices.retrieve(priceId,{expand:['product']});
