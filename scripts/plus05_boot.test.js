@@ -7,7 +7,7 @@ const boot = require('./plus05_boot');
 
 function setup(envExtra = {}) {
   const routes = {};
-  const app = { get: (p, h) => { routes[p] = h; } };
+  const app = { get: (p, h) => { [].concat(p).forEach((x) => { routes[x] = h; }); } };
   const db = new Database(':memory:');
   const calls = { http: [] };
   const engine = boot({
@@ -28,6 +28,7 @@ test('routes admin et publique enregistrees, schema cree', () => {
   const { routes, db } = setup();
   assert.ok(routes['/admin/plus05-log']);
   assert.ok(routes['/api/plus05/stats']);
+  assert.ok(routes['/plus05/stats'], 'route sans prefixe /api (Caddy le retire)');
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((t) => t.name);
   assert.ok(tables.includes('plus05_signals') && tables.includes('plus05_watchlist'));
 });

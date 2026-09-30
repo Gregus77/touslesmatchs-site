@@ -1179,8 +1179,8 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <div class="tlm-hero-grid">
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
-          <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
-          <p class="tlm-hero-lead">Entre la 35e et la 45e minute, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 4 avis concordants sur 5 et les autres critères de qualité.</p>
+          <h1 id="hero-title">Votre signal<br>+0,5 but.<span class="hero-gradient">Le favori du top 5 face aux 5 derniers.</span></h1>
+          <p class="tlm-hero-lead">Une équipe du top 5 affronte une équipe du bas de tableau et n'a pas encore marqué : quand la cote de son +0,5 but atteint 1,60, 5 IA analysent le match. Le signal n'est validé qu'avec au moins 4 avis concordants sur 5 et les autres critères de qualité.</p>
           <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
@@ -1206,6 +1206,51 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     </section>
 
   </div>
+
+  <!-- Stratégie +0,5 but équipe favorite (30/09/2026) : annonce + résultats réels. L'historique Over/Under 2,5 reste intact. -->
+  <style>
+    .p05-banner{border:1px solid rgba(166,136,255,.4);background:rgba(138,104,255,.12);border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.55;color:var(--tx2);margin-bottom:16px}
+    .p05-banner strong{color:var(--violet2)}
+    #plus05-block{padding:22px 20px}
+    #plus05-block h2{margin:0 0 12px;font-size:21px}
+    .p05-stats{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+    .p05-stat{background:var(--panel2,rgba(255,255,255,.04));border:1px solid var(--b1);border-radius:10px;padding:10px 14px;min-width:92px}
+    .p05-stat b{display:block;font-size:22px;color:var(--tx)}.p05-stat span{font-size:12px;color:var(--muted)}
+    .p05-legend{font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.7}
+    .p05-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--b1);font-size:13.5px}
+    .p05-row small{display:block;color:var(--muted);font-size:12px}
+    .p05-empty{color:var(--muted);font-size:14px;line-height:1.6}
+    .p05-win{color:var(--green);font-weight:800}.p05-loss{color:var(--red);font-weight:800}
+  </style>
+  <div class="row row-hero" style="margin-top:16px">
+    <section class="card" id="plus05-block" aria-labelledby="p05-title">
+      <div class="p05-banner"><strong>Nouveau :</strong> nos signaux passent du Over/Under 2,5 au <b>+0,5 but de l'équipe favorite</b> (top 5 face aux 5 derniers). Les résultats Over/Under 2,5 restent consultables dans l'historique.</div>
+      <h2 id="p05-title">Signaux +0,5 but — résultats</h2>
+      <div class="p05-stats" id="p05-stats" aria-live="polite"></div>
+      <p class="p05-legend">🟢 Sûr : le favori a marqué dans ses 5 derniers matchs, avec 8 buts ou plus · 🟠 Moyen · 🔴 Risqué : 4 matchs sur 5 avec peu de buts. Cote indicative (marché en direct) : vérifiez-la chez votre opérateur. Aucun résultat n'est garanti.</p>
+      <div id="p05-list"></div>
+    </section>
+  </div>
+  <script>
+  (function(){
+    function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
+    var dot={vert:'🟢',orange:'🟠',rouge:'🔴'},res={win:['✅ Gagné','p05-win'],loss:['❌ Perdu','p05-loss'],pending:['⏳ En cours',''],'void':['Annulé','']};
+    fetch('/api/plus05/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+      if(!d||!d.ok)return;
+      var s=document.getElementById('p05-stats'),l=document.getElementById('p05-list');
+      [[d.total,'signaux'],[d.wins,'gagnés'],[d.losses,'perdus'],[d.winRatePct==null?'—':d.winRatePct+' %','réussite']].forEach(function(p){
+        var b=el('div','p05-stat');b.appendChild(el('b',0,String(p[0])));b.appendChild(el('span',0,p[1]));s.appendChild(b)});
+      if(!d.recent||!d.recent.length){l.appendChild(el('p','p05-empty','Les premiers signaux arrivent : les critères sont stricts (favori du top 5, adversaire du bas de tableau, forme récente, cote à 1,60, 4 IA sur 5). Comptez quelques signaux par semaine.'));return}
+      d.recent.forEach(function(x){
+        var row=el('div','p05-row'),a=el('div'),t=x.date?new Date(x.date):null;
+        a.appendChild(el('span',0,(dot[x.risk]||'⚪')));
+        var m=el('div');m.appendChild(el('strong',0,x.team+' +0,5 but'));
+        m.appendChild(el('small',0,(x.match||'')+' · '+(x.competition||'')+(t?' · '+t.toLocaleDateString('fr-FR'):'')+(x.finalScore?' · score '+x.finalScore:'')));
+        var r=res[x.outcome]||['',''],o=el('div',r[1],r[0]+(x.odd?' · cote '+Number(x.odd).toFixed(2):''));
+        row.appendChild(a);row.appendChild(m);row.appendChild(o);l.appendChild(row)});
+    }).catch(function(){});
+  })();
+  </script>
 
   <!-- Navigation légère : une seule rubrique est ouverte et chargée à la fois. -->
   <div class="row tlm-home-switcher-row" style="grid-template-columns:1fr">

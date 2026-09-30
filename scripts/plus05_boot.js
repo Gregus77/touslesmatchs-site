@@ -86,7 +86,8 @@ module.exports = function bootPlus05(ctx) {
   });
 
   // Statistiques publiques agregees (sans essais a blanc) pour le site.
-  app.get('/api/plus05/stats', (req, res) => {
+  // Caddy retire le prefixe /api : la route doit exister sans prefixe (et avec, pour un appel direct).
+  app.get(['/plus05/stats', '/api/plus05/stats'], (req, res) => {
     try {
       const r = engine.adminReport({ limit: 30 });
       res.json({ ok: true, total: r.total, wins: r.wins, losses: r.losses, pending: r.pending, winRatePct: r.winRatePct,
