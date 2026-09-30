@@ -55,3 +55,17 @@ test('reglages par variables d environnement', () => {
   assert.equal(b.flags.dryRun, false);
   assert.equal(b.leagues, 2);
 });
+
+test('la carte application est ecrite dans le fichier lu par /goal05/latest', async () => {
+  const fs = require('fs'), os = require('os'), path = require('path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'p05-'));
+  const file = path.join(dir, 'sub', 'goal05-latest-signal.json');
+  const { engine } = (() => { const r = setup({ GOAL05_LATEST_SIGNAL_FILE: file, PLUS05_DRY_RUN: '0' }); return { engine: r.engine }; })();
+  assert.ok(engine);
+  // le moteur ecrit via onSignal : on le declenche par le chemin reel (publication simulee)
+  const w = { fixture_id: '5', home: 'A', away: 'B', competition: 'L', fav_name: 'A', opp_name: 'B', side: 'home', fav_id: 1, fav_rank: 1, opp_rank: 20, total_teams: 20, fav_scored_in: 5, fav_goals5: 9, opp_conceded_in: 5 };
+  await engine._internals.publish(w, { minute: 60, score_home: 0, score_away: 1 }, { odd: 1.7 }, { yes: 5, total: 5, results: [] });
+  const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(saved.team, 'A');
+  assert.equal(saved.odd, 1.7);
+});

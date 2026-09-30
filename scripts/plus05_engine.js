@@ -24,7 +24,7 @@ const ENG = {
 
 function createPlus05Engine(deps) {
   const {
-    db, apiGet, fetchLiveMatches, callSeat, publisher,
+    db, apiGet, fetchLiveMatches, callSeat, publisher, onSignal = null,
     leagueIds = [], log = console, now = () => Date.now(),
     seats = ['Perplexity-Web', 'DeepSeek-V3', 'Mistral-Large', 'OpenRouter-Luna', 'OpenRouter-Qwen'],
     flags = () => ({ enabled: false, dryRun: true, requireHistory: true, sendResults: true }),
@@ -240,6 +240,27 @@ function createPlus05Engine(deps) {
       try { await publisher.flush(); } catch (e) { log.error('[plus05] flush', e.message); }
     }
     db.prepare('UPDATE plus05_signals SET delivered_channels=? WHERE fixture_id=?').run(JSON.stringify(delivered), w.fixture_id);
+    // Carte « dernier signal » de l'application (fichier lu par /goal05/latest) : jamais pour un essai a blanc.
+    if (!f.dryRun && typeof onSignal === 'function') {
+      try {
+        onSignal({
+          ok: true, id: `${w.fixture_id}_plus05`, type: 'plus05_favorite_team_over_0_5', status: 'active',
+          sentAt: new Date(now()).toISOString(), fixtureId: w.fixture_id, match: `${w.home} - ${w.away}`,
+          home: w.home, away: w.away, team: w.fav_name, opponent: w.opp_name, competition: w.competition,
+          minute: live.minute, score_home: live.score_home, score_away: live.score_away, odd: Number(quote.odd),
+          bet: `${w.fav_name} +0,5 but`, risk: risk.color,
+          meta: `${w.competition} · ${live.minute}' · niveau ${risk.label}`,
+          reason: 'Tous les critères sont validés',
+          checks: [
+            { ok: true, text: `Top 5 (${w.fav_rank}e) face aux 5 derniers (${w.opp_rank}e)` },
+            { ok: true, text: `${w.fav_name} a marqué dans ${w.fav_scored_in}/5 derniers matchs` },
+            { ok: true, text: `Adversaire : but encaissé dans ${w.opp_conceded_in}/5 derniers matchs` },
+            { ok: true, text: 'Attaquants disponibles · historique 4 saisons favorable' },
+            { ok: true, text: `Cote indicative ${Number(quote.odd).toFixed(2)} · ${votes.yes}/${votes.total} IA` },
+          ],
+        });
+      } catch (e) { log.error('[plus05] carte application', e.message); }
+    }
     log.log(`[plus05] SIGNAL ${f.dryRun ? '(essai a blanc) ' : ''}${w.fav_name} (${w.home}-${w.away}) cote ${quote.odd} votes ${votes.yes}/${votes.total}`);
     return { sent: true, dryRun: !!f.dryRun, delivered, data };
   }

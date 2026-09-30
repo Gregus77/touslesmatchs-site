@@ -15,6 +15,7 @@ const formFix = (teamId, list) => ({ response: list.map(([gf, ga], i) => ({ fixt
 function build(opts = {}) {
   const db = new Database(':memory:');
   const sent = [];
+  const signals = [];
   let clock = NOW;
   let odd = opts.odd ?? 1.65, liveGoals = opts.favGoals ?? 0, suspended = false;
   const calls = { seats: 0, apis: [] };
@@ -36,7 +37,7 @@ function build(opts = {}) {
     return { response: [] };
   };
   const eng = createPlus05Engine({
-    db, apiGet, now: () => clock, leagueIds: [39], log: { log() {}, error() {} },
+    db, apiGet, now: () => clock, onSignal: (s) => signals.push(s), leagueIds: [39], log: { log() {}, error() {} },
     fetchLiveMatches: async () => [{ fixtureId: String(FIX), minute: 58, score_home: liveGoals, score_away: 1 }],
     callSeat: async (seat) => { calls.seats++; const yes = (opts.yesVotes ?? 5) > ['Perplexity-Web', 'DeepSeek-V3', 'Mistral-Large', 'OpenRouter-Luna', 'OpenRouter-Qwen'].indexOf(seat); return { ok: true, text: `{"vote":"${yes ? 'OUI' : 'NON'}","confiance":70,"raison":"test"}` }; },
     publisher: {
@@ -46,7 +47,7 @@ function build(opts = {}) {
     },
     flags: () => ({ enabled: true, dryRun: opts.dryRun ?? false, requireHistory: true, sendResults: true }),
   });
-  return { db, eng, sent, calls, setOdd: (v) => { odd = v; }, advance: (ms) => { clock += ms; } };
+  return { db, eng, sent, signals, calls, setOdd: (v) => { odd = v; }, advance: (ms) => { clock += ms; } };
 }
 
 test('watchlist : le match top5 vs bottom5 est retenu avec pastille verte', async () => {
@@ -148,4 +149,22 @@ test('journal admin : les essais a blanc sont exclus par defaut', async () => {
   await eng.tick();
   assert.equal(eng.adminReport().total, 0);
   assert.equal(eng.adminReport({ includeDry: true }).total, 1);
+});
+
+test('carte application : alimentee a chaque signal reel, jamais en essai a blanc', async () => {
+  const real = build();
+  await real.eng.buildWatchlist('2026-10-03');
+  await real.eng.tick();
+  assert.equal(real.signals.length, 1);
+  const s = real.signals[0];
+  assert.equal(s.team, 'Alpha FC');
+  assert.equal(s.bet, 'Alpha FC +0,5 but');
+  assert.equal(s.odd, 1.65);
+  assert.equal(s.checks.length, 5);
+  assert.ok(s.checks.every((c) => c.ok && c.text));
+  assert.ok(Number.isFinite(Date.parse(s.sentAt)));
+  const dry = build({ dryRun: true });
+  await dry.eng.buildWatchlist('2026-10-03');
+  await dry.eng.tick();
+  assert.equal(dry.signals.length, 0);
 });

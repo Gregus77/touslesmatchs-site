@@ -56,7 +56,7 @@
 
 
   .goal05-home{position:relative;overflow:hidden;border:1px solid rgba(34,211,238,.30);border-radius:23px;padding:18px;margin:0 0 14px;background:linear-gradient(145deg,rgba(34,211,238,.13),rgba(124,58,237,.17) 62%,rgba(11,16,37,.82));box-shadow:0 18px 46px rgba(34,211,238,.12),inset 0 1px 0 rgba(255,255,255,.06)}
-  .goal05-home:after{content:"O/U 2,5";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
+  .goal05-home:after{content:"+0,5";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
   .goal05-kicker{position:relative;font-size:10px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
   .goal05-title{position:relative;margin:7px 0 8px;font-size:30px;line-height:.98;letter-spacing:-.065em;font-weight:1000;text-shadow:0 10px 26px rgba(0,0,0,.22)}
   .goal05-copy{position:relative;margin:0;color:#dbe4ff;font-size:13px;line-height:1.55}
@@ -644,7 +644,7 @@ body.tlm-page-app .btn{
 
   <section class="tlm-app-stadium-hero" aria-labelledby="app-hero-title">
     <div class="tlm-app-kicker">Football · Analyse live</div>
-    <h1 id="app-hero-title">Votre signal Over ou Under 2,5.<span>Décidé avant la mi-temps.</span></h1>
+    <h1 id="app-hero-title">Votre signal +0,5 but.<span>Le favori du top 5 face aux 5 derniers.</span></h1>
     <p class="tlm-app-copy">Les équipes, les logos, le score et les drapeaux ci-dessous viennent du match réellement en cours.</p>
     <div class="tlm-app-match" id="app-live-stage" aria-live="polite">
       <div class="tlm-app-match-head"><span class="tlm-app-live-label" id="app-live-status">Recherche du direct</span><strong class="tlm-app-minute" id="app-live-minute">—</strong></div>
@@ -668,7 +668,7 @@ body.tlm-page-app .btn{
 
   <!-- â•â• PERFORMANCES â•â• -->
   <section id="s-perf">
-    <h2>Résultats Over / Under 2,5</h2>
+    <h2>Historique Over / Under 2,5 (ancien circuit)</h2>
     <p class="sub">Historique des analyses. Les envois Telegram vérifiés sont distingués de l’ancien système.</p>
     <div class="kpis" id="perf-kpis"></div>
     <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
@@ -936,7 +936,7 @@ body.tlm-page-app .btn{
     var badge = hasSignal ? 'SIGNAL VALIDÉ' : 'SIGNAL EN ATTENTE';
     var badgeClass = hasSignal ? 'goal05-verdict-badge ok' : 'goal05-verdict-badge';
     var odd = hasSignal && signal.odd ? '@' + esc(signal.odd) : '@—';
-    var team = hasSignal ? esc(signal.team || 'Sélection Over / Under 2,5') : 'Aucun signal Over / Under 2,5 validé';
+    var team = hasSignal ? esc(signal.team || 'Sélection +0,5 but') : 'Aucun signal +0,5 but validé';
     var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Football uniquement · moteur en surveillance';
     var checks = hasSignal && signal.checks ? signal.checks : [
       { ok:false, text:'Écart historique favorable' },
@@ -960,7 +960,7 @@ body.tlm-page-app .btn{
   }
 
   function goal05MemberRow() {
-    return '<div class="offer-stack" aria-label="Accès Premium Over / Under 2,5"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">Over / Under 2,5 — Premium</div><div class="offer-desc">Tous les signaux admissibles et les alertes membres</div></div><div class="offer-price">14,90 €/mois</div></a></div>';
+    return '<div class="offer-stack" aria-label="Accès Premium +0,5 but"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">+0,5 but — Premium</div><div class="offer-desc">Tous les signaux admissibles et les alertes membres</div></div><div class="offer-price">14,90 €/mois</div></a></div>';
   }
 
   function renderGoal05Pick(signal) {
@@ -991,7 +991,7 @@ body.tlm-page-app .btn{
     if (!p) {
       var emptyHeroCta = document.querySelector('.tlm-app-cta');
       if (emptyHeroCta) emptyHeroCta.textContent = 'Voir le signal gratuit';
-      box.innerHTML = '<div class="tlm-app-pick-card tlm-app-empty-signal"><strong>Aucun signal gratuit validé pour le moment</strong>La carte apparaîtra uniquement lorsqu’un vrai signal Over ou Under 2,5 sera disponible.</div>';
+      box.innerHTML = '<div class="tlm-app-pick-card tlm-app-empty-signal"><strong>Aucun signal gratuit validé pour le moment</strong>La carte apparaîtra uniquement lorsqu’un vrai signal +0,5 but sera disponible.</div>';
       return;
     }
     var home = (p.teamA && p.teamA.name) || p.home || 'Équipe à domicile';

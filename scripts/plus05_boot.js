@@ -9,6 +9,8 @@
  *   PLUS05_LEAGUE_IDS=39,40 ... liste des championnats api-sports
  *   PLUS05_TICK_MS=120000   frequence de la boucle live
  */
+const fs = require('fs');
+const path = require('path');
 const { createPlus05Engine } = require('./plus05_engine');
 
 // Europe D1+D2, Norvege D1, Danemark D1+D2, Bresil, Argentine, Chili/Uruguay/Paraguay/Colombie D1, Japon, Coree K1.
@@ -55,7 +57,14 @@ module.exports = function bootPlus05(ctx) {
     return { ok: true, text };
   }
 
-  const engine = createPlus05Engine({ db, apiGet, fetchLiveMatches, callSeat, publisher, leagueIds, flags, log });
+  // Meme fichier que l'ancien module goal05 : /goal05/latest le sert a l'application (membres Premium uniquement).
+  const latestFile = env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(env.DB_PATH || '/data/tlm.db'), 'goal05-latest-signal.json');
+  const onSignal = (signal) => {
+    fs.mkdirSync(path.dirname(latestFile), { recursive: true });
+    fs.writeFileSync(latestFile, JSON.stringify(signal, null, 2));
+  };
+
+  const engine = createPlus05Engine({ db, apiGet, fetchLiveMatches, callSeat, publisher, onSignal, leagueIds, flags, log });
   engine.ensureSchema();
 
   const guarded = (name, fn) => async () => {
