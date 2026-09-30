@@ -27,30 +27,29 @@ test('bornes : 5e et 16e sur 20 acceptes, adversaire 15e refuse', () => {
   const ko = P.evaluatePreselection({ home: { rank: 5, form: fav5of5 }, away: { rank: 15, form: opp5of5 }, totalTeams: 20 });
   assert.equal(ko.eligible, false);
 });
-test('rejet : favori a marque 3/5 seulement', () => {
+// Depuis le 30/09/2026 la forme est un INDICATEUR (pastille) et non un filtre.
+test('forme faible : le match reste eligible, pastille rouge (favori 3/5)', () => {
   const f = F([[1, 0], [0, 0], [2, 1], [0, 1], [1, 1]]);
   const r = P.evaluatePreselection({ home: { rank: 1, form: f }, away: { rank: 20, form: opp5of5 }, totalTeams: 20 });
-  assert.equal(r.reason, 'favori_a_marque_moins_de_4_sur_5');
+  assert.equal(r.eligible, true);
+  assert.equal(r.risk.color, 'rouge');
 });
-test('rejet : favori 4/5 mais a blanchi au dernier match', () => {
+test('favori 4/5 sans but au dernier match : eligible (plus de filtre), pastille selon les buts', () => {
   const f = F([[0, 1], [1, 0], [2, 1], [1, 1], [3, 0]]);
   const r = P.evaluatePreselection({ home: { rank: 1, form: f }, away: { rank: 20, form: opp5of5 }, totalTeams: 20 });
-  assert.equal(r.reason, 'favori_na_pas_marque_dernier_match');
+  assert.equal(r.eligible, true);
+  assert.equal(r.risk.color, 'orange'); // 4/5 et 7 buts
 });
-test('rejet : adversaire sans but encaisse au dernier match', () => {
-  const o = F([[0, 0], [1, 3], [0, 1], [2, 2], [1, 1]]);
-  const r = P.evaluatePreselection({ home: { rank: 1, form: fav5of5 }, away: { rank: 20, form: o }, totalTeams: 20 });
-  assert.equal(r.reason, 'adversaire_na_pas_encaisse_dernier_match');
-});
-test('rejet : adversaire a encaisse 3/5', () => {
-  const o = F([[0, 2], [1, 0], [0, 1], [2, 0], [1, 1]]);
-  const r = P.evaluatePreselection({ home: { rank: 1, form: fav5of5 }, away: { rank: 20, form: o }, totalTeams: 20 });
-  assert.equal(r.reason, 'adversaire_a_encaisse_moins_de_4_sur_5');
-});
-test('adversaire 4/5 avec dernier encaisse : accepte', () => {
-  const o = F([[0, 2], [1, 0], [0, 1], [2, 2], [1, 1]]);
+test('adversaire sans but encaisse au dernier match ou 3/5 : eligible, statistiques conservees', () => {
+  const o = F([[0, 0], [1, 3], [0, 1], [2, 0], [1, 1]]);
   const r = P.evaluatePreselection({ home: { rank: 1, form: fav5of5 }, away: { rank: 20, form: o }, totalTeams: 20 });
   assert.equal(r.eligible, true);
+  assert.equal(r.oppStats.concededIn, 3);
+  assert.equal(r.oppStats.concededLast, false);
+});
+test('rejet : favori en dehors du top 5 meme avec une forme parfaite', () => {
+  const r = P.evaluatePreselection({ home: { rank: 7, form: fav5of5 }, away: { rank: 20, form: opp5of5 }, totalTeams: 20 });
+  assert.equal(r.reason, 'pas_top5_contre_5_derniers');
 });
 test('rejet : moins de 5 matchs disponibles (absent != zero)', () => {
   const r = P.evaluatePreselection({ home: { rank: 1, form: fav5of5.slice(0, 3) }, away: { rank: 20, form: opp5of5 }, totalTeams: 20 });
@@ -62,7 +61,8 @@ test('pastilles', () => {
   assert.equal(P.riskLevel(s(5, 7)).color, 'orange');
   assert.equal(P.riskLevel(s(4, 6)).color, 'orange');
   assert.equal(P.riskLevel(s(4, 5)).color, 'rouge');
-  assert.equal(P.riskLevel(s(3, 9)), null);
+  assert.equal(P.riskLevel(s(3, 9)).color, 'rouge');
+  assert.equal(P.riskLevel({ played: 3, scoredIn: 3, totalGoals: 9 }), null, 'forme incomplete : pas de pastille');
 });
 
 const entry = (over) => ({

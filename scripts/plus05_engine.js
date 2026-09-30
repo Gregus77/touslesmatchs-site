@@ -253,8 +253,8 @@ function createPlus05Engine(deps) {
           reason: 'Tous les critères sont validés',
           checks: [
             { ok: true, text: `Top 5 (${w.fav_rank}e) face aux 5 derniers (${w.opp_rank}e)` },
-            { ok: true, text: `${w.fav_name} a marqué dans ${w.fav_scored_in}/5 derniers matchs` },
-            { ok: true, text: `Adversaire : but encaissé dans ${w.opp_conceded_in}/5 derniers matchs` },
+            { ok: w.fav_scored_in >= 4, text: `${w.fav_name} a marqué dans ${w.fav_scored_in}/5 derniers matchs` },
+            { ok: w.opp_conceded_in >= 4, text: `Adversaire : but encaissé dans ${w.opp_conceded_in}/5 derniers matchs` },
             { ok: true, text: 'Attaquants disponibles · historique 4 saisons favorable' },
             { ok: true, text: `Cote indicative ${Number(quote.odd).toFixed(2)} · ${votes.yes}/${votes.total} IA` },
           ],

@@ -4,7 +4,8 @@
  * Module pur (aucune I/O) : toutes les donnees sont injectees, donc testable.
  *
  * Preselection : favori dans le top 5 du championnat, adversaire dans les 5
- * dernieres places. Forme = 5 derniers matchs de CHAMPIONNAT, plus recent d'abord.
+ * dernieres places. Forme = 5 derniers matchs de CHAMPIONNAT, plus recent d'abord :
+ * INDICATEUR (pastille de risque) et non filtre depuis le 30/09/2026 (simulation 60 jours).
  * Declenchement live : le favori n'a pas encore marque, cote +0,5 >= 1,60,
  * marche non suspendu, cote fraiche, quorum Concile >= 4/5.
  */
@@ -13,8 +14,6 @@ const CFG = {
   topN: 5,
   bottomN: 5,
   formWindow: 5,
-  favMinScored: 4, // favori : a marque dans >= 4 des 5 derniers
-  oppMinConceded: 4, // adversaire : a encaisse dans >= 4 des 5 derniers
   minOdd: 1.6,
   minVotes: 4, // sur 5 IA du Concile
   minMinute: 30, // fenetre live (ajustable)
@@ -51,15 +50,17 @@ function opponentFormStats(matches) {
   };
 }
 
-/** Pastille de risque. Retourne null si le favori n'est pas eligible (< 4/5). */
+/**
+ * Pastille de risque (INDICATEUR, plus un filtre — decision du 30/09/2026 apres simulation sur 60 jours).
+ * Retourne null seulement si la forme est incomplete (moins de 5 matchs connus).
+ */
 function riskLevel(favStats) {
   if (!favStats || favStats.played < CFG.formWindow) return null;
   const { scoredIn, totalGoals } = favStats;
   if (scoredIn === 5 && totalGoals >= CFG.greenMinGoals) return { color: 'vert', emoji: '🟢', label: 'Sûr' };
   if (scoredIn === 5) return { color: 'orange', emoji: '🟠', label: 'Moyen' };
   if (scoredIn === 4 && totalGoals >= CFG.orangeMinGoals4of5) return { color: 'orange', emoji: '🟠', label: 'Moyen' };
-  if (scoredIn === 4) return { color: 'rouge', emoji: '🔴', label: 'Risqué' };
-  return null;
+  return { color: 'rouge', emoji: '🔴', label: 'Risqué' };
 }
 
 /**
@@ -90,10 +91,8 @@ function evaluatePreselection({ home, away, totalTeams }) {
 
   if (favStats.played < CFG.formWindow) return reject('forme_favori_incomplete');
   if (oppStats.played < CFG.formWindow) return reject('forme_adversaire_incomplete');
-  if (favStats.scoredIn < CFG.favMinScored) return reject('favori_a_marque_moins_de_4_sur_5');
-  if (!favStats.scoredLast) return reject('favori_na_pas_marque_dernier_match');
-  if (oppStats.concededIn < CFG.oppMinConceded) return reject('adversaire_a_encaisse_moins_de_4_sur_5');
-  if (!oppStats.concededLast) return reject('adversaire_na_pas_encaisse_dernier_match');
+  // La forme (4/5, dernier match...) n'est plus un filtre : la simulation sur 60 jours montrait que ces
+  // filtres retiraient ~9 cas sur 10 sans ameliorer la reussite. Elle alimente la pastille de risque.
 
   return {
     eligible: true,

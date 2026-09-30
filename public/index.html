@@ -1227,7 +1227,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <div class="p05-banner"><strong>Nouveau :</strong> nos signaux passent du Over/Under 2,5 au <b>+0,5 but de l'équipe favorite</b> (top 5 face aux 5 derniers). Les résultats Over/Under 2,5 restent consultables dans l'historique.</div>
       <h2 id="p05-title">Signaux +0,5 but — résultats</h2>
       <div class="p05-stats" id="p05-stats" aria-live="polite"></div>
-      <p class="p05-legend">🟢 Sûr : le favori a marqué dans ses 5 derniers matchs, avec 8 buts ou plus · 🟠 Moyen · 🔴 Risqué : 4 matchs sur 5 avec peu de buts. Cote indicative (marché en direct) : vérifiez-la chez votre opérateur. Aucun résultat n'est garanti.</p>
+      <p class="p05-legend">🟢 Sûr : le favori a marqué dans ses 5 derniers matchs, avec 8 buts ou plus · 🟠 Moyen · 🔴 Risqué : peu de buts récents. La forme est un indicateur, pas un filtre. Cote indicative (marché en direct) : vérifiez-la chez votre opérateur. Aucun résultat n'est garanti.</p>
       <div id="p05-list"></div>
     </section>
   </div>
@@ -1240,7 +1240,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       var s=document.getElementById('p05-stats'),l=document.getElementById('p05-list');
       [[d.total,'signaux'],[d.wins,'gagnés'],[d.losses,'perdus'],[d.winRatePct==null?'—':d.winRatePct+' %','réussite']].forEach(function(p){
         var b=el('div','p05-stat');b.appendChild(el('b',0,String(p[0])));b.appendChild(el('span',0,p[1]));s.appendChild(b)});
-      if(!d.recent||!d.recent.length){l.appendChild(el('p','p05-empty','Les premiers signaux arrivent : les critères sont stricts (favori du top 5, adversaire du bas de tableau, forme récente, cote à 1,60, 4 IA sur 5). Comptez quelques signaux par semaine.'));return}
+      if(!d.recent||!d.recent.length){l.appendChild(el('p','p05-empty','Les premiers signaux arrivent : les critères sont stricts (favori du top 5, adversaire du bas de tableau, attaquants présents, cote à 1,60, 4 IA sur 5). Comptez quelques signaux par semaine.'));return}
       d.recent.forEach(function(x){
         var row=el('div','p05-row'),a=el('div'),t=x.date?new Date(x.date):null;
         a.appendChild(el('span',0,(dot[x.risk]||'⚪')));
