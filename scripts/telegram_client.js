@@ -67,6 +67,27 @@ function render(kind,data,dest) {
     lines=ru?['📘 <b>Как читать сигналы TousLesMatchs</b>','Футбол: тотал больше 2,5 означает минимум 3 гола; тотал меньше 2,5 — максимум 2 гола за основное время.','Прогноз публикуется только при соблюдении действующих критериев качества. Голосование ИИ не гарантирует результат.','Бесплатный канал: знакомство с сервисом, руководства и анонсы. Premium: все допустимые сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается.']:['📘 <b>Lire les signaux TousLesMatchs</b>','Football : Over 2,5 signifie au moins 3 buts ; Under 2,5 signifie au maximum 2 buts dans le temps réglementaire.','Un signal doit respecter les critères qualité actifs. Le vote IA ne garantit aucun résultat.','Gratuit : présentation, guides et aperçus. Premium : tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum de signaux par jour n’est promis.'];
   } else if(kind==='reminder'||kind==='nopick') {
     lines=ru?['💎 <b>TousLesMatchs Premium</b>','Бесплатный канал: знакомство с сервисом и руководства.','Premium: все допустимые футбольные сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается. Мы не публикуем сигнал ради количества.']:['💎 <b>TousLesMatchs Premium</b>','Gratuit : présentation du service et guides.','Premium : tous les signaux de football admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum quotidien promis. Aucun signal forcé.'];
+  } else if(kind==='plus05') {
+    // Strategie "+0,5 but equipe favorite" (30/09/2026). Gratuit = signal detecte, Premium = selection et cote.
+    const riskRu={vert:'Надёжный',orange:'Средний',rouge:'Рискованный'}[data.riskColor]||esc(data.riskLabel);
+    const riskText=ru?riskRu:esc(data.riskLabel);
+    lines=[`🎯 <b>${ru?'СИГНАЛ +0,5 ГОЛА':'SIGNAL +0,5 BUT'}${free?(ru?' ОБНАРУЖЕН':' DÉTECTÉ'):''}</b>`,match(),`🏆 ${esc(data.competition)}`,
+      `⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,
+      `🧠 ${ru?'Голосование ИИ':'Vote IA'} : ${esc(data.votes)}/${esc(data.votesTotal||5)}`,
+      `${esc(data.riskEmoji)} ${ru?'Уровень риска':'Niveau de risque'} : <b>${riskText}</b>`];
+    if (free) lines.push(ru?'🔒 Команда и коэффициент доступны только подписчикам Premium.':'🔒 L’équipe ciblée et la cote sont réservées aux membres Premium.');
+    else lines.push(
+      `💡 ${ru?'Прогноз':'Sélection'} : <b>${esc(data.favName)} ${ru?'забьёт минимум 1 гол':'marque au moins 1 but'}</b>`,
+      `💰 ${ru?'Ориентировочный коэффициент':'Cote indicative'} : <b>${esc(data.odd)}</b> (${ru?'live-рынок':'marché live'})`,
+      ru?`📈 ${esc(data.favName)} забивал в ${esc(data.favScoredIn)} из 5 последних матчей (${esc(data.favGoals5)} голов) · соперник пропускал в ${esc(data.oppConcededIn)} из 5`
+        :`📈 ${esc(data.favName)} a marqué dans ${esc(data.favScoredIn)}/5 derniers matchs (${esc(data.favGoals5)} buts) · adversaire : but encaissé dans ${esc(data.oppConcededIn)}/5`,
+      ru?`📊 Таблица: ${esc(data.favRank)}-е место против ${esc(data.oppRank)}-го из ${esc(data.totalTeams)}`:`📊 Classement : ${esc(data.favRank)}e face à ${esc(data.oppRank)}e sur ${esc(data.totalTeams)}`,
+      ru?'ℹ️ Коэффициент ориентировочный: проверьте его у своего оператора перед игрой.':'ℹ️ Cote indicative : vérifiez-la chez votre opérateur avant de jouer.');
+  } else if(kind==='plus05_result') {
+    const won=data.outcome==='win';
+    lines=[`${won?'✅':'❌'} <b>${ru?(won?'+0,5 ГОЛА: ВЫИГРЫШ':'+0,5 ГОЛА: ПРОИГРЫШ'):(won?'+0,5 BUT VALIDÉ':'+0,5 BUT NON VALIDÉ')}</b>`,match(),
+      `⚽ ${ru?'Итоговый счёт':'Score final'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,
+      ru?`🎯 ${esc(data.favName)}: голов забито — ${esc(data.favGoals)}`:`🎯 ${esc(data.favName)} : ${esc(data.favGoals)} but${Number(data.favGoals)>1?'s':''} marqué${Number(data.favGoals)>1?'s':''}`];
   } else throw new Error('Unknown client template');
   if(free || ['reminder','nopick','guide'].includes(kind)) {
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :

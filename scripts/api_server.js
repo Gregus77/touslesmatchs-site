@@ -19900,3 +19900,13 @@ app.post('/internal/openrouter/v1/chat/completions',async(req,res)=>{
   if(require('./ai_budget_guard').backgroundPaused())return res.status(429).json({error:{message:'Paid background calls paused; client signals have priority'}});
   try {const r=await httpPost('https://openrouter.ai/api/v1/chat/completions',req.body,{Authorization:`Bearer ${OPENROUTER_API_KEY}`},90000);res.status(r._httpStatus||200).json(r);}catch(_){res.status(503).json({error:{message:'Provider unavailable'}});}
 });
+
+// ── +0,5 but équipe favorite (décision propriétaire du 30/09/2026) ───────────
+// Pipeline isolé : aucun effet tant que PLUS05_ENABLED n'est pas "1".
+try {
+  require('./plus05_boot')({
+    app, db, httpGet, httpPost, resolveModel, fetchLiveMatches, isAdminAccess,
+    publisher: clientTelegramPublisher, parisParts: telegramClient.parisParts,
+    env: { ...process.env, API_SPORTS_KEY }, log: console,
+  });
+} catch (e) { console.error('[plus05] initialisation impossible:', e.message); }

@@ -51,5 +51,9 @@ COPY scripts/beta_waitlist.js ./beta_waitlist.js
 COPY scripts/hermes_mail_bot.js ./hermes_mail_bot.js
 COPY scripts/tlm_learning_safe.js ./tlm_learning_safe.js
 
+COPY scripts/plus05_favorite.js ./plus05_favorite.js
+COPY scripts/plus05_engine.js ./plus05_engine.js
+COPY scripts/plus05_boot.js ./plus05_boot.js
+
 EXPOSE 3001
 CMD ["node", "server.js"]
