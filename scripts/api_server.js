@@ -11014,6 +11014,40 @@ function sendGoal05Latest(req, res) {
 
 app.get("/goal05/latest", sendGoal05Latest);
 app.get("/api/goal05/latest", sendGoal05Latest);
+
+// ── Radar +0,5 but (01/10/2026) ──────────────────────────────────────────────
+// Top 5 contre 5 derniers, alerte Telegram quand la cote en direct de l'equipe
+// du haut atteint 1,60. Logique complete dans scripts/radar05.js.
+const radar05 = require("./radar05").createRadar05({
+  db, httpGet, apiKey: API_SPORTS_KEY, publisher: clientTelegramPublisher, env: process.env,
+  shouldSkip: shouldSkipApiSportsSport, handleErrors: handleApiSportsErrors,
+  extraExclude: (m) => isWomenMatch(m) ? "feminin"
+    : isCategoryBanned(m) ? "categorie_exclue"
+    : isUsaOrCanadaMatch(m) ? "usa_canada" : null,
+});
+function sendRadar05(req, res) {
+  res.set("Cache-Control", "private, no-store");
+  res.set("Vary", "Authorization, X-TLM-Email");
+  res.json(radar05.view(!!paidGoal05Account(req)));
+}
+app.get("/radar05", sendRadar05);
+app.get("/api/radar05", sendRadar05);
+app.get("/admin/radar05", (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  res.json(radar05.adminState());
+});
+app.get("/admin/radar05/odds-probe", async (req, res) => {
+  const { email, code, fixture } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!/^\d+$/.test(String(fixture || ""))) return res.status(400).json({ ok: false, error: "fixture requis" });
+  res.json(await radar05.probeOdds(fixture));
+});
+app.post("/admin/radar05/run", async (req, res) => {
+  const { email, code } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  res.json({ ok: true, cycle: await radar05.runCycle() });
+});
 app.get("/beta-plus05/status", (req, res) => {
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
   res.json({ ok:true, enabled:FOUNDER_BETA_ENABLED, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:0 });
@@ -19840,6 +19874,7 @@ app.listen(PORT, () => {
     ) * 60 * 1000;
     setTimeout(runGoal05PushObserver, 60000);
     setInterval(runGoal05PushObserver, goal05PushIntervalMs);
+    radar05.start();
     console.log(
       "[fcm] Observateur autonome actif: " +
       Math.round(goal05PushIntervalMs / 60000) +

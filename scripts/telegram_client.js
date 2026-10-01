@@ -67,6 +67,18 @@ function render(kind,data,dest) {
     lines=ru?['📘 <b>Как читать сигналы TousLesMatchs</b>','Футбол: тотал больше 2,5 означает минимум 3 гола; тотал меньше 2,5 — максимум 2 гола за основное время.','Прогноз публикуется только при соблюдении действующих критериев качества. Голосование ИИ не гарантирует результат.','Бесплатный канал: знакомство с сервисом, руководства и анонсы. Premium: все допустимые сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается.']:['📘 <b>Lire les signaux TousLesMatchs</b>','Football : Over 2,5 signifie au moins 3 buts ; Under 2,5 signifie au maximum 2 buts dans le temps réglementaire.','Un signal doit respecter les critères qualité actifs. Le vote IA ne garantit aucun résultat.','Gratuit : présentation, guides et aperçus. Premium : tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum de signaux par jour n’est promis.'];
   } else if(kind==='reminder'||kind==='nopick') {
     lines=ru?['💎 <b>TousLesMatchs Premium</b>','Бесплатный канал: знакомство с сервисом и руководства.','Premium: все допустимые футбольные сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается. Мы не публикуем сигнал ради количества.']:['💎 <b>TousLesMatchs Premium</b>','Gratuit : présentation du service et guides.','Premium : tous les signaux de football admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum quotidien promis. Aucun signal forcé.'];
+  } else if(kind==='radar05') {
+    // Radar +0,5 but : le canal Gratuit voit les deux equipes mais ni l'equipe
+    // visee ni la cote ; Premium recoit la selection complete.
+    const scoreLine=`⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`;
+    const form=(name,rank,played,gf,ga)=>`${esc(name)} : ${ru?'место':'n°'}${esc(rank)} · ${esc(gf)} ${ru?'забито':'buts marqués'}, ${esc(ga)} ${ru?'пропущено':'encaissés'} ${ru?'в':'en'} ${esc(played)} ${ru?'матчах':'matchs'}`;
+    lines=[`📡 <b>${ru?'РАДАР +0,5 ГОЛА':'RADAR +0,5 BUT'} — ${free?(ru?'СИГНАЛ ОБНАРУЖЕН':'SIGNAL DÉTECTÉ'):'GO'}</b>`,match(),`🏆 ${esc(data.competition)}`,scoreLine];
+    if(free) lines.push(ru?'🎯 Радар обнаружил возможность на рынке «команда забьёт минимум 1 гол» для одной из этих двух команд.':'🎯 Le radar a détecté une opportunité sur le marché « +0,5 but » pour l’une de ces deux équipes.',
+      ru?'🔒 Название команды и коэффициент доступны только подписчикам Premium.':'🔒 L’équipe concernée et la cote sont réservées aux membres Premium.');
+    else lines.push(`🎯 ${ru?'Целевая команда':'Équipe ciblée'} : <b>${esc(data.team)}</b> — <b>${ru?'забьёт минимум 1 гол (+0,5)':'+0,5 but'}</b>`,
+      `💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`,
+      `📈 ${form(data.team,data.teamRank,data.teamPlayed,data.teamGf,data.teamGa)}`,
+      `📉 ${form(data.opponent,data.opponentRank,data.opponentPlayed,data.opponentGf,data.opponentGa)}`);
   } else throw new Error('Unknown client template');
   if(free || ['reminder','nopick','guide'].includes(kind)) {
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :

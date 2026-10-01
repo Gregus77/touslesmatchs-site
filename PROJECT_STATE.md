@@ -188,3 +188,12 @@ bash scripts/deploy.sh
 
 *Cette page se met à jour à chaque fin de session significative. Toute IA
 qui modifie l'état du projet doit mettre à jour ce fichier avant de conclure.*
+
+## 📡 Radar +0,5 but (01/10/2026) — code livré, à déployer
+
+- **Règle (fondateur)** : match de championnat 1re/2e division (tous pays), hors femmes, U17-U23, réserves, coupes, compétitions continentales/internationales, USA/Canada. Équipe du **top 5** contre équipe des **5 derniers** → surveillance. Marché : **l'équipe du haut marque au moins 1 but (+0,5)**, cote en direct. Surveillance dès 1,30, **GO à 1,60** (double lecture), pas de plafond, **une seule alerte par match et par canal**.
+- **Code** : `scripts/radar05.js` (module isolé), branché dans `api_server.js` (routes `/radar05`, `/admin/radar05`, `/admin/radar05/odds-probe`, `/admin/radar05/run`), modèle Telegram `radar05` dans `telegram_client.js`. Tests : `node --no-warnings scripts/test_radar05_20261001.js`.
+- **Telegram** : Gratuit = les deux équipes sans l'équipe visée ni la cote + lien Premium ; Premium = équipe, cote, stats.
+- **Zéro appel IA**, quota API-Sports plafonné (`RADAR05_DAILY_BUDGET`, 2500/jour). Coupure : `RADAR05_ENABLED=0`.
+- **À vérifier au 1er déploiement** : libellé réel du marché « total équipe » dans `/odds/live` → `/admin/radar05/odds-probe?fixture=ID` sur un match en cours. Non testé contre la vraie API (pas de clé en dev).
+- Hors ARJEL assumé : le fondateur a demandé de « trouver la cote » sans restriction (R3 vise les jetons IA, le radar n'en consomme pas).
