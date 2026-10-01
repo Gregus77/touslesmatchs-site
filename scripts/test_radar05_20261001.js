@@ -100,7 +100,7 @@ const standingsResp = { response: [{ league: { standings: [Array.from({ length: 
 async function scenario(name, steps, check) {
   const db = openDb();
   let step = 0, calls = [];
-  const queued = [];
+  const queued = [], gos = [];
   const publisher = {
     targets: [{ channel: 'free', lang: 'fr', tier: 'free', id: '-1' }, { channel: 'premium', lang: 'fr', tier: 'premium', id: '-2' }],
     enqueue: (kind, data, dest, key, exp) => { const k = `${kind}:${key}:${dest.id}`; if (queued.find(q => q.k === k)) return false; queued.push({ k, kind, data, dest, exp }); return true; },
@@ -119,9 +119,9 @@ async function scenario(name, steps, check) {
     if (url.includes('/odds/live')) return cur.odds ? (typeof cur.odds === 'function' ? cur.odds() : cur.odds) : { response: [] };
     throw new Error('url inattendue ' + url);
   };
-  const r = radar.createRadar05({ db, httpGet, apiKey: 'k', publisher, env: {}, log: quiet, config: { coldEvery: 1 } });
+  const r = radar.createRadar05({ db, httpGet, apiKey: 'k', publisher, env: {}, log: quiet, config: { coldEvery: 1 }, onGo: (r, f, d) => { gos.push({ r, f, d }); } });
   for (step = 0; step < steps.length; step++) await r.runCycle();
-  check({ r, db, queued, calls });
+  check({ r, db, queued, calls, gos });
   console.log('  ok -', name);
 }
 const h2hResp = (n, scored) => ({ response: Array.from({ length: n }, (_, i) => ({ fixture: { status: { short: 'FT' } }, teams: { home: { id: 1 }, away: { id: 18 } }, goals: { home: i < scored ? 1 : 0, away: 0 } })) });
@@ -139,7 +139,9 @@ const row = db => db.prepare('SELECT * FROM radar05_signals').all();
     { fixtures: [apiFixture(1, '2H', 65, 0, 1)], odds: oddsResp(1.70) },       // pas de 2e alerte
     { fixtures: [apiFixture(1, '2H', 70, 1, 1)] },                              // l'equipe marque
     { fixtures: [apiFixture(1, 'FT', 90, 2, 1)] },
-  ], ({ db, queued, r }) => {
+  ], ({ db, queued, r, gos }) => {
+    assert.equal(gos.length, 1, 'le GO alimente aussi la notification application, une seule fois');
+    assert.equal(gos[0].r.target_name, 'Paris FC'); assert.equal(gos[0].d.odd, '1.62');
     const [x] = row(db);
     assert.equal(x.target_side, 'home'); assert.equal(x.state, 'go');
     assert.equal(x.watch_odd, 1.35); assert.equal(x.go_odd, 1.62); assert.equal(x.go_minute, 62);

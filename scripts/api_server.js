@@ -3245,6 +3245,10 @@ async function buildStrictGoal05Criteria(match) {
 }
 
 async function enrichStrictGoal05(matches) {
+  // Decision du fondateur (01/10/2026) : on garde le moteur le moins restrictif,
+  // le radar (scripts/radar05.js). Le moteur strict ne tourne plus sauf si
+  // GOAL05_STRICT_ENABLED=1.
+  if (process.env.GOAL05_STRICT_ENABLED !== "1") return matches;
   const candidates=matches.filter(m=>{
     const minute=Number(m.minute||0);
     const hs=Number(m.score_home||0),as=Number(m.score_away||0);
@@ -11021,6 +11025,14 @@ app.get("/api/goal05/latest", sendGoal05Latest);
 const radar05 = require("./radar05").createRadar05({
   db, httpGet, apiKey: API_SPORTS_KEY, publisher: clientTelegramPublisher, env: process.env,
   shouldSkip: shouldSkipApiSportsSport, handleErrors: handleApiSportsErrors,
+  // Chaque GO du radar alimente aussi la notification de l'application et
+  // /goal05/latest (meme cle de deduplication que l'ancien moteur).
+  onGo: (row, fx, data) => publishStrictGoal05Signals([{
+    fixtureId: row.fixture_id, home: row.home, away: row.away, competition: row.competition,
+    minute: fx.minute, score_home: fx.goalsHome, score_away: fx.goalsAway,
+    goal05Criteria: { eligible: true, play: true, team: row.target_name, opponent: row.opponent_name,
+      liveOdd: Number(data.odd), reasonText: "Signal radar +0,5 but : cote atteinte", source: "radar05" },
+  }]),
   extraExclude: (m) => isWomenMatch(m) ? "feminin"
     : isCategoryBanned(m) ? "categorie_exclue"
     : isUsaOrCanadaMatch(m) ? "usa_canada" : null,
@@ -11988,7 +12000,7 @@ async function publishStrictGoal05Signals(matches) {
       score_away: Number(match.score_away || 0),
       odd: Number(criteria.liveOdd || 0),
       bet: team + " +0,5 but",
-      reason: "Tous les critères stricts sont validés",
+      reason: criteria.reasonText || "Tous les critères stricts sont validés",
       checks: criteria
     };
 
@@ -19872,8 +19884,10 @@ app.listen(PORT, () => {
       2,
       Number(process.env.GOAL05_PUSH_INTERVAL_MIN || 5)
     ) * 60 * 1000;
-    setTimeout(runGoal05PushObserver, 60000);
-    setInterval(runGoal05PushObserver, goal05PushIntervalMs);
+    if (process.env.GOAL05_STRICT_ENABLED === "1") {
+      setTimeout(runGoal05PushObserver, 60000);
+      setInterval(runGoal05PushObserver, goal05PushIntervalMs);
+    }
     radar05.start();
     console.log(
       "[fcm] Observateur autonome actif: " +

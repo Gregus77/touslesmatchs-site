@@ -235,7 +235,7 @@ function createRadar05(deps) {
   const {
     db, httpGet, apiKey, publisher, extraExclude,
     shouldSkip = () => false, handleErrors = () => false,
-    env = {}, now = Date.now, log = console,
+    env = {}, now = Date.now, log = console, onGo = null,
   } = deps;
   const cfg = { ...defaultConfig(env), ...(deps.config || {}) };
   const HOST = 'https://v3.football.api-sports.io';
@@ -480,6 +480,8 @@ function createRadar05(deps) {
       .run(now(), odd, fx.minute ?? null, fx.goalsHome ?? 0, fx.goalsAway ?? 0, queued, now(), row.fixture_id);
     log.log(`[radar05] GO ${row.home} - ${row.away}: ${row.target_name} +0,5 but a ${odd} (min ${fx.minute}) -> ${queued} envoi(s) en file`);
     if (publisher) publisher.flush().catch(e => log.error('[radar05] flush:', e.message));
+    // Canaux annexes (notification de l'application) : un echec ne bloque jamais le radar.
+    if (onGo) { try { await onGo(row, fx, data); } catch (e) { log.error('[radar05] onGo:', e.message); } }
   }
 
   async function pollOdds(row, fx) {
