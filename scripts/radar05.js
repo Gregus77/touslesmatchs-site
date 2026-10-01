@@ -63,6 +63,10 @@ function defaultConfig(env = {}) {
     maxOddsPerCycle: n('RADAR05_MAX_ODDS_PER_CYCLE', 15),
     coldEvery: Math.max(1, n('RADAR05_COLD_EVERY', 3)),
     alertTtlMs: n('RADAR05_ALERT_TTL_MIN', 10) * 60 * 1000,
+    announceBeforeMin: n('RADAR05_ANNOUNCE_BEFORE_MIN', 120),
+    maxAnnouncePerCycle: n('RADAR05_MAX_ANNOUNCE_PER_CYCLE', 3),
+    greenFrom: n('RADAR05_GREEN_FROM', 6),
+    yellowFrom: n('RADAR05_YELLOW_FROM', 4),
   };
 }
 
@@ -180,6 +184,52 @@ function parseStandings(data) {
   return out.length ? out : null;
 }
 
+// ── Confiance : pastille verte / jaune / rouge ───────────────────────────────
+// Quatre controles notes de 0 a 2. Un controle impossible a verifier vaut 1
+// (neutre) et reste affiche comme « non verifie » : on ne fabrique jamais de
+// certitude. La pastille n'empeche pas l'alerte, elle dit si le radar est
+// confiant ou non.
+const ratio = (a, b) => (b > 0 ? a / b : null);
+
+function scoreH2h(fixtures, targetId) {
+  const done = (fixtures || []).filter(f => FINISHED.has(String(f.fixture?.status?.short || '').toUpperCase()));
+  const played = done.length;
+  if (played < 3) return { points: null, played };
+  const scored = done.filter(f => ((Number(f.teams?.home?.id) === Number(targetId) ? f.goals?.home : f.goals?.away) || 0) > 0).length;
+  const r = scored / played;
+  return { points: r >= 0.8 ? 2 : r >= 0.6 ? 1 : 0, scored, played };
+}
+function scoreScoring(stats) {
+  const played = Number(stats?.played) || 0;
+  if (played < 1) return { points: null };
+  const failed = Number(stats.failed) || 0;
+  const r = failed / played;
+  return { points: r <= 0.15 ? 2 : r <= 0.30 ? 1 : 0, failed, played };
+}
+function scoreHistory(pairs) {
+  if (!pairs || !pairs.length) return { points: null, total: 0 };
+  const confirmed = pairs.filter(p => p.target < p.opponent).length;
+  const total = pairs.length;
+  return { points: confirmed === total && total >= 2 ? 2 : confirmed * 2 >= total ? 1 : 0, confirmed, total };
+}
+function scoreAttackers({ forwards = null, missing = null }) {
+  if (forwards == null && missing == null) return { points: null };
+  let points;
+  if (forwards != null) { points = forwards >= 2 ? 2 : forwards === 1 ? 1 : 0; if (missing != null && missing >= 2) points = Math.min(points, 1); }
+  else points = missing === 0 ? 2 : missing === 1 ? 1 : 0;
+  return { points, forwards, missing };
+}
+function summarizeConfidence(parts, cfg) {
+  const total = Object.values(parts).reduce((n, p) => n + (p?.points ?? 1), 0);
+  const level = total >= cfg.greenFrom ? 'green' : total >= cfg.yellowFrom ? 'yellow' : 'red';
+  return { level, score: total, max: 8 };
+}
+
+const kickoffLabel = iso => {
+  try { return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); }
+  catch { return ''; }
+};
+
 // ── Fabrique ─────────────────────────────────────────────────────────────────
 function createRadar05(deps) {
   const {
@@ -204,11 +254,15 @@ function createRadar05(deps) {
       watch_at INTEGER, watch_odd REAL,
       go_at INTEGER, go_odd REAL, go_minute INTEGER, go_score_home INTEGER, go_score_away INTEGER, queued INTEGER DEFAULT 0,
       outcome TEXT, final_score_home INTEGER, final_score_away INTEGER, finished INTEGER DEFAULT 0,
+      announced INTEGER DEFAULT 0, conf_level TEXT, conf_score INTEGER, conf_detail TEXT,
       created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS radar05_state ON radar05_signals(state, day);
     CREATE TABLE IF NOT EXISTS radar05_usage (day TEXT PRIMARY KEY, count INTEGER DEFAULT 0);
   `);
+  for (const col of ['announced INTEGER DEFAULT 0', 'conf_level TEXT', 'conf_score INTEGER', 'conf_detail TEXT']) {
+    if (!db.prepare('PRAGMA table_info(radar05_signals)').all().some(r => r.name === col.split(' ')[0])) db.exec(`ALTER TABLE radar05_signals ADD COLUMN ${col}`);
+  }
 
   const tables = new Map();        // league_season -> {ts, groups}
   const rejected = new Map();      // fixtureId -> reason (memoire du jour)
@@ -311,19 +365,108 @@ function createRadar05(deps) {
     }
   }
 
+  const squads = new Map(); // teamId -> {ts, byName}
+
+  async function fetchPartsFull(row) {
+    const targetId = row.target_side === 'home' ? row.home_id : row.away_id;
+    const oppId = row.target_side === 'home' ? row.away_id : row.home_id;
+    const safe = async fn => { try { return await fn(); } catch (e) { log.error('[radar05] confiance:', e.message); return null; } };
+    const [h2h, stats, history] = await Promise.all([
+      safe(async () => { const d = await call(`/fixtures/headtohead?h2h=${row.home_id}-${row.away_id}&last=10`); return d ? scoreH2h(d.response, targetId) : { points: null }; }),
+      safe(async () => {
+        const d = await call(`/teams/statistics?league=${row.league_id}&season=${row.season}&team=${targetId}`);
+        const r = d?.response;
+        return r?.fixtures ? scoreScoring({ played: r.fixtures.played?.total, failed: r.failed_to_score?.total }) : { points: null };
+      }),
+      safe(async () => {
+        const pairs = [];
+        for (const back of [1, 2]) {
+          const { groups } = await getTable(row.league_id, row.season - back, { allowFetch: true });
+          const g = (groups || []).find(x => x.some(t => Number(t.teamId) === Number(targetId)) && x.some(t => Number(t.teamId) === Number(oppId)));
+          if (!g) continue;
+          pairs.push({ target: g.find(t => Number(t.teamId) === Number(targetId)).rank, opponent: g.find(t => Number(t.teamId) === Number(oppId)).rank });
+        }
+        return scoreHistory(pairs);
+      }),
+    ]);
+    return { h2h: h2h || { points: null }, scoring: stats || { points: null }, history: history || { points: null } };
+  }
+
+  // Attaquants : composition officielle si elle est publiee (en general ~1 h
+  // avant le coup d'envoi), sinon croisement blesses x effectif (poste Attacker).
+  async function fetchAttackers(row) {
+    const targetId = row.target_side === 'home' ? row.home_id : row.away_id;
+    let forwards = null, missing = null;
+    try {
+      const lu = await call(`/fixtures/lineups?fixture=${row.fixture_id}`);
+      const mine = (lu?.response || []).find(l => Number(l.team?.id) === Number(targetId));
+      if (mine?.startXI?.length) forwards = mine.startXI.filter(p => String(p.player?.pos || '').toUpperCase() === 'F').length;
+    } catch (e) { log.error('[radar05] compo:', e.message); }
+    try {
+      const inj = await call(`/injuries?fixture=${row.fixture_id}`);
+      if (inj) {
+        let sq = squads.get(targetId);
+        if (!sq || now() - sq.ts > 24 * 3600e3) {
+          const d = await call(`/players/squads?team=${targetId}`);
+          sq = { ts: now(), byId: new Map((d?.response?.[0]?.players || []).map(p => [Number(p.id), String(p.position || '')])) };
+          squads.set(targetId, sq);
+        }
+        const mineInj = (inj.response || []).filter(i => Number(i.team?.id) === Number(targetId));
+        missing = sq.byId.size ? mineInj.filter(i => /attacker|forward/i.test(sq.byId.get(Number(i.player?.id)) || '')).length : null;
+      }
+    } catch (e) { log.error('[radar05] blesses:', e.message); }
+    return scoreAttackers({ forwards, missing });
+  }
+
+  // full=true : calcul complet (annonce) ; sinon seuls les attaquants sont
+  // relus (juste avant un GO) car blesses et composition evoluent.
+  async function computeConfidence(row, full) {
+    let parts = row.conf_detail ? JSON.parse(row.conf_detail) : null;
+    if (!parts || full) parts = { ...(await fetchPartsFull(row)), attackers: parts?.attackers || { points: null } };
+    parts.attackers = await fetchAttackers(row);
+    const sum = summarizeConfidence(parts, cfg);
+    db.prepare('UPDATE radar05_signals SET conf_level=?, conf_score=?, conf_detail=?, updated_at=? WHERE fixture_id=?')
+      .run(sum.level, sum.score, JSON.stringify(parts), now(), row.fixture_id);
+    return { ...sum, parts };
+  }
+
+  async function announce(row, fx) {
+    const conf = await computeConfidence(row, true);
+    const data = buildAlertData({ ...row, conf_level: conf.level, conf_score: conf.score, conf_detail: JSON.stringify(conf.parts) }, fx, null);
+    let queued = 0;
+    if (publisher) {
+      const expiresAt = now() + cfg.alertTtlMs * 3;
+      for (const dest of publisher.targets) {
+        try { if (publisher.enqueue('radar05watch', data, dest, row.fixture_id, expiresAt)) queued++; }
+        catch (e) { log.error('[radar05] enqueue annonce:', e.message); }
+      }
+    }
+    db.prepare('UPDATE radar05_signals SET announced=1, updated_at=? WHERE fixture_id=?').run(now(), row.fixture_id);
+    log.log(`[radar05] annonce ${row.home} - ${row.away}: pastille ${conf.level} (${conf.score}/8) -> ${queued} envoi(s)`);
+    if (publisher) publisher.flush().catch(e => log.error('[radar05] flush:', e.message));
+  }
+
   function buildAlertData(row, fx, odd) {
     return {
       home: row.home, away: row.away, competition: row.competition,
       minute: fx.minute ?? '?', scoreHome: fx.goalsHome ?? 0, scoreAway: fx.goalsAway ?? 0,
-      team: row.target_name, opponent: row.opponent_name, odd: Number(odd).toFixed(2),
+      team: row.target_name, opponent: row.opponent_name, odd: odd == null ? null : Number(odd).toFixed(2),
       teamRank: row.target_rank, opponentRank: row.opponent_rank,
       teamPlayed: row.target_played, teamGf: row.target_gf, teamGa: row.target_ga,
       opponentPlayed: row.opponent_played, opponentGf: row.opponent_gf, opponentGa: row.opponent_ga,
+      kickoff: kickoffLabel(row.kickoff),
+      confidence: row.conf_level ? { level: row.conf_level, score: row.conf_score, max: 8, parts: row.conf_detail ? JSON.parse(row.conf_detail) : {} } : null,
     };
   }
 
   async function fireGo(row, fx, odd) {
-    const data = buildAlertData(row, fx, odd);
+    // Relecture des attaquants juste avant d'envoyer (composition / blesses).
+    let fresh = row;
+    try {
+      const conf = await computeConfidence(row, !row.conf_detail);
+      fresh = { ...row, conf_level: conf.level, conf_score: conf.score, conf_detail: JSON.stringify(conf.parts) };
+    } catch (e) { log.error('[radar05] confiance GO:', e.message); }
+    const data = buildAlertData(fresh, fx, odd);
     let queued = 0;
     if (publisher) {
       const expiresAt = now() + cfg.alertTtlMs; // une alerte perimee ne part jamais
@@ -364,6 +507,7 @@ function createRadar05(deps) {
   async function track(fixtureById) {
     const open = db.prepare("SELECT * FROM radar05_signals WHERE state IN ('candidate','watching','go') AND finished=0").all();
     const toPoll = [];
+    let announced = 0;
     for (const row of open) {
       const fx = fixtureById.get(row.fixture_id);
       if (!fx) {
@@ -381,6 +525,10 @@ function createRadar05(deps) {
         continue;
       }
       if (tGoals > 0) { setState(row.fixture_id, 'done', 'equipe_visee_a_marque'); continue; }
+      if (!row.announced && announced < cfg.maxAnnouncePerCycle && Date.parse(row.kickoff) - now() <= cfg.announceBeforeMin * 60000) {
+        announced++;
+        try { await announce(row, fx); } catch (e) { log.error('[radar05] annonce:', e.message); }
+      }
       if ((fx.minute ?? 0) > cfg.maxMinute) { setState(row.fixture_id, 'done', 'minute_depassee'); continue; }
       if (LIVE_POLL.has(fx.status)) toPoll.push({ row, fx });
     }
@@ -444,8 +592,8 @@ function createRadar05(deps) {
       ok: true, locked: !paid, day, generated_at: new Date(now()).toISOString(),
       matches: rows.map(r => ({
         match: `${r.home} - ${r.away}`, competition: r.competition, kickoff: r.kickoff,
-        state: r.state, minute: r.last_minute,
-        ...(paid ? { team: r.target_name, rank: r.target_rank, opponent_rank: r.opponent_rank, odd: r.last_odd, go_odd: r.go_odd, outcome: r.outcome } : {}),
+        state: r.state, minute: r.last_minute, confidence: r.conf_level || null,
+        ...(paid ? { team: r.target_name, rank: r.target_rank, opponent_rank: r.opponent_rank, odd: r.last_odd, go_odd: r.go_odd, outcome: r.outcome, confidence_detail: r.conf_detail ? JSON.parse(r.conf_detail) : null } : {}),
       })),
       stats: stats(),
     };
@@ -488,4 +636,5 @@ function createRadar05(deps) {
 module.exports = {
   createRadar05, defaultConfig, staticExclusion, evaluateStandings, extractTeamOver05,
   normalizeFixture, parseStandings, EXCLUDED_COMPETITION_RE, LOWER_TIER_RE,
+  scoreH2h, scoreScoring, scoreHistory, scoreAttackers, summarizeConfidence,
 };

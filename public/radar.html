@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Radar +0,5 but — TousLesMatchs</title>
+<meta name="description" content="Le radar surveille tous les championnats : une équipe du top 5 face à une équipe du bas de tableau. Le signal n'est confirmé que lorsque la cote atteint 1,60.">
+<style>
+:root{--bg:#12152a;--bg2:#171b34;--bg3:#1e2340;--text:#f7f8ff;--muted:#949bc4;--muted2:#c4c9e6;--green:#1cc98f;--red:#f6546b;--amber:#f7a91e;--cyan:#33dcf5;--indigo:#7275ff;--b1:rgba(255,255,255,.11)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+main{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+a{color:var(--cyan)}
+h1{font-size:24px;margin:8px 0 6px}
+.sub{color:var(--muted2);font-size:14px;line-height:1.5;margin:0 0 16px}
+.banner{background:var(--bg3);border:1px solid var(--b1);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-size:14px;line-height:1.5;color:var(--muted2)}
+.banner b{color:var(--text)}
+.stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.stat{flex:1 1 130px;background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:10px 12px}
+.stat span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.stat strong{font-size:20px}
+.card{background:var(--bg3);border:1px solid var(--b1);border-radius:16px;padding:16px;margin-bottom:12px}
+.card.go{border-color:var(--green)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.match{font-weight:800;font-size:16px}
+.comp{color:var(--muted);font-size:12px;margin-top:2px}
+.dot{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:inline-block;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+.dot.green{background:var(--green)}.dot.yellow{background:var(--amber)}.dot.red{background:var(--red)}.dot.none{background:var(--muted)}
+.tag{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;margin-top:10px;background:rgba(114,117,255,.18);color:var(--indigo)}
+.tag.watching{background:rgba(247,169,30,.18);color:var(--amber)}
+.tag.go{background:rgba(28,201,143,.18);color:var(--green)}
+.wait{margin-top:10px;font-size:13px;line-height:1.5;color:var(--muted2)}
+.lock{margin-top:10px;font-size:13px;color:var(--muted2)}
+.cta{display:inline-block;margin-top:8px;padding:9px 14px;border-radius:10px;background:var(--indigo);color:#fff;font-weight:800;font-size:13px;text-decoration:none}
+.detail{margin:10px 0 0;padding:0;list-style:none;font-size:13px;color:var(--muted2);line-height:1.7}
+.empty{text-align:center;color:var(--muted);padding:32px 12px;font-size:14px}
+.legend{font-size:12px;color:var(--muted);margin:14px 0}
+.legal{margin-top:24px;font-size:12px;color:var(--muted);line-height:1.5}
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/">← Accueil</a></p>
+  <h1>📡 Radar +0,5 but</h1>
+  <p class="sub">Tous les championnats, toute la journée : le radar repère une équipe du <b>top 5</b> face à une équipe des <b>5 derniers</b>, puis suit la cote en direct.</p>
+  <div class="banner">⏳ <b>Patience :</b> aucun signal n'est confirmé tant que la cote de l'équipe visée n'a pas atteint <b>1,60</b>. Une fois la cote atteinte, l'alerte <b>GO</b> passe ici et sur Telegram.</div>
+  <div class="stats" id="stats"></div>
+  <div id="list"><div class="empty">Chargement…</div></div>
+  <p class="legend">🟢 confiance élevée · 🟡 confiance moyenne · 🔴 confiance faible — d'après le face-à-face, les matchs sans marquer, les saisons précédentes et la présence des attaquants.</p>
+  <p class="legal">⚠️ 18+ — Jeu responsable. Aucun gain garanti. Ces informations sont une aide à l'analyse, pas une promesse de résultat. <a href="https://www.joueurs-info-service.fr" rel="noopener">joueurs-info-service.fr</a></p>
+</main>
+<script>
+(function(){
+  var LEVEL={green:'élevée',yellow:'moyenne',red:'faible'};
+  var STATE={candidate:['À surveiller',''],watching:['Cote en hausse — surveillance renforcée','watching'],go:['GO — cote 1,60 atteinte','go']};
+  var MARK=function(p){return p==null?'❔':p>=2?'✅':p===1?'➖':'⚠️';};
+  function headers(){
+    var h={Accept:'application/json'};
+    try{
+      var t=localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_token')||localStorage.getItem('tlm_session')||'';
+      var e=localStorage.getItem('tlm_email')||'';
+      if(t)h.Authorization='Bearer '+t;
+      if(e)h['X-TLM-Email']=e;
+    }catch(_){}
+    return h;
+  }
+  function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+  function hour(iso){try{return new Date(iso).toLocaleTimeString('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});}catch(_){return '';}}
+  function details(d){
+    if(!d)return null;
+    var ul=el('ul','detail');
+    function li(t){ul.appendChild(el('li',null,t));}
+    if(d.h2h)li(MARK(d.h2h.points)+' Face-à-face : '+(d.h2h.points==null?'non vérifié':'but dans '+d.h2h.scored+'/'+d.h2h.played+' confrontations'));
+    if(d.scoring)li(MARK(d.scoring.points)+' Matchs sans marquer cette saison : '+(d.scoring.points==null?'non vérifié':d.scoring.failed+'/'+d.scoring.played));
+    if(d.history)li(MARK(d.history.points)+' Saisons précédentes : '+(d.history.points==null?'non vérifié':'hiérarchie confirmée '+d.history.confirmed+'/'+d.history.total));
+    if(d.attackers)li(MARK(d.attackers.points)+' Attaquants : '+(d.attackers.points==null?'non vérifié':d.attackers.forwards!=null?d.attackers.forwards+' titulaire(s) annoncé(s)':d.attackers.missing+' absent(s)'));
+    return ul;
+  }
+  function card(m,locked){
+    var c=el('div','card'+(m.state==='go'?' go':''));
+    var top=el('div','row'),left=el('div');
+    left.appendChild(el('div','match',m.match));
+    left.appendChild(el('div','comp',m.competition+(m.kickoff?' · '+hour(m.kickoff):'')));
+    top.appendChild(left);
+    var dot=el('span','dot '+(m.confidence||'none'));
+    dot.title='Confiance : '+(LEVEL[m.confidence]||'en cours de calcul');
+    top.appendChild(dot);
+    c.appendChild(top);
+    var st=STATE[m.state]||STATE.candidate;
+    c.appendChild(el('span','tag '+st[1],st[0]));
+    if(locked){
+      var lk=el('div','lock','🔒 L\'équipe visée, la cote et le détail de la confiance sont réservés aux membres Premium.');
+      var a=el('a','cta','Voir l\'offre Premium');a.href='/#plans';
+      lk.appendChild(document.createElement('br'));lk.appendChild(a);
+      c.appendChild(lk);
+    }else{
+      c.appendChild(el('div','wait','🎯 Équipe visée : '+m.team+' (n°'+m.rank+' contre n°'+m.opponent_rank+')'+(m.odd?' · cote actuelle : '+Number(m.odd).toFixed(2):'')));
+      if(m.state!=='go')c.appendChild(el('div','wait','⏳ Attendez que la cote atteigne 1,60 avant d\'agir.'));
+      else c.appendChild(el('div','wait','✅ Cote atteinte'+(m.go_odd?' ('+Number(m.go_odd).toFixed(2)+')':'')+(m.outcome==='win'?' — but marqué':m.outcome==='loss'?' — pas de but':'')+'.'));
+      var d=details(m.confidence_detail);if(d)c.appendChild(d);
+    }
+    return c;
+  }
+  function render(data){
+    var s=data.stats||{},stats=document.getElementById('stats');
+    stats.textContent='';
+    [['Signaux GO',s.signals],['Réussis',s.wins],['Taux de réussite',s.hit_rate==null?'—':s.hit_rate+' %']].forEach(function(x){
+      var b=el('div','stat');b.appendChild(el('span',null,x[0]));b.appendChild(el('strong',null,x[1]==null?'0':String(x[1])));stats.appendChild(b);
+    });
+    var list=document.getElementById('list');list.textContent='';
+    if(!data.matches||!data.matches.length){list.appendChild(el('div','empty','Aucun match sous surveillance pour le moment. Le radar continue de scruter les championnats.'));return;}
+    data.matches.forEach(function(m){list.appendChild(card(m,data.locked));});
+  }
+  function load(){
+    fetch('/api/radar05',{headers:headers(),cache:'no-store'}).then(function(r){return r.json();}).then(render).catch(function(){
+      var l=document.getElementById('list');l.textContent='';l.appendChild(el('div','empty','Radar momentanément indisponible.'));
+    });
+  }
+  load();setInterval(load,60000);
+})();
+</script>
+</body>
+</html>

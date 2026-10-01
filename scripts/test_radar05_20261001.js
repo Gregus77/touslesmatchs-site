@@ -90,7 +90,7 @@ assert.equal(radar.extractTeamOver05(named, teams, 'away').odd, null);
 
 // ── 4. Cycle complet avec fausse API ─────────────────────────────────────────
 function apiFixture(id, status, minute, gh, ga, over = {}) {
-  return { fixture: { id, date: '2026-10-01T18:00:00+02:00', status: { short: status, elapsed: minute } },
+  return { fixture: { id, date: new Date(Date.now() + 30 * 60000).toISOString(), status: { short: status, elapsed: minute } },
     league: { id: 61, name: 'Ligue 1', country: 'France', season: 2026, round: 'Regular Season - 8' },
     teams: { home: { id: 1, name: 'Paris FC' }, away: { id: 18, name: 'Le Havre' } },
     goals: { home: gh, away: ga }, ...over };
@@ -111,6 +111,11 @@ async function scenario(name, steps, check) {
     const cur = steps[Math.min(step, steps.length - 1)];
     if (url.includes('/fixtures?date=')) return { response: cur.fixtures };
     if (url.includes('/standings')) return standingsResp;
+    if (url.includes('/fixtures/headtohead')) return cur.h2h || h2hResp(8, 7);
+    if (url.includes('/teams/statistics')) return cur.stats || { response: { fixtures: { played: { total: 10 } }, failed_to_score: { total: 1 } } };
+    if (url.includes('/injuries')) return cur.injuries || { response: [] };
+    if (url.includes('/players/squads')) return { response: [{ players: [{ id: 7, position: 'Attacker' }, { id: 8, position: 'Midfielder' }] }] };
+    if (url.includes('/fixtures/lineups')) return cur.lineups || { response: [] };
     if (url.includes('/odds/live')) return cur.odds ? (typeof cur.odds === 'function' ? cur.odds() : cur.odds) : { response: [] };
     throw new Error('url inattendue ' + url);
   };
@@ -119,6 +124,9 @@ async function scenario(name, steps, check) {
   check({ r, db, queued, calls });
   console.log('  ok -', name);
 }
+const h2hResp = (n, scored) => ({ response: Array.from({ length: n }, (_, i) => ({ fixture: { status: { short: 'FT' } }, teams: { home: { id: 1 }, away: { id: 18 } }, goals: { home: i < scored ? 1 : 0, away: 0 } })) });
+const lineupResp = fw => ({ response: [{ team: { id: 1 }, startXI: [...Array(fw).fill(0).map(() => ({ player: { pos: 'F' } })), ...Array(11 - fw).fill(0).map(() => ({ player: { pos: 'M' } }))] }] });
+const goOnly = q => q.filter(x => x.kind === 'radar05');
 const oddsResp = odd => ({ response: [{ odds: [{ name: 'Home Team Total Goals', values: [{ value: 'Over', handicap: '0.5', odd: String(odd) }] }] }] });
 const row = db => db.prepare('SELECT * FROM radar05_signals').all();
 
@@ -136,9 +144,12 @@ const row = db => db.prepare('SELECT * FROM radar05_signals').all();
     assert.equal(x.target_side, 'home'); assert.equal(x.state, 'go');
     assert.equal(x.watch_odd, 1.35); assert.equal(x.go_odd, 1.62); assert.equal(x.go_minute, 62);
     assert.equal(x.outcome, 'win'); assert.equal(x.final_score_home, 2);
-    assert.equal(queued.length, 2, 'une alerte par canal, jamais plus');
-    assert(queued.every(q => q.kind === 'radar05' && q.data.team === 'Paris FC' && q.data.odd === '1.62'));
-    assert(queued.every(q => q.exp - Date.now() < 11 * 60 * 1000), 'alerte a duree de vie courte');
+    const go = goOnly(queued), watch = queued.filter(q => q.kind === 'radar05watch');
+    assert.equal(go.length, 2, 'une alerte GO par canal, jamais plus');
+    assert.equal(watch.length, 2, 'une annonce « a surveiller » par canal, jamais plus');
+    assert(go.every(q => q.data.team === 'Paris FC' && q.data.odd === '1.62' && q.data.confidence.level === 'green' && q.data.confidence.score === 8));
+    assert(watch.every(q => q.data.odd === null && q.data.team === 'Paris FC'));
+    assert(go.every(q => q.exp - Date.now() < 11 * 60 * 1000), 'alerte a duree de vie courte');
     const st = r.stats(); assert.equal(st.signals, 1); assert.equal(st.wins, 1); assert.equal(st.hit_rate, 100);
   });
 
@@ -154,30 +165,30 @@ const row = db => db.prepare('SELECT * FROM radar05_signals').all();
     { fixtures: [apiFixture(3, 'NS', null, null, null)] },
     { fixtures: [apiFixture(3, '2H', 70, 0, 0)], odds: (() => { let n = 0; return () => oddsResp(n++ % 2 === 0 ? 1.80 : 1.45); })() },
   ], ({ db, queued }) => {
-    assert.equal(queued.length, 0); assert.notEqual(row(db)[0].state, 'go');
+    assert.equal(goOnly(queued).length, 0); assert.notEqual(row(db)[0].state, 'go');
   });
 
   await scenario('l\'equipe marque avant la cote : jamais de signal', [
     { fixtures: [apiFixture(4, 'NS', null, null, null)] },
     { fixtures: [apiFixture(4, '1H', 20, 1, 0)], odds: oddsResp(1.90) },
   ], ({ db, queued }) => {
-    assert.equal(queued.length, 0); assert.equal(row(db)[0].state, 'done');
+    assert.equal(goOnly(queued).length, 0); assert.equal(row(db)[0].state, 'done');
   });
 
   await scenario('le but de l\'adversaire ne gene pas : GO a 0-1', [
     { fixtures: [apiFixture(5, 'NS', null, null, null)] },
     { fixtures: [apiFixture(5, '2H', 60, 0, 1)], odds: oddsResp(1.65) },
-  ], ({ queued }) => assert.equal(queued.length, 2));
+  ], ({ queued }) => assert.equal(goOnly(queued).length, 2));
 
   await scenario('passe la minute max : pas de GO', [
     { fixtures: [apiFixture(6, 'NS', null, null, null)] },
     { fixtures: [apiFixture(6, '2H', 88, 0, 0)], odds: oddsResp(3.0) },
-  ], ({ queued }) => assert.equal(queued.length, 0));
+  ], ({ queued }) => assert.equal(goOnly(queued).length, 0));
 
   await scenario('mi-temps : aucune interrogation de cotes', [
     { fixtures: [apiFixture(7, 'NS', null, null, null)] },
     { fixtures: [apiFixture(7, 'HT', 45, 0, 0)], odds: oddsResp(2.0) },
-  ], ({ queued, calls }) => { assert.equal(queued.length, 0); assert(!calls.some(u => u.includes('/odds/live'))); });
+  ], ({ queued, calls }) => { assert.equal(goOnly(queued).length, 0); assert(!calls.some(u => u.includes('/odds/live'))); });
 
   await scenario('match exclu (coupe) et match du milieu de tableau : ignores, un seul appel classement', [
     { fixtures: [
@@ -192,7 +203,7 @@ const row = db => db.prepare('SELECT * FROM radar05_signals').all();
 
   await scenario('plafond de classements par cycle respecte', Array.from({ length: 1 }, () => ({
     fixtures: Array.from({ length: 30 }, (_, i) => apiFixture(100 + i, 'NS', null, null, null, { league: { id: 1000 + i, name: 'Liga ' + i, country: 'Pays' + i, season: 2026, round: 'RS' } })),
-  })), ({ calls }) => assert(calls.filter(u => u.includes('/standings')).length <= 12));
+  })), ({ calls }) => assert(calls.filter(u => u.includes('/standings') && u.includes('season=2026')).length <= 12));
 
   await scenario('match reporte : ferme sans signal', [
     { fixtures: [apiFixture(10, 'NS', null, null, null)] },
@@ -209,10 +220,63 @@ const row = db => db.prepare('SELECT * FROM radar05_signals').all();
     assert.equal(paid.matches[0].team, 'Paris FC'); assert.equal(paid.matches[0].state, 'go');
   });
 
+  await scenario('pastille rouge : mauvais face-a-face, attaque muette, aucun attaquant titulaire', [
+    { fixtures: [apiFixture(12, 'NS', null, null, null)], h2h: h2hResp(8, 1), stats: { response: { fixtures: { played: { total: 10 } }, failed_to_score: { total: 5 } } }, lineups: lineupResp(0) },
+  ], ({ queued, db }) => {
+    const w = queued.filter(q => q.kind === 'radar05watch');
+    assert.equal(w.length, 2); assert.equal(w[0].data.confidence.level, 'red');
+    assert.equal(w[0].data.confidence.parts.h2h.points, 0); assert.equal(w[0].data.confidence.parts.attackers.points, 0);
+    assert.equal(row(db)[0].conf_level, 'red');
+  });
+
+  await scenario('attaquants relus juste avant le GO : vert a l\'annonce, jaune au GO', [
+    { fixtures: [apiFixture(13, 'NS', null, null, null)], stats: { response: { fixtures: { played: { total: 10 } }, failed_to_score: { total: 3 } } }, lineups: lineupResp(3) },
+    { fixtures: [apiFixture(13, '2H', 60, 0, 0)], odds: oddsResp(1.40), stats: { response: { fixtures: { played: { total: 10 } }, failed_to_score: { total: 3 } } }, lineups: lineupResp(3) },
+    { fixtures: [apiFixture(13, '2H', 66, 0, 0)], odds: oddsResp(1.70), lineups: lineupResp(0), injuries: { response: [{ team: { id: 1 }, player: { id: 7 } }] } },
+  ], ({ queued }) => {
+    const w = queued.find(q => q.kind === 'radar05watch'), g = queued.find(q => q.kind === 'radar05');
+    assert.equal(w.data.confidence.level, 'green'); assert.equal(w.data.confidence.score, 7);
+    assert.equal(g.data.confidence.level, 'yellow'); assert.equal(g.data.confidence.parts.attackers.points, 0);
+  });
+
+  await scenario('blesse attaquant identifie via l\'effectif quand la composition n\'est pas publiee', [
+    { fixtures: [apiFixture(14, 'NS', null, null, null)], injuries: { response: [{ team: { id: 1 }, player: { id: 7 } }, { team: { id: 1 }, player: { id: 8 } }, { team: { id: 18 }, player: { id: 7 } }] } },
+  ], ({ queued }) => {
+    const a = queued.find(q => q.kind === 'radar05watch').data.confidence.parts.attackers;
+    assert.equal(a.missing, 1); assert.equal(a.forwards, null); assert.equal(a.points, 1);
+  });
+
+  console.log('Confiance :');
+  assert.equal(radar.scoreH2h(h2hResp(8, 7).response, 1).points, 2);
+  assert.equal(radar.scoreH2h(h2hResp(10, 6).response, 1).points, 1);
+  assert.equal(radar.scoreH2h(h2hResp(10, 3).response, 1).points, 0);
+  assert.equal(radar.scoreH2h(h2hResp(2, 2).response, 1).points, null, 'moins de 3 confrontations = non verifie');
+  assert.equal(radar.scoreScoring({ played: 10, failed: 1 }).points, 2);
+  assert.equal(radar.scoreScoring({ played: 10, failed: 3 }).points, 1);
+  assert.equal(radar.scoreScoring({ played: 10, failed: 6 }).points, 0);
+  assert.equal(radar.scoreScoring({ played: 0 }).points, null);
+  assert.equal(radar.scoreHistory([{ target: 2, opponent: 17 }, { target: 4, opponent: 15 }]).points, 2);
+  assert.equal(radar.scoreHistory([{ target: 2, opponent: 17 }, { target: 15, opponent: 3 }]).points, 1);
+  assert.equal(radar.scoreHistory([{ target: 15, opponent: 3 }, { target: 12, opponent: 4 }]).points, 0);
+  assert.equal(radar.scoreHistory([]).points, null);
+  assert.equal(radar.scoreAttackers({ forwards: 3 }).points, 2);
+  assert.equal(radar.scoreAttackers({ forwards: 1 }).points, 1);
+  assert.equal(radar.scoreAttackers({ forwards: 0 }).points, 0);
+  assert.equal(radar.scoreAttackers({ forwards: 3, missing: 2 }).points, 1, 'deux attaquants absents plafonnent a 1');
+  assert.equal(radar.scoreAttackers({ missing: 0 }).points, 2);
+  assert.equal(radar.scoreAttackers({}).points, null);
+  const cf = radar.defaultConfig({});
+  assert.equal(radar.summarizeConfidence({ a: { points: 2 }, b: { points: 2 }, c: { points: 2 }, d: { points: 0 } }, cf).level, 'green');
+  assert.equal(radar.summarizeConfidence({ a: { points: 2 }, b: { points: 1 }, c: { points: 1 }, d: { points: 0 } }, cf).level, 'yellow');
+  assert.equal(radar.summarizeConfidence({ a: { points: 0 }, b: { points: 1 }, c: { points: 1 }, d: { points: 0 } }, cf).level, 'red');
+  assert.equal(radar.summarizeConfidence({ a: { points: null }, b: { points: null }, c: { points: null }, d: { points: null } }, cf).level, 'yellow', 'tout non verifie = neutre, jamais vert');
+  console.log('  ok - notation des 4 controles et seuils de pastille');
+
   // ── 5. Modele Telegram ─────────────────────────────────────────────────────
   console.log('Telegram :');
   const data = { home: 'Paris FC', away: 'Le Havre & Co', competition: 'Ligue 1 · France', minute: 63, scoreHome: 0, scoreAway: 1,
-    team: 'Paris FC', opponent: 'Le Havre & Co', odd: '1.62', teamRank: 3, opponentRank: 18, teamPlayed: 10, teamGf: 36, teamGa: 14, opponentPlayed: 10, opponentGf: 18, opponentGa: 30 };
+    team: 'Paris FC', opponent: 'Le Havre & Co', odd: '1.62', teamRank: 3, opponentRank: 18, teamPlayed: 10, teamGf: 36, teamGa: 14, opponentPlayed: 10, opponentGf: 18, opponentGa: 30, kickoff: '21:00',
+    confidence: { level: 'yellow', score: 5, max: 8, parts: { h2h: { points: 2, scored: 7, played: 8 }, scoring: { points: 1, failed: 3, played: 10 }, history: { points: 2, confirmed: 2, total: 2 }, attackers: { points: 0, forwards: 0, missing: null } } } };
   const targets = client.destinations({ TELEGRAM_CHANNEL_ID: '-1', TELEGRAM_PREMIUM_CHANNEL_ID: '-2', TELEGRAM_RU_FREE_CHANNEL_ID: '-3', TELEGRAM_RU_PREMIUM_CHANNEL_ID: '-4' });
   for (const dest of targets) {
     const msg = client.render('radar05', data, { ...dest, paymentVerified: true });
@@ -230,6 +294,23 @@ const row = db => db.prepare('SELECT * FROM radar05_signals').all();
       if (dest.lang === 'ru') assert(!/Équipe|cote|encaissés/.test(t), 'version russe sans francais');
     }
   }
-  console.log('  ok - gratuit = apercu, Premium = detail, FR + RU, ANJ');
+  for (const dest of targets) {
+    const msg = client.render('radar05watch', data, { ...dest, paymentVerified: true });
+    const t = msg.text;
+    assert(t.includes('🟡') && t.includes('21:00') && t.includes('1,60'));
+    assert(!/\bpari\b/i.test(t.replace(/Paris FC/g, '')));
+    if (dest.tier === 'free') {
+      assert(!/Équipe surveillée|Команда под наблюдением|Face-à-face|Личные встречи|36/.test(t), 'le gratuit ne voit ni equipe visee ni detail');
+      assert(msg.reply_markup.inline_keyboard[0][0].text === client.CTA[dest.lang]);
+    } else {
+      assert(/Équipe surveillée : <b>Paris FC|Команда под наблюдением : <b>Paris FC/.test(t));
+      assert(/Patientez|Не действуйте заранее/.test(t));
+      assert(/7\/8|7 из 8/.test(t) && /⚠️/.test(t));
+      if (dest.lang === 'ru') assert(!/Patientez|Face-à-face|confrontations|Attaquants/.test(t));
+    }
+  }
+  const goMsg = client.render('radar05', data, { ...targets[1], paymentVerified: true });
+  assert(goMsg.text.includes('🟡') && goMsg.text.includes('Face-à-face') && goMsg.text.includes('1.62'));
+  console.log('  ok - gratuit = apercu, Premium = detail, FR + RU, ANJ, pastille, annonce « patientez 1,60 »');
   console.log('\nTous les tests radar +0,5 but passent.');
 })().catch(e => { console.error('ECHEC:', e.stack || e.message); process.exit(1); });

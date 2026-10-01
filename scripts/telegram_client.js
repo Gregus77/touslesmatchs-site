@@ -67,18 +67,36 @@ function render(kind,data,dest) {
     lines=ru?['📘 <b>Как читать сигналы TousLesMatchs</b>','Футбол: тотал больше 2,5 означает минимум 3 гола; тотал меньше 2,5 — максимум 2 гола за основное время.','Прогноз публикуется только при соблюдении действующих критериев качества. Голосование ИИ не гарантирует результат.','Бесплатный канал: знакомство с сервисом, руководства и анонсы. Premium: все допустимые сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается.']:['📘 <b>Lire les signaux TousLesMatchs</b>','Football : Over 2,5 signifie au moins 3 buts ; Under 2,5 signifie au maximum 2 buts dans le temps réglementaire.','Un signal doit respecter les critères qualité actifs. Le vote IA ne garantit aucun résultat.','Gratuit : présentation, guides et aperçus. Premium : tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum de signaux par jour n’est promis.'];
   } else if(kind==='reminder'||kind==='nopick') {
     lines=ru?['💎 <b>TousLesMatchs Premium</b>','Бесплатный канал: знакомство с сервисом и руководства.','Premium: все допустимые футбольные сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается. Мы не публикуем сигнал ради количества.']:['💎 <b>TousLesMatchs Premium</b>','Gratuit : présentation du service et guides.','Premium : tous les signaux de football admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum quotidien promis. Aucun signal forcé.'];
-  } else if(kind==='radar05') {
-    // Radar +0,5 but : le canal Gratuit voit les deux equipes mais ni l'equipe
-    // visee ni la cote ; Premium recoit la selection complete.
+  } else if(kind==='radar05'||kind==='radar05watch') {
+    // Radar +0,5 but. Gratuit : les deux equipes + la pastille, mais ni l'equipe
+    // visee, ni la cote, ni le detail. Premium : selection complete.
+    const watch=kind==='radar05watch';
     const scoreLine=`⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`;
     const form=(name,rank,played,gf,ga)=>`${esc(name)} : ${ru?'место':'n°'}${esc(rank)} · ${esc(gf)} ${ru?'забито':'buts marqués'}, ${esc(ga)} ${ru?'пропущено':'encaissés'} ${ru?'в':'en'} ${esc(played)} ${ru?'матчах':'matchs'}`;
-    lines=[`📡 <b>${ru?'РАДАР +0,5 ГОЛА':'RADAR +0,5 BUT'} — ${free?(ru?'СИГНАЛ ОБНАРУЖЕН':'SIGNAL DÉTECTÉ'):'GO'}</b>`,match(),`🏆 ${esc(data.competition)}`,scoreLine];
-    if(free) lines.push(ru?'🎯 Радар обнаружил возможность на рынке «команда забьёт минимум 1 гол» для одной из этих двух команд.':'🎯 Le radar a détecté une opportunité sur le marché « +0,5 but » pour l’une de ces deux équipes.',
-      ru?'🔒 Название команды и коэффициент доступны только подписчикам Premium.':'🔒 L’équipe concernée et la cote sont réservées aux membres Premium.');
-    else lines.push(`🎯 ${ru?'Целевая команда':'Équipe ciblée'} : <b>${esc(data.team)}</b> — <b>${ru?'забьёт минимум 1 гол (+0,5)':'+0,5 but'}</b>`,
-      `💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`,
-      `📈 ${form(data.team,data.teamRank,data.teamPlayed,data.teamGf,data.teamGa)}`,
-      `📉 ${form(data.opponent,data.opponentRank,data.opponentPlayed,data.opponentGf,data.opponentGa)}`);
+    const c=data.confidence,dot={green:'🟢',yellow:'🟡',red:'🔴'}[c?.level];
+    const confLabel={green:ru?'высокая':'élevée',yellow:ru?'средняя':'moyenne',red:ru?'низкая':'faible'}[c?.level];
+    const mark=p=>p==null?'❔':p>=2?'✅':p===1?'➖':'⚠️';
+    const parts=c?.parts||{},det=[];
+    if(parts.h2h)det.push(`${mark(parts.h2h.points)} ${ru?'Личные встречи':'Face-à-face'} : ${parts.h2h.points==null?(ru?'не проверено':'non vérifié'):ru?`гол в ${esc(parts.h2h.scored)} из ${esc(parts.h2h.played)} матчей`:`but dans ${esc(parts.h2h.scored)}/${esc(parts.h2h.played)} confrontations`}`);
+    if(parts.scoring)det.push(`${mark(parts.scoring.points)} ${ru?'Матчи без голов в сезоне':'Matchs sans marquer cette saison'} : ${parts.scoring.points==null?(ru?'не проверено':'non vérifié'):`${esc(parts.scoring.failed)}/${esc(parts.scoring.played)}`}`);
+    if(parts.history)det.push(`${mark(parts.history.points)} ${ru?'Прошлые сезоны':'Saisons précédentes'} : ${parts.history.points==null?(ru?'не проверено':'non vérifié'):ru?`иерархия подтверждена ${esc(parts.history.confirmed)}/${esc(parts.history.total)}`:`hiérarchie confirmée ${esc(parts.history.confirmed)}/${esc(parts.history.total)}`}`);
+    if(parts.attackers)det.push(`${mark(parts.attackers.points)} ${ru?'Нападающие':'Attaquants'} : ${parts.attackers.points==null?(ru?'не проверено':'non vérifié'):parts.attackers.forwards!=null?(ru?`${esc(parts.attackers.forwards)} в стартовом составе`:`${esc(parts.attackers.forwards)} titulaire(s) annoncé(s)`):(ru?`${esc(parts.attackers.missing)} отсутствует`:`${esc(parts.attackers.missing)} absent(s)`)}`);
+    const title=watch?(ru?'НА ЗАМЕТКЕ':'À SURVEILLER'):free?(ru?'СИГНАЛ ОБНАРУЖЕН':'SIGNAL DÉTECTÉ'):'GO';
+    lines=[`📡 <b>${ru?'РАДАР +0,5 ГОЛА':'RADAR +0,5 BUT'} — ${title}</b>`,match(),`🏆 ${esc(data.competition)}`,watch?`🕒 ${ru?'Начало':'Coup d’envoi'} : ${esc(data.kickoff)} ${ru?'(по Парижу)':'(heure de Paris)'}`:scoreLine];
+    if(c&&dot)lines.push(`${dot} ${ru?'Уверенность радара':'Confiance du radar'} : <b>${confLabel}</b>`);
+    if(free) {
+      lines.push(watch?(ru?'👀 Радар следит за этим матчем: рынок «команда забьёт минимум 1 гол» для одной из двух команд.':'👀 Le radar surveille ce match sur le marché « +0,5 but » pour l’une de ces deux équipes.')
+        :(ru?'🎯 Радар обнаружил возможность на рынке «команда забьёт минимум 1 гол» для одной из этих двух команд.':'🎯 Le radar a détecté une opportunité sur le marché « +0,5 but » pour l’une de ces deux équipes.'));
+      if(watch)lines.push(ru?'⏳ Сигнал подтверждается только при коэффициенте 1,60 и выше: терпение.':'⏳ Le signal n’est confirmé que lorsque la cote atteint 1,60 : patience.');
+      lines.push(ru?'🔒 Название команды, коэффициент и подробности доступны только подписчикам Premium.':'🔒 L’équipe concernée, la cote et le détail sont réservés aux membres Premium.');
+    } else {
+      lines.push(`🎯 ${ru?(watch?'Команда под наблюдением':'Целевая команда'):(watch?'Équipe surveillée':'Équipe ciblée')} : <b>${esc(data.team)}</b> — <b>${ru?'забьёт минимум 1 гол (+0,5)':'+0,5 but'}</b>`);
+      if(watch)lines.push(ru?'⏳ <b>Не действуйте заранее:</b> дождитесь, пока коэффициент достигнет <b>1,60</b>. Сигнал GO придёт отдельным сообщением.':'⏳ <b>Patientez :</b> attendez que la cote atteigne <b>1,60</b> avant d’agir. Une alerte GO sera envoyée à ce moment-là.');
+      else lines.push(`💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`);
+      lines.push(`📈 ${form(data.team,data.teamRank,data.teamPlayed,data.teamGf,data.teamGa)}`,
+        `📉 ${form(data.opponent,data.opponentRank,data.opponentPlayed,data.opponentGf,data.opponentGa)}`);
+      if(det.length)lines.push(det.join('\n'));
+    }
   } else throw new Error('Unknown client template');
   if(free || ['reminder','nopick','guide'].includes(kind)) {
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :
