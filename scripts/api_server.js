@@ -18184,6 +18184,9 @@ async function runMorningAudit() {
     }
   };
 
+  try { lignes.push(...plus05DailyReportLines(), ""); }
+  catch (e) { lignes.push("🔴 Rapport +0,5 — " + String(e.message).slice(0,60), ""); }
+
   // 1. Le compte OpenRouter : solde restant et autonomie estimee.
   //    Demande du fondateur (07/08/2026) : "dis-moi chaque jour combien il reste
   //    sur OpenRouter pour qu'on ne soit pas sans analyse". /api/v1/key ne donne
@@ -18785,6 +18788,89 @@ async function runReliabilityLoop(trigger = "scheduler") {
   } finally { _reliabilityLoopRunning = false; }
 }
 
+
+let _lastPlus05DailyReportDate = "";
+
+function plus05DailyReportLines() {
+  const today = telegramClient.parisParts(Date.now()).day;
+  const bounds = telegramClient.parisDayBounds(today);
+  const startMs = Date.parse(bounds.start);
+  const endMs = Date.parse(bounds.end);
+  const has = (name) => !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);
+  const safe = (v) => String(v == null ? "" : v).replace(/[&<>]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;" }[c]));
+  const pct = (n,d) => d ? Math.round((Number(n||0)/Number(d))*1000)/10 : null;
+
+  if (!has("plus05_watchlist")) {
+    return ["📌 <b>TLM +0,5 — bilan du jour</b>", "Moteur +0,5 non initialisé."];
+  }
+
+  const watch = db.prepare("SELECT COUNT(*) n,COALESCE(SUM(attempts),0) attempts FROM plus05_watchlist WHERE day=?").get(today) || {};
+  const blockers = db.prepare(`SELECT COALESCE(last_reason,'aucun') reason,COUNT(*) n
+    FROM plus05_watchlist WHERE day=? GROUP BY COALESCE(last_reason,'aucun') ORDER BY n DESC LIMIT 3`).all(today);
+
+  let candidates = [], resolvedFixtures = 0, metrics = [];
+  if (has("plus05_shadow_evals")) {
+    candidates = db.prepare(`SELECT fixture_id,MAX(home) home,MAX(away) away,MAX(fav_name) fav_name,MIN(observed_at) first_seen
+      FROM plus05_shadow_evals WHERE observed_at>=? AND observed_at<? GROUP BY fixture_id ORDER BY first_seen`).all(startMs,endMs);
+    resolvedFixtures = Number((db.prepare(`SELECT COUNT(DISTINCT fixture_id) n FROM plus05_shadow_evals
+      WHERE resolved_at IS NOT NULL AND truth_fav_scored IS NOT NULL`).get() || {}).n || 0);
+    metrics = db.prepare(`SELECT policy,
+      SUM(CASE WHEN resolved_at IS NOT NULL AND truth_fav_scored IS NOT NULL AND decision IN ('yes','no') THEN 1 ELSE 0 END) resolved,
+      SUM(CASE WHEN resolved_at IS NOT NULL AND decision='yes' AND truth_fav_scored=1 THEN 1 ELSE 0 END) yes_wins,
+      SUM(CASE WHEN resolved_at IS NOT NULL AND decision='yes' AND truth_fav_scored=0 THEN 1 ELSE 0 END) yes_losses,
+      SUM(CASE WHEN decision='abstain' THEN 1 ELSE 0 END) abstains,
+      SUM(CASE WHEN decision='error' THEN 1 ELSE 0 END) errors
+      FROM plus05_shadow_evals GROUP BY policy`).all();
+  }
+
+  let sig = {total:0,wins:0,losses:0,pending:0};
+  if (has("plus05_signals")) {
+    sig = db.prepare(`SELECT COUNT(*) total,
+      COALESCE(SUM(outcome='win'),0) wins,COALESCE(SUM(outcome='loss'),0) losses,
+      COALESCE(SUM(outcome='pending'),0) pending
+      FROM plus05_signals WHERE sent_at>=? AND sent_at<?`).get(startMs,endMs) || sig;
+  }
+
+  const metric = (policy) => {
+    const r = metrics.find(x => x.policy === policy);
+    if (!r) return "aucune donnée";
+    const yr = Number(r.yes_wins||0)+Number(r.yes_losses||0);
+    return `${Number(r.resolved||0)} résolus · OUI ${yr} · réussite ${yr ? pct(r.yes_wins,yr)+'%' : '—'}${Number(r.abstains||0)?' · abst. '+r.abstains:''}${Number(r.errors||0)?' · err. '+r.errors:''}`;
+  };
+  const names = candidates.slice(0,6).map(x => `• ${safe(x.home)} — ${safe(x.away)} → ${safe(x.fav_name)} +0,5`);
+  if (candidates.length > 6) names.push(`• +${candidates.length-6} autre(s)`);
+  const progress = Math.min(100, Math.round((resolvedFixtures/50)*100));
+  const blockerText = blockers.length ? blockers.map(x => `${safe(x.reason)}: ${x.n}`).join(" · ") : "aucun";
+
+  return [
+    "📌 <b>TLM +0,5 — bilan du jour</b>",
+    `👀 Présélectionnés : <b>${Number(watch.n||0)}</b> · analyses live : <b>${Number(watch.attempts||0)}</b>`,
+    `📤 Signaux : <b>${Number(sig.total||0)}</b> · ✅ ${Number(sig.wins||0)} · ❌ ${Number(sig.losses||0)} · ⏳ ${Number(sig.pending||0)}`,
+    "",
+    "🔬 <b>Matchs réellement analysés</b>",
+    ...(names.length ? names : ["• Aucun candidat réel aujourd’hui"]),
+    "",
+    "🤖 <b>Comparaison IA cumulée</b>",
+    `Concile 5 IA : ${metric("council_4of5")}`,
+    `DeepSeek seul : ${metric("seat:DeepSeek-V3")}`,
+    `Kimi Shadow : ${metric("shadow:Kimi")}`,
+    `Jev Shadow : ${metric("shadow:Jev")}`,
+    "",
+    `📊 Apprentissage : <b>${resolvedFixtures}/50</b> cas résolus — <b>${progress}%</b>`,
+    `🚧 Blocages principaux : ${blockerText}`,
+    resolvedFixtures >= 50 ? "✅ Échantillon suffisant : décision comparative prête." : "➡️ Collecte automatique en cours."
+  ];
+}
+
+async function sendPlus05DailyReport() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
+  const lines = plus05DailyReportLines();
+  const msg = [...lines, "", "━━━━━━━━━━━━━━━━━━", "👑 Hermès — suivi quotidien +0,5"].join("\n");
+  const ok = await sendHermesDailyDigest(msg);
+  console.log(`[plus05-daily] ${ok ? "OK" : "ECHEC"}`);
+  return ok;
+}
+
 function checkAnalyticsSchedule() {
   const now = new Date();
   const parisStr = now.toLocaleString("en-GB", { timeZone: "Europe/Paris" });
@@ -18847,6 +18933,18 @@ function checkAnalyticsSchedule() {
   if (dueBilanSlot === "21" && _lastHermesEveningBilanDate !== todayKey) {
     _lastHermesEveningBilanDate = todayKey;
     sendHermesOperationalBilan("21").catch(e => console.error("[hermes-bilan-21]", e.message));
+  }
+
+  // Rapport quotidien +0,5 : une fois par jour à partir de 23h Paris.
+  // sendHermesDailyDigest garde l'idempotence même après redémarrage.
+  if (hour >= 23 && _lastPlus05DailyReportDate !== todayKey) {
+    _lastPlus05DailyReportDate = todayKey;
+    sendPlus05DailyReport().then(ok => {
+      if (!ok) _lastPlus05DailyReportDate = "";
+    }).catch(e => {
+      _lastPlus05DailyReportDate = "";
+      console.error("[plus05-daily]", e.message);
+    });
   }
 
   // AUTO 2 — paliers à sec, contrôlé toutes les 6h (0h / 6h / 12h / 18h)
