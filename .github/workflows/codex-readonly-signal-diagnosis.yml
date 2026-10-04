@@ -58,5 +58,29 @@ jobs:
                 if '[plus05] charge' in line:
                     m=re.search(r'champion[n]?ats=\\d+ actif=(?:true|false) essai_a_blanc=(?:true|false)',line)
                     if m:print("BOOT",m.group(0))
+            js_probe = """
+            const key=process.env.API_SPORTS_KEY||process.env.API_FOOTBALL_KEY;
+            const https=require('https');
+            if(!key) console.log('COLLECTION_BLOCK=key_absent');
+            else {
+              const req=https.get('https://v3.football.api-sports.io/fixtures?live=all',{headers:{'x-apisports-key':key}},res=>{
+                let b='';res.on('data',c=>b+=c);res.on('end',()=>{
+                  try {
+                    const d=JSON.parse(b), err=JSON.stringify(d.errors||{});
+                    const reason=/daily request limit|rateLimit|too many requests/i.test(err)?'quota':/subscription|plan|access/i.test(err)?'access':/key|token|auth/i.test(err)?'authentication':Object.keys(d.errors||{}).length?'provider_error':'none';
+                    console.log('COLLECTION_HTTP='+res.statusCode);
+                    console.log('COLLECTION_BLOCK='+reason);
+                    console.log('COLLECTION_MATCH_COUNT='+(Array.isArray(d.response)?d.response.length:0));
+                  } catch {console.log('COLLECTION_BLOCK=invalid_response');}
+                });
+              });
+              req.setTimeout(10000,()=>req.destroy());req.on('error',()=>console.log('COLLECTION_BLOCK=network'));
+            }
+            """
+            print(run(["docker","compose","exec","-T","api","node","-e",js_probe]))
+            print("UPSTREAM",run(["git","rev-parse","--abbrev-ref","--symbolic-full-name","@{u}"]).strip())
+            print("MATCHING_LOCAL_BRANCHES",run(["git","branch","--points-at","HEAD"]).strip())
+            print("MATCHING_REMOTE_BRANCHES",run(["git","branch","-r","--points-at","HEAD"]).strip())
+            print("TRACKED_CHANGED_COUNT",len(run(["git","diff","--name-only"]).splitlines()))
             print("AUDIT_END")
             PY
