@@ -39,12 +39,7 @@ jobs:
             ok=0
             for i in $(seq 1 25); do
               if curl -fsS --max-time 5 "https://www.touslesmatchs.com/api/health?plus05daily=$stamp" >/tmp/h.json 2>/dev/null; then
-                if python3 - <<'PY'
-import json
-d=json.load(open('/tmp/h.json'))
-raise SystemExit(0 if d.get('ok') is True else 1)
-PY
-                then ok=1; break; fi
+                if python3 -c "import json; d=json.load(open('/tmp/h.json')); raise SystemExit(0 if d.get('ok') is True else 1)"; then ok=1; break; fi
               fi
               sleep 2
             done
