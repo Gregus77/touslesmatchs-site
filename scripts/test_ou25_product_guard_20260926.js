@@ -4,8 +4,8 @@ const root=path.resolve(__dirname,'..'),source=fs.readFileSync(path.join(__dirna
 const rule='Le marché officiel OVER/UNDER 2,5, ses votes et son affichage ne peuvent être supprimés, désactivés ou remplacés par une future IA/mise à jour sans accord explicite écrit du propriétaire.';
 assert(fs.readFileSync(path.join(root,'AGENTS.md'),'utf8').includes(rule));
 assert.match(source,/const BET_TYPES = \["Over 2\.5 buts", "Under 2\.5 buts"\]/);
-assert.match(source,/const CLIENT_OU25_MIN_VOTES = 3;/);
-assert.match(fs.readFileSync(path.join(__dirname,'official_signal_snapshots.js'),'utf8'),/const MIN_CONSENSUS_VOTES = 3;/);
+assert.match(source,/const CLIENT_OU25_MIN_VOTES = 4;/);
+assert.match(fs.readFileSync(path.join(__dirname,'official_signal_snapshots.js'),'utf8'),/const MIN_CONSENSUS_VOTES = 4;/);
 assert.match(source,/await fetchMatchStatsForMatch\(match\)/);
 const harness=fs.readFileSync(path.join(__dirname,'test_live_surfaces_20260926.js'),'utf8').split('// Real SQLite snapshots')[0];
 new Function('require','__dirname',harness+`
