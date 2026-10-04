@@ -1,0 +1,23 @@
+name: Test plus05 shadow learning
+on:
+  push:
+    branches: [codex/plus05-shadow-learning-20261004]
+    paths:
+      - scripts/plus05_*.js
+      - Dockerfile.api
+      - docker-compose.yml
+      - .github/workflows/test-plus05-shadow-learning.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API test image
+        run: docker build -f Dockerfile.api -t tlm-plus05-test .
+      - name: Run +0.5 unit tests
+        run: |
+          docker run --rm -v "$PWD/scripts:/tests:ro" tlm-plus05-test             node --test             /tests/plus05_favorite.test.js             /tests/plus05_engine.test.js             /tests/plus05_boot.test.js             /tests/plus05_shadow_learning.test.js             /tests/plus05_jev_shadow.test.js
