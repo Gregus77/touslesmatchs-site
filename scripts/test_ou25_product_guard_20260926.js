@@ -7,7 +7,7 @@ assert.match(source,/const BET_TYPES = \["Over 2\.5 buts", "Under 2\.5 buts"\]/)
 assert.match(source,/const CLIENT_OU25_MIN_VOTES = 4;/);
 assert.match(fs.readFileSync(path.join(__dirname,'official_signal_snapshots.js'),'utf8'),/const MIN_CONSENSUS_VOTES = 4;/);
 assert.match(source,/await fetchMatchStatsForMatch\(match\)/);
-const harness=fs.readFileSync(path.join(__dirname,'test_live_surfaces_20260926.js'),'utf8').split('// Real SQLite snapshots')[0];
+const harness=fs.readFileSync(path.join(__dirname,'test_live_surfaces_20260926.js'),'utf8').split('let checks=0;')[0];
 new Function('require','__dirname',harness+`
 for(const direction of ['over','under'])for(const period of ['1H','HT','2H'])for(const n of [4,5]){
  const state=raw(n,true);state.consensus_direction=direction;state.votes.forEach(v=>{if(v.status==='voted')v.direction=direction;});
