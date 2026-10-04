@@ -1,0 +1,64 @@
+name: Codex read-only provider fallback proof
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-readonly-provider-fallback.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe production fallbacks without mutations
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 4m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            echo FALLBACK_PROOF_BEGIN
+            docker compose exec -T api node <<'NODE'
+            const https=require('https');
+            const fd=process.env.FOOTBALL_DATA_KEY||process.env.FOOTBALL_DATA_API_KEY||'';
+            const ts=process.env.THESPORTSDB_API_KEY||'';
+            console.log('KEYS='+JSON.stringify({football_data:Boolean(fd),thesportsdb:Boolean(ts),api_football:Boolean(process.env.API_FOOTBALL_KEY||process.env.API_SPORTS_KEY)}));
+            function get(url,headers={}){
+              return new Promise(resolve=>{
+                const req=https.get(url,{headers},res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>resolve({http:res.statusCode,headers:res.headers,body:b}))});
+                req.setTimeout(12000,()=>req.destroy());req.on('error',e=>resolve({network:e.code||e.message}));
+              });
+            }
+            (async()=>{
+              if(fd){
+                const r=await get('https://api.football-data.org/v4/matches?status=LIVE',{'X-Auth-Token':fd});
+                let out={provider:'football-data',http:r.http,network:r.network||null};
+                try{const d=JSON.parse(r.body||'{}');out.count=Array.isArray(d.matches)?d.matches.length:null;out.message=d.message||null;out.errorCode=d.errorCode||null}catch{out.parse_error=true}
+                console.log('FD='+JSON.stringify(out));
+              } else console.log('FD='+JSON.stringify({provider:'football-data',configured:false}));
+              if(ts){
+                const r=await get('https://www.thesportsdb.com/api/v2/json/livescore/all',{'X-API-KEY':ts,'Content-Type':'application/json'});
+                let out={provider:'thesportsdb',http:r.http,network:r.network||null};
+                try{const d=JSON.parse(r.body||'{}');const a=Array.isArray(d.livescore)?d.livescore:Array.isArray(d.events)?d.events:Array.isArray(d.response)?d.response:Array.isArray(d)?d:[];out.count=a.length;out.football=a.filter(x=>String(x.strSport||x.sport||'').toLowerCase()==='football').length;out.error=d.error||d.message||null}catch{out.parse_error=true}
+                console.log('TSDB='+JSON.stringify(out));
+              } else console.log('TSDB='+JSON.stringify({provider:'thesportsdb',configured:false}));
+            })();
+            NODE
+            curl -fsS --max-time 45 "https://www.touslesmatchs.com/api/live-matches?fallback_proof=$(date +%s)" -o /tmp/tlm-live-proof.json || true
+            python3 - <<'PY'
+            import json
+            try:
+              d=json.load(open('/tmp/tlm-live-proof.json'))
+              m=d if isinstance(d,list) else d.get('matches',[])
+              print('PUBLIC_LIVE='+json.dumps({'count':len(m),'sources':sorted(set(str(x.get('source')) for x in m)),'sample':[{'home':x.get('home'),'away':x.get('away'),'minute':x.get('minute'),'source':x.get('source')} for x in m[:8]]},ensure_ascii=False))
+            except Exception as e: print('PUBLIC_LIVE='+json.dumps({'error':type(e).__name__}))
+            PY
+            echo AUTO_CONCILE_LOGS_BEGIN
+            docker compose logs --no-color --since 24h api 2>/dev/null | grep -E '\[auto-concile\]|football-data.org|TheSportsDB|API-Sports football (indisponible|saute|bloque|quota)' | tail -n 120 || true
+            echo AUTO_CONCILE_LOGS_END
+            echo FALLBACK_PROOF_END
