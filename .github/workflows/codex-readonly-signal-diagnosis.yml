@@ -1,4 +1,4 @@
-name: Codex plus05 runtime diagnosis
+name: Codex deploy plus05 standings fix
 on:
   push:
     branches: [codex/readonly-vps-audit-20261004]
@@ -9,25 +9,38 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Read plus05 runtime state
-        uses: appleboy/ssh-action@v1.0.3
+      - uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 9m
           script: |
             set -eu
             cd /opt/touslesmatchs
-            docker exec touslesmatchs-api node -e "console.log(JSON.stringify({PLUS05_ENABLED:process.env.PLUS05_ENABLED,PLUS05_DRY_RUN:process.env.PLUS05_DRY_RUN,PLUS05_REQUIRE_HISTORY:process.env.PLUS05_REQUIRE_HISTORY,PLUS05_TICK_MS:process.env.PLUS05_TICK_MS,API_FOOTBALL_KEY:Boolean(process.env.API_FOOTBALL_KEY)}))"
-            echo LOGS_BEGIN
-            docker logs --since 10m touslesmatchs-api 2>&1 | grep -E '\[plus05\]|API-Sports|api-sports' | tail -120 || true
-            echo LOGS_END
+            test "$(git branch --show-current)" = "feat/plus05-favorite"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git fetch origin feat/plus05-favorite
+            echo DIFF_BEGIN
+            git diff --name-only HEAD..origin/feat/plus05-favorite
+            echo DIFF_END
+            test "$(git diff --name-only HEAD..origin/feat/plus05-favorite)" = "scripts/plus05_engine.js"
+            git pull --ff-only origin feat/plus05-favorite
+            node --check scripts/plus05_engine.js
+            node scripts/plus05_favorite.test.js
+            node scripts/plus05_engine.test.js
+            node scripts/plus05_boot.test.js
+            docker compose up -d --build api
+            sleep 75
+            docker logs --since 2m touslesmatchs-api 2>&1 | grep '\[plus05\] watchlist' | tail -5 || true
             docker exec touslesmatchs-api node - <<'NODE'
             const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
-            console.log('WATCH='+JSON.stringify(db.prepare("select day,count(*) n,max(created_at) latest from plus05_watchlist group by day order by day desc limit 5").all()));
-            console.log('SIG='+JSON.stringify(db.prepare("select count(*) n,max(sent_at) latest from plus05_signals").all()));
+            console.log('WATCH='+JSON.stringify(db.prepare("select day,count(*) n from plus05_watchlist group by day order by day desc limit 5").all()));
+            console.log('SIGNALS='+JSON.stringify(db.prepare("select count(*) n from plus05_signals").get()));
             db.close();
             NODE
+            curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/health?plus05fix=$(date +%s)" >/tmp/h.json
+            python3 -c 'import json;d=json.load(open("/tmp/h.json"));assert d.get("ok") is True;print("PLUS05_FIX_HEALTH_OK")'
