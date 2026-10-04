@@ -1,0 +1,43 @@
+name: Codex current council seats audit 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-current-seats-audit-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            docker compose exec -T api node <<'NODE'
+            const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
+            const q=(l,s)=>{try{console.log(l+'='+JSON.stringify(db.prepare(s).all()))}catch(e){console.log(l+'='+JSON.stringify({error:e.message}))}};
+            q('MARKET_LINES',"select market_line,count(*) n from agent_market_predictions group by market_line order by n desc limit 30");
+            q('RECENT_AGENTS',`
+              SELECT agent_name,COUNT(*) n,COUNT(DISTINCT match_key) matches,
+                SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+                SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses,
+                ROUND(AVG(confidence),1) avg_conf,MAX(created_at) latest
+              FROM agent_market_predictions
+              WHERE created_at>='2026-09-12'
+              GROUP BY agent_name ORDER BY agent_name`);
+            q('RECENT_CALLS',`
+              SELECT agent_name,COUNT(*) calls,
+                SUM(CASE WHEN issue IS NULL OR issue='' THEN 1 ELSE 0 END) clean,
+                SUM(CASE WHEN issue IS NOT NULL AND issue!='' THEN 1 ELSE 0 END) issues,
+                ROUND(AVG(duree_ms)) avg_ms,MAX(created_at) latest
+              FROM agent_calls WHERE created_at>='2026-09-12'
+              GROUP BY agent_name ORDER BY agent_name`);
+            db.close();
+            NODE
