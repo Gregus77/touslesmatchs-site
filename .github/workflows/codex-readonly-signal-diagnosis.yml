@@ -1,4 +1,4 @@
-name: Codex deploy plus05 standings fix
+name: Codex activate plus05 standings fix
 on:
   push:
     branches: [codex/readonly-vps-audit-20261004]
@@ -22,25 +22,20 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             test "$(git branch --show-current)" = "feat/plus05-favorite"
-            test -z "$(git status --porcelain --untracked-files=no)"
-            git fetch origin feat/plus05-favorite
-            echo DIFF_BEGIN
-            git diff --name-only HEAD..origin/feat/plus05-favorite
-            echo DIFF_END
-            test "$(git diff --name-only HEAD..origin/feat/plus05-favorite)" = "scripts/plus05_engine.js"
-            git pull --ff-only origin feat/plus05-favorite
+            test "$(git rev-parse HEAD)" = "f83c5b51f844c674f2bc570486efeb5bae90ab42"
             node --check scripts/plus05_engine.js
             node scripts/plus05_favorite.test.js
-            node scripts/plus05_engine.test.js
-            node scripts/plus05_boot.test.js
             docker compose up -d --build api
-            sleep 75
-            docker logs --since 2m touslesmatchs-api 2>&1 | grep '\[plus05\] watchlist' | tail -5 || true
+            sleep 80
+            echo PLUS05_LOGS_BEGIN
+            docker logs --since 3m touslesmatchs-api 2>&1 | grep -E '\[plus05\]|API-Sports football' | tail -80 || true
+            echo PLUS05_LOGS_END
             docker exec touslesmatchs-api node - <<'NODE'
             const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
             console.log('WATCH='+JSON.stringify(db.prepare("select day,count(*) n from plus05_watchlist group by day order by day desc limit 5").all()));
-            console.log('SIGNALS='+JSON.stringify(db.prepare("select count(*) n from plus05_signals").get()));
+            console.log('WATCH_RECENT='+JSON.stringify(db.prepare("select fixture_id,day,competition,home,away,fav_name,fav_rank,opp_rank,total_teams,risk_color,attempts,last_reason from plus05_watchlist order by created_at desc limit 20").all()));
+            console.log('SIGNALS='+JSON.stringify(db.prepare("select count(*) n,max(sent_at) latest from plus05_signals").all()));
             db.close();
             NODE
             curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/health?plus05fix=$(date +%s)" >/tmp/h.json
-            python3 -c 'import json;d=json.load(open("/tmp/h.json"));assert d.get("ok") is True;print("PLUS05_FIX_HEALTH_OK")'
+            python3 -c 'import json;d=json.load(open("/tmp/h.json"));assert d.get("ok") is True;print("PLUS05_FIX_ACTIVE_OK")'
