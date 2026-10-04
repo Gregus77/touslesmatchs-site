@@ -1,4 +1,5 @@
 'use strict';
+global.window=globalThis;
 const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),path=require('path');
 const lifecycle=require('../public/js/match-lifecycle');
 const source=fs.readFileSync(path.join(__dirname,'api_server.js'),'utf8');
