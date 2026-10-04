@@ -1,0 +1,97 @@
+name: Codex plus05 tonight scan 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-plus05-tonight-scan-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 7m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            echo PLUS05_SCAN_BEGIN
+            docker compose exec -T api node <<'NODE'
+            const https=require('https');
+            const key=process.env.API_FOOTBALL_KEY||process.env.API_SPORTS_KEY;
+            const tz='Europe/Paris';
+            function get(path){return new Promise(resolve=>{const r=https.get('https://v3.football.api-sports.io'+path,{headers:{'x-apisports-key':key}},res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>{try{resolve(JSON.parse(b))}catch{resolve({errors:{parse:true}})}})});r.setTimeout(15000,()=>r.destroy());r.on('error',()=>resolve({errors:{network:true}}));});}
+            function parisParts(d=new Date()){return Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d).filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));}
+            (async()=>{
+              const pp=parisParts();
+              const day=`${pp.year}-${pp.month}-${pp.day}`;
+              const fixtures=await get('/fixtures?date='+day+'&timezone=Europe%2FParis');
+              const all=Array.isArray(fixtures.response)?fixtures.response:[];
+              const upcoming=all.filter(f=>['NS','TBD','1H','HT'].includes(String(f.fixture?.status?.short||'')));
+              const leagueSeason=new Map();
+              for(const f of upcoming){
+                const lid=Number(f.league?.id), season=Number(f.league?.season);
+                if(lid&&season) leagueSeason.set(lid+':'+season,{lid,season,name:f.league?.name,country:f.league?.country});
+              }
+              const standings=new Map();
+              for(const x of leagueSeason.values()){
+                const d=await get('/standings?league='+x.lid+'&season='+x.season);
+                const groups=d?.response?.[0]?.league?.standings;
+                if(Array.isArray(groups)&&groups.length===1){
+                  const rows=groups[0].map(r=>({id:Number(r.team?.id),rank:Number(r.rank),name:r.team?.name})).filter(r=>r.id&&r.rank);
+                  standings.set(x.lid+':'+x.season,rows);
+                }
+              }
+              const cands=[];
+              for(const f of upcoming){
+                const rows=standings.get(Number(f.league?.id)+':'+Number(f.league?.season));
+                if(!rows) continue;
+                const hr=rows.find(r=>r.id===Number(f.teams?.home?.id))?.rank;
+                const ar=rows.find(r=>r.id===Number(f.teams?.away?.id))?.rank;
+                if(!hr||!ar) continue;
+                const total=rows.length;
+                const homeTop=hr<=5, awayTop=ar<=5;
+                const homeBottom=hr>total-5, awayBottom=ar>total-5;
+                let side=null;
+                if(homeTop&&awayBottom) side='home';
+                if(awayTop&&homeBottom) side='away';
+                if(!side) continue;
+                const kickoff=f.fixture?.date;
+                cands.push({
+                  fixture_id:String(f.fixture?.id),
+                  kickoff,
+                  status:f.fixture?.status?.short,
+                  league_id:f.league?.id,
+                  competition:f.league?.name,
+                  country:f.league?.country,
+                  home:f.teams?.home?.name,
+                  away:f.teams?.away?.name,
+                  home_rank:hr,away_rank:ar,total_teams:total,
+                  favorite:side==='home'?f.teams?.home?.name:f.teams?.away?.name,
+                  favorite_rank:side==='home'?hr:ar,
+                  opponent_rank:side==='home'?ar:hr
+                });
+              }
+              cands.sort((a,b)=>String(a.kickoff).localeCompare(String(b.kickoff)));
+              console.log('NOW_PARIS='+JSON.stringify(pp));
+              console.log('API_ERRORS='+JSON.stringify(fixtures.errors||{}));
+              console.log('UPCOMING_TOTAL='+upcoming.length);
+              console.log('CANDIDATES='+JSON.stringify(cands));
+            })();
+            NODE
+            echo "PLUS05_DB_BEGIN"
+            docker compose exec -T api node <<'NODE'
+            const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
+            const q=(l,s)=>{try{console.log(l+'='+JSON.stringify(db.prepare(s).all()))}catch(e){console.log(l+'='+JSON.stringify({error:e.message}))}};
+            q('WATCHLIST_RECENT',"select fixture_id,day,competition,home,away,fav_name,fav_rank,opp_rank,total_teams,risk_color,attempts,last_reason,deep_json from plus05_watchlist order by created_at desc limit 30");
+            q('SIGNALS_RECENT',"select fixture_id,sent_at,home,away,fav_name,minute,odd,risk_color,votes_yes,votes_total,outcome,dry_run,delivered_channels from plus05_signals order by id desc limit 20");
+            db.close();
+            NODE
+            echo PLUS05_DB_END
+            echo PLUS05_SCAN_END
