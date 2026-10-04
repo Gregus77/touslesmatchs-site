@@ -11,6 +11,8 @@
 - **Regle actuelle** : Claude/Codex modifient le site/API. Hermes audite et recommande ; il ne pousse pas de modification dans `public/`, `site/`, `scripts/api_server.js`, `scripts/bookmakers.config.js`, `docker-compose.yml` ou `Caddyfile` sans validation explicite de Greg.
 - **Etat produit a preserver** : Live multisport = Football, Basketball, Hockey, Baseball. Tennis est retire. Public = vote de 5 IA independantes, pas de "Chief" visible client.
 
+**Protection O/U 2,5 historique :** Le marché officiel OVER/UNDER 2,5, ses votes et son affichage ne peuvent être supprimés, désactivés ou remplacés par une future IA/mise à jour sans accord explicite écrit du propriétaire.
+
 **A PRESERVER ABSOLUMENT (ne jamais casser) :**
 - **Liens bookmakers / affiliation** → `scripts/bookmakers.config.js` (+ variables `.env` : WINAMAX_LINK, UNIBET_LINK, PMU_LINK). **Betclic a ete retire volontairement.** Bookmakers actifs : Winamax, Unibet, PMU.
 - **Endpoints API** → voir la table ci-dessous (routes exactes, ne pas renommer).
