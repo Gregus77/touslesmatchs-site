@@ -110,7 +110,7 @@ function createPlus05ShadowLearning({ db, now = () => Date.now(), log = console,
     }
     for (const result of shadows || []) {
       upsert({ ...common, policy: `shadow:${result.seat}`,
-        decision: result.failed ? 'error' : !!result.yes,
+        decision: result.failed ? 'error' : (result.decision || !!result.yes),
         confidence: result.confidence,
         reason: result.failed ? result.error : result.raison });
     }
