@@ -64,12 +64,14 @@ function createPlus05Engine(deps) {
       const res = await apiGet(`/standings?league=${leagueId}&season=${season}`);
       const groups = res?.response?.[0]?.league?.standings;
       if (Array.isArray(groups) && groups.length) {
-        // Plusieurs groupes/phases : on ne les melange jamais (regle du pilier historique).
-        if (groups.length > 1) data = { multiGroup: true };
-        else {
-          const rows = groups[0].map((t) => ({ teamId: Number(t.team?.id), rank: Number(t.rank) })).filter((r) => r.teamId && r.rank);
-          if (rows.length) data = { rows, total: rows.length };
-        }
+        const normalized = groups.map((group) => {
+          const rows = (Array.isArray(group) ? group : [])
+            .map((t) => ({ teamId: Number(t.team?.id), rank: Number(t.rank), group: t.group || null }))
+            .filter((r) => r.teamId && r.rank);
+          return rows.length ? { rows, total: rows.length, name: rows[0]?.group || null } : null;
+        }).filter(Boolean);
+        if (normalized.length === 1) data = normalized[0];
+        else if (normalized.length > 1) data = { multiGroup: true, groups: normalized };
       }
     } catch (e) { log.error('[plus05] classement', leagueId, season, e.message); }
     tableCache.set(key, { data, ts: now() });
@@ -110,10 +112,17 @@ function createPlus05Engine(deps) {
     for (const f of fixtures) {
       try {
         const leagueId = Number(f.league.id), season = Number(f.league.season);
-        const table = await loadTable(leagueId, season);
-        if (!table) { skip('classement_indisponible'); continue; }
-        if (table.multiGroup) { skip('championnat_a_groupes'); continue; }
+        const rawTable = await loadTable(leagueId, season);
+        if (!rawTable) { skip('classement_indisponible'); continue; }
         const hid = Number(f.teams.home.id), aid = Number(f.teams.away.id);
+        let table = rawTable;
+        if (rawTable.multiGroup) {
+          const matching = (rawTable.groups || []).filter((group) =>
+            group.rows.some((r) => r.teamId === hid) && group.rows.some((r) => r.teamId === aid)
+          );
+          if (matching.length !== 1) { skip('championnat_a_groupes'); continue; }
+          table = matching[0];
+        }
         const hr = table.rows.find((r) => r.teamId === hid)?.rank;
         const ar = table.rows.find((r) => r.teamId === aid)?.rank;
         // Pre-filtre rang AVANT tout appel de forme : economise le quota.
