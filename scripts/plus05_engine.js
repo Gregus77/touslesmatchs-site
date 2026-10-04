@@ -25,6 +25,7 @@ const ENG = {
 function createPlus05Engine(deps) {
   const {
     db, apiGet, fetchLiveMatches, callSeat, publisher, onSignal = null,
+    shadowLearning = null, shadowVote = null,
     leagueIds = [], log = console, now = () => Date.now(),
     seats = ['Perplexity-Web', 'DeepSeek-V3', 'Mistral-Large', 'OpenRouter-Luna', 'OpenRouter-Qwen'],
     flags = () => ({ enabled: false, dryRun: true, requireHistory: true, sendResults: true }),
@@ -329,6 +330,15 @@ function createPlus05Engine(deps) {
         if (!deep.attackers.verified) { db.prepare('UPDATE plus05_watchlist SET last_reason=? WHERE fixture_id=?').run('attaquants_non_verifies', w.fixture_id); out.reasons.attaquants_non_verifies = (out.reasons.attaquants_non_verifies || 0) + 1; continue; }
 
         const votes = await councilVote(w, c.m, quote, deep);
+        let shadowResults = [];
+        if (typeof shadowVote === 'function') {
+          try { shadowResults = await shadowVote({ w, live: c.m, quote, deep, votes, prompt: buildPrompt(w, c.m, quote, deep) }) || []; }
+          catch (e) { log.error('[plus05-shadow] vote', e.message); }
+        }
+        if (shadowLearning) {
+          try { shadowLearning.recordCouncil({ w, live: c.m, quote, votes, shadows: shadowResults }); }
+          catch (e) { log.error('[plus05-shadow] record', e.message); }
+        }
         if (votes.yes < P.CFG.minVotes) { db.prepare('UPDATE plus05_watchlist SET last_reason=? WHERE fixture_id=?').run(`quorum_${votes.yes}_sur_5`, w.fixture_id); out.reasons.quorum_insuffisant = (out.reasons.quorum_insuffisant || 0) + 1; continue; }
 
         // Re-verification APRES le vote (il dure jusqu'a 45 s) : score et cote frais.
@@ -376,7 +386,28 @@ function createPlus05Engine(deps) {
         }
       } catch (e) { log.error('[plus05] settle', s.fixture_id, e.message); }
     }
-    return { pending: rows.length, resolved };
+    let shadowResolved = 0;
+    if (shadowLearning) {
+      try {
+        for (const fixtureId of shadowLearning.pendingFixtureIds(30)) {
+          const res = await apiGet(`/fixtures?id=${fixtureId}`);
+          const fx = res?.response?.[0];
+          const status = fx?.fixture?.status?.short;
+          if (!status) continue;
+          if (['PST','CANC','ABD','AWD','WO'].includes(status)) {
+            const r = shadowLearning.settleFixture(fixtureId, null, null, status);
+            shadowResolved += Number(r?.settled || 0);
+            continue;
+          }
+          if (!['FT','AET','PEN'].includes(status)) continue;
+          const ft = fx.score?.fulltime;
+          const h = Number(ft?.home ?? fx.goals?.home), a = Number(ft?.away ?? fx.goals?.away);
+          const r = shadowLearning.settleFixture(fixtureId, h, a, status);
+          shadowResolved += Number(r?.settled || 0);
+        }
+      } catch (e) { log.error('[plus05-shadow] settle', e.message); }
+    }
+    return { pending: rows.length, resolved, shadowResolved };
   }
 
   // ── Journal admin ───────────────────────────────────────────────────────
@@ -394,6 +425,7 @@ function createPlus05Engine(deps) {
       total: agg.total || 0, wins: agg.wins || 0, losses: agg.losses || 0, pending: agg.pending || 0, voids: agg.voids || 0,
       winRatePct: settled ? Math.round((1000 * (agg.wins || 0)) / settled) / 10 : null,
       flatStakeProfitUnits: Math.round(profit * 100) / 100, byColor,
+      shadow: shadowLearning ? shadowLearning.report() : null,
       signals: rows.map((r) => ({ id: r.id, fixtureId: r.fixture_id, sentAt: new Date(r.sent_at).toISOString(), minute: r.minute,
         match: `${r.home} - ${r.away}`, competition: r.competition, team: r.fav_name, odd: r.odd, oddSource: r.odd_source,
         risk: r.risk_color, votes: `${r.votes_yes}/${r.votes_total}`, outcome: r.outcome,
