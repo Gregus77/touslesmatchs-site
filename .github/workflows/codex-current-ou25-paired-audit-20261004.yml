@@ -1,0 +1,66 @@
+name: Codex current OU25 paired audit 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-current-ou25-paired-audit-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            docker compose exec -T api node <<'NODE'
+            const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
+            const official=["Perplexity-Web","DeepSeek-V3","Mistral-Large","OpenRouter-Luna","OpenRouter-Qwen"];
+            const ph=official.map(()=>'?').join(',');
+            const recent=db.prepare(`
+              SELECT agent_name,COUNT(*) n,COUNT(DISTINCT match_key) matches,
+                SUM(outcome='win') wins,SUM(outcome='loss') losses,ROUND(AVG(confidence),1) avg_conf
+              FROM agent_market_predictions
+              WHERE market_line='buts' AND created_at>='2026-09-12' AND agent_name IN (${ph})
+              GROUP BY agent_name ORDER BY agent_name`).all(...official);
+            console.log('OU25_RECENT='+JSON.stringify(recent));
+            const paired=db.prepare(`
+              WITH ranked AS (
+                SELECT id,match_key,agent_name,outcome,confidence,
+                  ROW_NUMBER() OVER(PARTITION BY match_key,agent_name ORDER BY id DESC) rn
+                FROM agent_market_predictions
+                WHERE market_line='buts' AND created_at>='2026-09-12'
+                  AND outcome IN ('win','loss') AND agent_name IN (${ph})
+              ), common AS (
+                SELECT match_key FROM ranked WHERE rn=1
+                GROUP BY match_key HAVING COUNT(DISTINCT agent_name)=5
+              )
+              SELECT r.agent_name,COUNT(*) common,
+                SUM(r.outcome='win') wins,SUM(r.outcome='loss') losses,
+                ROUND(AVG(r.confidence),1) avg_conf
+              FROM ranked r JOIN common c USING(match_key)
+              WHERE r.rn=1 GROUP BY r.agent_name ORDER BY r.agent_name
+            `).all(...official);
+            console.log('OU25_PAIRED5='+JSON.stringify(paired));
+            const common=db.prepare(`
+              WITH ranked AS (
+                SELECT match_key,agent_name,
+                  ROW_NUMBER() OVER(PARTITION BY match_key,agent_name ORDER BY id DESC) rn
+                FROM agent_market_predictions
+                WHERE market_line='buts' AND created_at>='2026-09-12'
+                  AND outcome IN ('win','loss') AND agent_name IN (${ph})
+              )
+              SELECT COUNT(*) n FROM (
+                SELECT match_key FROM ranked WHERE rn=1 GROUP BY match_key HAVING COUNT(DISTINCT agent_name)=5
+              )
+            `).get(...official);
+            console.log('OU25_COMMON_MATCHES='+JSON.stringify(common));
+            db.close();
+            NODE
