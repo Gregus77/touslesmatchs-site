@@ -1,4 +1,4 @@
-name: Codex signal diagnosis and safe branch tracking
+name: Codex deploy plus05 primary UI
 on:
   push:
     branches: [codex/readonly-vps-audit-20261004]
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - name: Read-only production evidence
+      - name: Deploy public +0.5 positioning
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -22,68 +22,20 @@ jobs:
           script: |
             set -eu
             cd /opt/touslesmatchs
-            echo "TLM_SIGNAL_AUDIT_BEGIN"
-            printf 'BRANCH='; git branch --show-current
-            printf 'COMMIT='; git rev-parse HEAD
-            printf 'TRACKED_DIRTY='; test -z "$(git status --porcelain --untracked-files=no)" && echo 0 || echo 1
-            docker compose ps --format json 2>/dev/null || docker compose ps
-            docker compose exec -T api node <<'NODE'
-            const Database=require('better-sqlite3');
-            const db=new Database(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
-            const tables=new Set(db.prepare("select name from sqlite_master where type='table'").all().map(r=>r.name));
-            const cols=t=>tables.has(t)?db.prepare("pragma table_info("+t+")").all().map(r=>r.name):[];
-            const pick=(t,cands)=>cands.filter(c=>cols(t).includes(c));
-            const q=(sql,args=[])=>{try{return db.prepare(sql).all(...args)}catch(e){return [{query_error:e.message}]}};
-            const latest=(t,cands,n=20)=>{
-              if(!tables.has(t)) return {absent:true};
-              const cs=pick(t,cands); const tc=['created_at','analysed_at','resolved_at','sent_at'].find(c=>cs.includes(c))||cs[0];
-              return {columns:cols(t),rows:cs.length?q("select "+cs.join(",")+" from "+t+" order by "+tc+" desc limit "+n):[]};
-            };
-            console.log("ENV="+JSON.stringify({
-              AUTO_CONCILE_OBSERVER:process.env.AUTO_CONCILE_OBSERVER??'ABSENT',
-              JEV_ENABLED:process.env.JEV_ENABLED??'ABSENT',
-              JEV_PRODUCTION_MODE:process.env.JEV_PRODUCTION_MODE??'ABSENT',
-              JEV_MIN_DECISION_CONFIDENCE:process.env.JEV_MIN_DECISION_CONFIDENCE??'ABSENT',
-              CLIENT_OU25_MIN_CONFIDENCE:process.env.CLIENT_OU25_MIN_CONFIDENCE??'ABSENT',
-              API_FOOTBALL_KEY_PRESENT:Boolean(process.env.API_FOOTBALL_KEY),
-              OPENROUTER_API_KEY_PRESENT:Boolean(process.env.OPENROUTER_API_KEY)
-            }));
-            console.log("CONCILE="+JSON.stringify(latest('concile_analyses',
-              ['id','match_key','fixture_id','home','away','minute','minute_at_analysis','score_home','score_away','score_home_at_analysis','score_away_at_analysis','best_bet','consensus','consensus_votes','confidence','real_odd','real_odd_source','analysed_at','diffusion_block','sig_sent_free','sig_sent_premium'],40)));
-            console.log("VOTES="+JSON.stringify(latest('agent_market_predictions',
-              ['id','match_key','fixture_id','agent','agent_name','model','market','selection','prediction','direction','confidence','created_at'],80)));
-            console.log("SNAPSHOTS="+JSON.stringify(latest('official_vote_snapshots',
-              ['id','match_key','fixture_id','minute','score_home','score_away','consensus','consensus_votes','confidence','real_odd','real_odd_source','created_at'],40)));
-            console.log("JEV="+JSON.stringify(latest('jev_decisions',
-              ['id','match_key','snapshot_id','fixture_id','created_at','decision','confidence','traditional_eligible','traditional_decision','traditional_block_reason','final_decision','decision_source','error_category','structural_block_reason','min_confidence'],40)));
-            console.log("REGISTRY="+JSON.stringify(latest('official_signal_registry',
-              ['id','official_signal_snapshot_id','match_key','fixture_id','market','selection','vote_count','confidence','real_odd','created_at'],40)));
-            console.log("TELEGRAM="+JSON.stringify(latest('telegram_signal_deliveries',
-              ['id','created_at','match_key','channel','market','vote_count','ok','error','telegram_message_id','official_signal_snapshot_id'],80)));
-            if(tables.has('telegram_signal_deliveries')){
-              const c=cols('telegram_signal_deliveries');
-              if(c.includes('created_at')&&c.includes('ok')) console.log("TELEGRAM_TODAY="+JSON.stringify(q("select channel,count(*) receipts,max(created_at) last_delivery from telegram_signal_deliveries where date(created_at)=date('now') and ok=1 and telegram_message_id is not null group by channel order by channel")));
-            }
-            if(tables.has('concile_analyses')){
-              const c=cols('concile_analyses');
-              if(c.includes('analysed_at')) console.log("CONCILE_TODAY_COUNT="+JSON.stringify(q("select count(*) n,max(analysed_at) latest from concile_analyses where date(analysed_at)=date('now')")));
-              if(c.includes('diffusion_block')&&c.includes('analysed_at')) console.log("BLOCKERS_TODAY="+JSON.stringify(q("select coalesce(diffusion_block,'NULL') blocker,count(*) n from concile_analyses where date(analysed_at)=date('now') group by coalesce(diffusion_block,'NULL') order by n desc")));
-            }
-            db.close();
-            NODE
-            docker compose exec -T api node <<'NODE'
-            const https=require('https');
-            const key=process.env.API_FOOTBALL_KEY||process.env.API_SPORTS_KEY;
-            if(!key){console.log("PROVIDER="+JSON.stringify({block:"key_absent"}));process.exit(0)}
-            const urls=[
-              'https://v3.football.api-sports.io/fixtures?live=all',
-              'https://v3.football.api-sports.io/fixtures?date='+new Date().toISOString().slice(0,10)
-            ];
-            let left=urls.length,out=[];
-            for(const url of urls){
-              const req=https.get(url,{headers:{'x-apisports-key':key}},res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>{let x={endpoint:url.includes('live=all')?'live':'date',http:res.statusCode};try{const d=JSON.parse(b);x.errors=d.errors||{};x.results=d.results;x.matches=Array.isArray(d.response)?d.response.length:0;x.paging=d.paging||null}catch{x.parse_error=true}out.push(x);if(!--left)console.log("PROVIDER="+JSON.stringify(out))})});
-              req.setTimeout(12000,()=>req.destroy());req.on('error',e=>{out.push({endpoint:url.includes('live=all')?'live':'date',network:e.code||'error'});if(!--left)console.log("PROVIDER="+JSON.stringify(out))});
-            }
-            NODE
-            curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/health?audit=$(date +%s)" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("HEALTH="+json.dumps({"ok":d.get("ok"),"integrations":d.get("integrations")},ensure_ascii=False))' || echo "HEALTH=unavailable"
-            echo "TLM_SIGNAL_AUDIT_END"
+            test "$(git branch --show-current)" = "feat/plus05-favorite"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git fetch origin feat/plus05-favorite
+            git pull --ff-only origin feat/plus05-favorite
+            grep -Fq 'Votre signal<br>+0,5 but.' public/index.html
+            grep -Fq 'Signaux +0,5 but équipe favorite, votes IA et justification factuelle' public/index.html
+            grep -Fq 'Les signaux +0,5 but équipe favorite et les alertes membres' public/app.html
+            grep -Fq 'Stratégie principale : +0,5 but de l’équipe du Top 5 face aux 5 derniers.' public/live-ia.html
+            docker restart touslesmatchs-api >/dev/null
+            sleep 8
+            curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/health?plus05=$(date +%s)" >/tmp/health.json
+            python3 - <<'PY'
+            import json
+            d=json.load(open('/tmp/health.json'))
+            assert d.get('ok') is True
+            print('DEPLOY_PLUS05_UI_OK')
+            PY
