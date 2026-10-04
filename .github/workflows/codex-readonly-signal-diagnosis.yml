@@ -32,7 +32,7 @@ jobs:
             js = """
             const keys=['PLUS05_ENABLED','PLUS05_DRY_RUN','PLUS05_REQUIRE_HISTORY','PLUS05_SEND_RESULTS','PLUS05_TICK_MS','AUTO_CONCILE_OBSERVER','JEV_ENABLED','JEV_PRODUCTION_MODE','JEV_MIN_DECISION_CONFIDENCE'];
             for(const k of keys) console.log(k+'='+(process.env[k]??'ABSENT'));
-            for(const k of ['API_SPORTS_KEY','OPENROUTER_API_KEY','PERPLEXITY_API_KEY','DEEPSEEK_API_KEY','MISTRAL_API_KEY']) console.log(k+'_PRESENT='+Boolean(process.env[k]));
+            for(const k of ['API_SPORTS_KEY','API_FOOTBALL_KEY','OPENROUTER_API_KEY','PERPLEXITY_API_KEY','DEEPSEEK_API_KEY','MISTRAL_API_KEY']) console.log(k+'_PRESENT='+Boolean(process.env[k]));
             const fs=require('fs');
             for(const name of ['plus05_boot','plus05_engine','plus05_favorite']) console.log(name+'_MODULE='+fs.existsSync('/app/'+name+'.js'));
             try {
@@ -51,7 +51,7 @@ jobs:
             """
             print(run(["docker","compose","exec","-T","api","node","-e",js]))
             logs=run(["docker","compose","logs","--no-color","--since","336h","--tail","50000","api"])
-            for pattern in ['jev_low_confidence','daily request limit','rateLimit','Cannot find module','historique_non_verifie','attaquants_non_verifies','quorum_insuffisant','cote_absente','cote_sous_1_60','siege non configure','reponse vide','initialisation impossible']:
+            for pattern in ['jev_low_confidence','daily request limit','rateLimit','Cannot find module','historique_non_verifie','attaquants_non_verifies','quorum_insuffisant','cote_absente','cote_sous_1_60','siege non configure','reponse vide','initialisation impossible','classement_indisponible','championnat_a_groupes','forme_favori_incomplete','forme_adversaire_incomplete','tick','watchlist']:
                 count=len(re.findall(re.escape(pattern),logs,re.I))
                 print("LOG_COUNT",pattern,count)
             for line in logs.splitlines():
