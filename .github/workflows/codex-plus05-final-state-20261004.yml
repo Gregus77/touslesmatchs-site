@@ -1,0 +1,47 @@
+name: Codex plus05 final state 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-plus05-final-state-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 4m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            echo FINAL_STATE_BEGIN
+            printf 'BRANCH='; git branch --show-current
+            printf 'HEAD='; git rev-parse HEAD
+            printf 'DISK='; df -P / | tail -1 | awk '{print $5}'
+            echo SITE_MARKERS_BEGIN
+            grep -F "Votre signal<br>+0,5 but" public/index.html | head -1 || true
+            grep -F "Signaux +0,5 but équipe favorite" public/index.html | head -1 || true
+            grep -F "Perplexity, DeepSeek, Mistral, Luna et Qwen votent." public/index.html | head -1 || true
+            grep -F "Stratégie principale : +0,5 but" public/live-ia.html | head -1 || true
+            grep -F "Les signaux +0,5 but équipe favorite" public/app.html | head -1 || true
+            echo SITE_MARKERS_END
+            docker compose exec -T api node <<'NODE'
+            const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
+            const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+            const tomorrow=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Date.now()+86400000));
+            const q=(sql,args=[])=>db.prepare(sql).all(...args);
+            console.log('ENV='+JSON.stringify({PLUS05_ENABLED:process.env.PLUS05_ENABLED,PLUS05_DRY_RUN:process.env.PLUS05_DRY_RUN,AUTO_CONCILE_OBSERVER:process.env.AUTO_CONCILE_OBSERVER,JEV_ENABLED:process.env.JEV_ENABLED,JEV_PRODUCTION_MODE:process.env.JEV_PRODUCTION_MODE,JEV_MODEL:process.env.JEV_MODEL}));
+            console.log('PLUS05_TODAY='+JSON.stringify(q("select fixture_id,competition,home,away,fav_name,fav_rank,opp_rank,risk_color,attempts,last_reason from plus05_watchlist where day=? order by kickoff_ts",[day])));
+            console.log('PLUS05_TOMORROW='+JSON.stringify(q("select fixture_id,competition,home,away,fav_name,fav_rank,opp_rank,risk_color,attempts,last_reason from plus05_watchlist where day=? order by kickoff_ts",[tomorrow])));
+            console.log('PLUS05_SIGNALS='+JSON.stringify(q("select fixture_id,home,away,fav_name,minute,odd,votes_yes,votes_total,outcome,dry_run from plus05_signals order by id desc limit 10")));
+            console.log('JEV_LAST='+JSON.stringify(q("select id,match_key,created_at,decision,confidence,final_decision,decision_source from jev_decisions order by id desc limit 5")));
+            db.close();
+            NODE
+            echo FINAL_STATE_END
