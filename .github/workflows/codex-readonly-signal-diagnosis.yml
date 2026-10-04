@@ -1,4 +1,4 @@
-name: Codex read-only signal diagnosis
+name: Codex signal diagnosis and safe branch tracking
 on:
   push:
     branches: [codex/readonly-vps-audit-20261004]
@@ -21,6 +21,12 @@ jobs:
           script: |
             set -eu
             cd /opt/touslesmatchs
+            test "$(git branch --show-current)" = feat/plus05-favorite
+            test "$(git rev-parse HEAD)" = ce49b4cdd895046f16396432ecc3dbc99959920d
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git fetch origin refs/heads/feat/plus05-favorite:refs/remotes/origin/feat/plus05-favorite
+            test "$(git rev-parse origin/feat/plus05-favorite)" = "$(git rev-parse HEAD)"
+            git branch --set-upstream-to=origin/feat/plus05-favorite feat/plus05-favorite
             python3 - <<'PY'
             import subprocess,json,re
             def run(args):
