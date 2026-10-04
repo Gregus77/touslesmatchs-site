@@ -43,6 +43,7 @@ function createPlus05ShadowLearning({ db, now = () => Date.now(), log = console,
   function normalizeDecision(value) {
     if (value === true || String(value).toLowerCase() === 'yes' || String(value).toLowerCase() === 'oui') return 'yes';
     if (value === false || String(value).toLowerCase() === 'no' || String(value).toLowerCase() === 'non') return 'no';
+    if (String(value).toLowerCase() === 'abstain' || String(value).toLowerCase() === 'wait' || String(value).toLowerCase() === 'reanalyze') return 'abstain';
     return 'error';
   }
 
@@ -154,6 +155,7 @@ function createPlus05ShadowLearning({ db, now = () => Date.now(), log = console,
         SUM(decision IN ('yes','no')) responses,
         SUM(decision='yes') yes_count,
         SUM(decision='no') no_count,
+        SUM(decision='abstain') abstains,
         SUM(decision='error') errors,
         SUM(resolved_at IS NOT NULL AND truth_fav_scored IS NOT NULL) resolved,
         SUM(resolved_at IS NOT NULL AND truth_fav_scored IS NOT NULL
