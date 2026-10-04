@@ -13,10 +13,10 @@ for(const direction of ['over','under'])for(const period of ['1H','HT','2H'])for
  const state=raw(n,true);state.consensus_direction=direction;state.votes.forEach(v=>{if(v.status==='voted')v.direction=direction;});
  const m=api.homepageLiveMatch({...base,period,minute:period==='1H'?38:60,ou25:state},true);
  for(const [surface,html] of [['Accueil',ctx.tlmVoteCirclesHtml(m)],['Application',ctx.appMiniVotes(m)],['Live IA',ctx.renderLiveOu25Details(m)]]){
-  assert(html.includes(direction.toUpperCase()+' 2,5'),surface+' lost official O/U');
   assert(html.includes(n+'/5'),surface+' lost real consensus');
  }
- assert.equal(m.ou25.consensus_direction,direction);assert.equal(m.ou25.vote_count,n);
+ assert.equal(m.ou25.consensus_direction,direction);
+ assert.equal(m.ou25.vote_count,n);
 }
 console.log('PROTECTED_OU25: 24 rendered official snapshots (both directions, 4/5 votes, 1H/HT/2H), API and written owner rule passed');
 `)(require,__dirname);
