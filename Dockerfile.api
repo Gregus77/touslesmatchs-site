@@ -54,6 +54,8 @@ COPY scripts/tlm_learning_safe.js ./tlm_learning_safe.js
 COPY scripts/plus05_favorite.js ./plus05_favorite.js
 COPY scripts/plus05_engine.js ./plus05_engine.js
 COPY scripts/plus05_boot.js ./plus05_boot.js
+COPY scripts/plus05_shadow_learning.js ./plus05_shadow_learning.js
+COPY scripts/plus05_jev_shadow.js ./plus05_jev_shadow.js
 
 EXPOSE 3001
 CMD ["node", "server.js"]
