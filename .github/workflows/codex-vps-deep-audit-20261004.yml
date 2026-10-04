@@ -1,0 +1,90 @@
+name: Codex VPS deep audit 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-vps-deep-audit-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Deep read-only VPS audit
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 7m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            echo "AUDIT_DEEP_BEGIN"
+            echo "==SYSTEM=="
+            uname -a
+            df -h /
+            df -ih /
+            echo "==TOP_LEVEL_DISK=="
+            du -x -h -d1 /opt 2>/dev/null | sort -h | tail -20
+            du -x -h -d1 /var 2>/dev/null | sort -h | tail -20
+            echo "==PROJECT_DISK=="
+            du -x -h -d1 /opt/touslesmatchs 2>/dev/null | sort -h | tail -30
+            echo "==BACKUPS=="
+            du -x -h -d1 /opt/backups 2>/dev/null | sort -h | tail -30 || true
+            du -x -h -d1 /root/backups 2>/dev/null | sort -h | tail -30 || true
+            echo "==LARGEST_PROJECT_FILES=="
+            find /opt/touslesmatchs -xdev -type f -printf '%s %p\n' 2>/dev/null | sort -nr | head -30 | awk '{printf "%.1f MB %s\n",$1/1048576,$2}'
+            echo "==DOCKER_SUMMARY=="
+            docker system df || true
+            echo "==DOCKER_IMAGES=="
+            docker images --format '{{.Repository}}|{{.Tag}}|{{.ID}}|{{.Size}}|{{.CreatedSince}}' | head -80 || true
+            echo "==CONTAINER_LOGS=="
+            find /var/lib/docker/containers -name '*-json.log' -type f -printf '%s %p\n' 2>/dev/null | sort -nr | head -20 | awk '{printf "%.1f MB %s\n",$1/1048576,$2}'
+            echo "==JOURNAL=="
+            journalctl --disk-usage 2>/dev/null || true
+            echo "==GIT=="
+            printf 'BRANCH='; git branch --show-current
+            printf 'HEAD='; git rev-parse HEAD
+            printf 'UPSTREAM='; git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo NONE
+            git status --short --branch
+            git count-objects -vH
+            echo "LOCAL_BRANCH_COUNT=$(git for-each-ref refs/heads --format='%(refname:short)' | wc -l)"
+            echo "REMOTE_BRANCH_COUNT=$(git for-each-ref refs/remotes/origin --format='%(refname:short)' | wc -l)"
+            echo "LOCAL_BRANCHES_BEGIN"
+            git for-each-ref refs/heads --sort=-committerdate --format='%(committerdate:iso8601)|%(refname:short)|%(objectname:short)|%(upstream:short)' | head -80
+            echo "LOCAL_BRANCHES_END"
+            echo "MERGED_INTO_CURRENT_BEGIN"
+            git branch --merged HEAD || true
+            echo "MERGED_INTO_CURRENT_END"
+            echo "==RUNTIME=="
+            docker compose ps
+            docker compose exec -T api node <<'NODE'
+            const Database=require('better-sqlite3');
+            const db=new Database(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
+            const tables=db.prepare("select name from sqlite_master where type='table' order by name").all().map(r=>r.name);
+            const wanted=tables.filter(x=>/jev|shadow|plus05|agent_market|agent_calls|telegram_signal|official_signal|concile_analyses|signal_funnel/i.test(x));
+            console.log('ENV='+JSON.stringify({
+              AUTO_CONCILE_OBSERVER:process.env.AUTO_CONCILE_OBSERVER??'ABSENT',
+              JEV_ENABLED:process.env.JEV_ENABLED??'ABSENT',
+              JEV_PRODUCTION_MODE:process.env.JEV_PRODUCTION_MODE??'ABSENT',
+              JEV_MODEL:process.env.JEV_MODEL??'ABSENT',
+              JEV_MIN_DECISION_CONFIDENCE:process.env.JEV_MIN_DECISION_CONFIDENCE??'ABSENT',
+              PLUS05_ENABLED:process.env.PLUS05_ENABLED??'ABSENT',
+              PLUS05_DRY_RUN:process.env.PLUS05_DRY_RUN??'ABSENT'
+            }));
+            for(const t of wanted){
+              const cols=db.prepare("pragma table_info("+t+")").all().map(r=>r.name);
+              let count=null;try{count=db.prepare("select count(*) n from "+t).get().n}catch{}
+              console.log('TABLE='+JSON.stringify({name:t,count,columns:cols}));
+            }
+            function q(label,sql){try{console.log(label+'='+JSON.stringify(db.prepare(sql).all()))}catch(e){console.log(label+'='+JSON.stringify({error:e.message}))}}
+            q('JEV_SUMMARY',"select final_decision,decision_source,count(*) n,max(created_at) latest from jev_decisions group by final_decision,decision_source order by n desc");
+            q('JEV_RECENT',"select id,match_key,created_at,decision,confidence,traditional_eligible,final_decision,decision_source,error_category,structural_block_reason from jev_decisions order by id desc limit 20");
+            q('CONCILE_RECENT',"select id,match_key,home,away,analysed_at,best_bet,consensus_votes,confidence,diffusion_block from concile_analyses order by id desc limit 25");
+            q('TELEGRAM_RECENT',"select id,created_at,match_key,channel,market,vote_count,ok,error,telegram_message_id from telegram_signal_deliveries order by id desc limit 25");
+            db.close();
+            NODE
+            echo "AUDIT_DEEP_END"
