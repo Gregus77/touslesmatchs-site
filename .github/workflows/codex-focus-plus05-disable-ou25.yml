@@ -1,0 +1,67 @@
+name: Focus production on plus05
+on:
+  push:
+    branches: [codex/plus05-shadow-learning-20261004]
+    paths: [.github/workflows/codex-focus-plus05-disable-ou25.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 5m
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            stamp=$(date -u +%Y%m%dT%H%M%SZ)
+            cp .env ".env.before-plus05-focus-$stamp"
+            python3 - <<'PY'
+            from pathlib import Path
+            p=Path('.env')
+            s=p.read_text().splitlines()
+            wanted={
+              'AUTO_CONCILE_OBSERVER':'0',
+              'JEV_ENABLED':'0',
+              'JEV_PRODUCTION_MODE':'0',
+              'PLUS05_ENABLED':'1',
+              'PLUS05_DRY_RUN':'0',
+            }
+            seen=set(); out=[]
+            for line in s:
+              if '=' in line:
+                k=line.split('=',1)[0]
+                if k in wanted:
+                  out.append(f"{k}={wanted[k]}")
+                  seen.add(k)
+                  continue
+              out.append(line)
+            for k,v in wanted.items():
+              if k not in seen: out.append(f"{k}={v}")
+            p.write_text('\n'.join(out)+'\n')
+            PY
+            systemctl disable --now tlm-shadow-tournament.timer 2>/dev/null || true
+            systemctl stop tlm-shadow-tournament.service 2>/dev/null || true
+            docker compose up -d --no-deps --force-recreate api
+            sleep 8
+            echo "FOCUS_FLAGS_BEGIN"
+            docker compose exec -T api node -e "console.log(JSON.stringify({
+              AUTO_CONCILE_OBSERVER:process.env.AUTO_CONCILE_OBSERVER,
+              JEV_ENABLED:process.env.JEV_ENABLED,
+              JEV_PRODUCTION_MODE:process.env.JEV_PRODUCTION_MODE,
+              PLUS05_ENABLED:process.env.PLUS05_ENABLED,
+              PLUS05_DRY_RUN:process.env.PLUS05_DRY_RUN
+            }))"
+            echo "FOCUS_FLAGS_END"
+            echo "SHADOW_TIMER=$(systemctl is-enabled tlm-shadow-tournament.timer 2>/dev/null || true)|$(systemctl is-active tlm-shadow-tournament.timer 2>/dev/null || true)"
+            docker compose ps api
+            curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/health?focus=$stamp" |
+              python3 -c 'import json,sys;d=json.load(sys.stdin);assert d.get("ok") is True;print("HEALTH_OK=1")'
+            docker compose logs --no-color --since 2m api | grep -E '\[plus05\] charge|\[auto-concile\] enabled' | tail -20 || true
