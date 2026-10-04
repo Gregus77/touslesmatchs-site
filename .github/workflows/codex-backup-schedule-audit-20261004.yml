@@ -1,0 +1,31 @@
+name: Codex backup schedule audit 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-backup-schedule-audit-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            echo "SCHEDULE_AUDIT_BEGIN"
+            echo "==USER_CRON=="
+            crontab -l 2>/dev/null || true
+            echo "==ETC_CRON=="
+            grep -R -n -E 'backup|tlm-|touslesmatchs' /etc/cron.d /etc/crontab 2>/dev/null || true
+            echo "==TIMERS=="
+            systemctl list-timers --all --no-pager | grep -Ei 'backup|tlm|touslesmatchs' || true
+            echo "==FILES=="
+            grep -R -n -E 'tar .*touslesmatchs|/opt/backups|tlm-.*0400|backup.log' /usr/local/bin /opt/touslesmatchs /root 2>/dev/null | head -120 || true
+            echo "SCHEDULE_AUDIT_END"
