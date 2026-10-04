@@ -12,5 +12,5 @@ jobs:
           node-version: '20'
       - name: Owner rule, real votes and all three surfaces (no network calls)
         run: node scripts/test_ou25_product_guard_20260926.js
-      - name: Statistics coverage never invents data (mocked transport)
-        run: node scripts/test_stats_coverage_20260926.js
+      - name: Live statistics coherence never invents data (mocked transport)
+        run: node scripts/test_live_state_coherence_20260919.js
