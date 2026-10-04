@@ -1,0 +1,38 @@
+name: Codex backup inventory 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-backup-inventory-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 4m
+          script: |
+            set -eu
+            echo "BACKUP_INVENTORY_BEGIN"
+            for d in /opt/backups /opt/touslesmatchs/backups /opt/touslesmatchs/data/snapshots /root/backups; do
+              echo "DIR=$d"
+              [ -d "$d" ] || continue
+              find "$d" -mindepth 1 -maxdepth 1 -printf '%T@|%TY-%Tm-%Td %TH:%TM:%TS|%s|%p\n' 2>/dev/null | sort -nr | head -120
+            done
+            echo "VOLUMES_BEGIN"
+            docker volume ls -q | while read v; do
+              [ -n "$v" ] || continue
+              u=$(docker ps -a --filter volume="$v" --format '{{.Names}}' | paste -sd, -)
+              m=$(docker volume inspect "$v" --format '{{.Mountpoint}}' 2>/dev/null || true)
+              sz=$(du -sb "$m" 2>/dev/null | awk '{print $1}')
+              echo "${sz:-0}|$v|${u:-UNUSED}|$m"
+            done | sort -nr | head -60
+            echo "VOLUMES_END"
+            echo "BACKUP_INVENTORY_END"
