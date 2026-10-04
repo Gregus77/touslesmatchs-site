@@ -980,7 +980,7 @@ body.tlm-page-app .btn{
           ? '<a class="btn btn-g" href="/#plans" style="margin-top:12px">Découvrir Premium — 14,90 €/mois</a>'
           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button><button class="btn btn-o" type="button" onclick="enablePushNotifications()" style="margin-top:8px">Activer notifications meme app fermee</button>')
       + _statusHtml;
-    if (signal && goal05MemberAccess()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || 'Over / Under 2,5', cote: signal.odd, competition: signal.competition || signal.meta });
+    if (signal && goal05MemberAccess()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || '+0,5 but équipe favorite', cote: signal.odd, competition: signal.competition || signal.meta });
   }
 
   function renderCurrentPick(data) {
@@ -996,7 +996,7 @@ body.tlm-page-app .btn{
     }
     var home = (p.teamA && p.teamA.name) || p.home || 'Équipe à domicile';
     var away = (p.teamB && p.teamB.name) || p.away || "Équipe à l'extérieur";
-    var signal = p.bet || p.best_bet || p.selection || 'Over / Under 2,5';
+    var signal = p.bet || p.best_bet || p.selection || '+0,5 but équipe favorite';
     var confidence = Number(p.confidence || p.score || 0);
     var odd = Number(p.real_odd || p.cote || p.odd || 0);
     var outcome = String(p.status || p.result || p.outcome || '').toLowerCase();
@@ -1208,7 +1208,7 @@ $("perf-kpis").innerHTML =
       + kpi(total ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
 
     if (!rows.length) {
-      $("perf-list").innerHTML = '<div class="state"><strong>Bilan Over / Under 2,5 en cours</strong><br>Aucun signal terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
+      $("perf-list").innerHTML = '<div class="state"><strong>Historique O/U 2,5</strong><br>Ancienne stratégie conservée pour comparaison. Les nouveaux signaux principaux sont les +0,5 but équipe favorite.</div>';
       return;
     }
     var html = "";
@@ -1259,7 +1259,7 @@ $("perf-kpis").innerHTML =
       + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
       + '<button class="btn btn-g" id="btn-lead">Créer mon compte gratuit</button>'
       + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
-      + '<div class="app-auth-note">Les sélections Over / Under 2,5 et les alertes membres sont disponibles avec Premium à 14,90 €/mois.</div></div></div>';
+      + '<div class="app-auth-note">Les signaux +0,5 but équipe favorite et les alertes membres sont disponibles avec Premium à 14,90 €/mois.</div></div></div>';
 
     $("btn-in").addEventListener("click", function () {
       var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
