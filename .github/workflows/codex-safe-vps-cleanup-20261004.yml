@@ -1,0 +1,113 @@
+name: Codex safe VPS cleanup 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-safe-vps-cleanup-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Safe cleanup with retention
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 9m
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            echo "SAFE_CLEANUP_BEGIN"
+            test "$(git branch --show-current)" = "feat/plus05-favorite"
+            test "$(git rev-parse HEAD)" = "ce49b4cdd895046f16396432ecc3dbc99959920d"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            echo "BEFORE_DISK=$(df -P / | tail -1 | awk '{print $3"|"$4"|"$5}')"
+            stamp=$(date -u +%Y%m%dT%H%M%SZ)
+            # Safety DB snapshot: only current database, not another multi-GB full repo archive.
+            docker compose exec -T api node -e '
+              const D=require("better-sqlite3"),fs=require("fs");
+              const src=process.env.DB_PATH||"/data/tlm.db";
+              const db=new D(src,{readonly:true,fileMustExist:true});
+              db.backup("/data/tlm-pre-cleanup-'$stamp'.db").then(()=>{db.close();console.log("DB_BACKUP_OK")}).catch(e=>{console.error(e.message);process.exit(1)});
+            '
+            cp "data/tlm-pre-cleanup-$stamp.db" "backups/tlm-pre-cleanup-$stamp.db"
+            rm -f "data/tlm-pre-cleanup-$stamp.db"
+
+            cleanup_keep_newest() {
+              dir="$1"; pattern="$2"; keep="$3"
+              [ -d "$dir" ] || return 0
+              mapfile -t files < <(find "$dir" -maxdepth 1 -type f -name "$pattern" -printf '%T@|%p\n' | sort -t'|' -k1,1nr | cut -d'|' -f2-)
+              count=${#files[@]}
+              echo "ROTATE dir=$dir pattern=$pattern found=$count keep=$keep"
+              if (( count > keep )); then
+                for ((i=keep;i<count;i++)); do
+                  echo "DELETE ${files[$i]}"
+                  rm -f -- "${files[$i]}"
+                done
+              fi
+            }
+
+            # Full nightly archives: latest 3 are enough; named incident/stability backups are untouched.
+            cleanup_keep_newest /opt/backups 'tlm-20??????_0400.tar.gz' 3
+            # Three DB snapshots/day: keep four days (12 DBs) and matching code DBs.
+            cleanup_keep_newest /opt/touslesmatchs/backups 'tlm-20??-??-??-??h00.db' 12
+            cleanup_keep_newest /opt/touslesmatchs/backups 'codes-20??-??-??-??h00.db' 12
+            # Automatic boot snapshots only; special before/after snapshots are untouched.
+            cleanup_keep_newest /opt/touslesmatchs/data/snapshots 'tlm-boot-*.db' 8
+            # Remove orphan sidecars belonging to boot snapshots whose main DB no longer exists.
+            find /opt/touslesmatchs/data/snapshots -maxdepth 1 -type f \( -name 'tlm-boot-*.db-wal' -o -name 'tlm-boot-*.db-shm' \) -print0 |
+              while IFS= read -r -d '' side; do base="${side%-wal}"; base="${base%-shm}"; [ -f "$base" ] || rm -f -- "$side"; done
+
+            echo "BRANCH_CLEANUP_BEGIN"
+            cutoff=$(date -u -d '2026-09-24 00:00:00' +%s)
+            current=$(git branch --show-current)
+            for b in $(git for-each-ref refs/heads --format='%(refname:short)'); do
+              case "$b" in
+                "$current"|main|design-wow-complet|codex/production-repair-20260914|codex/jev-production-20260924|claude/goal05-shadow|claude/plus05-bandeau-test) continue ;;
+              esac
+              ts=$(git log -1 --format=%ct "$b" 2>/dev/null || echo 0)
+              if [ "$ts" -lt "$cutoff" ] && git merge-base --is-ancestor "$b" HEAD 2>/dev/null; then
+                git branch -d "$b" || true
+              fi
+            done
+            echo "BRANCH_CLEANUP_END"
+
+            # Install small retention guard so the same leak cannot fill the disk again.
+            cat >/usr/local/sbin/tlm-backup-retention <<'SH'
+            #!/usr/bin/env bash
+            set -euo pipefail
+            keep_newest() {
+              dir="$1"; pattern="$2"; keep="$3"
+              [ -d "$dir" ] || return 0
+              mapfile -t files < <(find "$dir" -maxdepth 1 -type f -name "$pattern" -printf '%T@|%p\n' | sort -t'|' -k1,1nr | cut -d'|' -f2-)
+              for ((i=keep;i<${#files[@]};i++)); do rm -f -- "${files[$i]}"; done
+            }
+            keep_newest /opt/backups 'tlm-20??????_0400.tar.gz' 3
+            keep_newest /opt/touslesmatchs/backups 'tlm-20??-??-??-??h00.db' 12
+            keep_newest /opt/touslesmatchs/backups 'codes-20??-??-??-??h00.db' 12
+            keep_newest /opt/touslesmatchs/data/snapshots 'tlm-boot-*.db' 8
+            find /opt/touslesmatchs/data/snapshots -maxdepth 1 -type f \( -name 'tlm-boot-*.db-wal' -o -name 'tlm-boot-*.db-shm' \) -print0 |
+              while IFS= read -r -d '' side; do base="${side%-wal}"; base="${base%-shm}"; [ -f "$base" ] || rm -f -- "$side"; done
+            SH
+            chmod 700 /usr/local/sbin/tlm-backup-retention
+            cat >/etc/cron.d/tlm-backup-retention <<'CRON'
+            20 4 * * * root /usr/local/sbin/tlm-backup-retention >>/var/log/tlm-backup-retention.log 2>&1
+            CRON
+            chmod 644 /etc/cron.d/tlm-backup-retention
+
+            sync
+            echo "AFTER_DISK=$(df -P / | tail -1 | awk '{print $3"|"$4"|"$5}')"
+            echo "AFTER_OPT_BACKUPS=$(du -sh /opt/backups | awk '{print $1}')"
+            echo "AFTER_PROJECT_BACKUPS=$(du -sh /opt/touslesmatchs/backups | awk '{print $1}')"
+            echo "AFTER_SNAPSHOTS=$(du -sh /opt/touslesmatchs/data/snapshots | awk '{print $1}')"
+            echo "LOCAL_BRANCH_COUNT=$(git for-each-ref refs/heads --format='%(refname:short)' | wc -l)"
+            docker compose ps
+            curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/health?cleanup=$stamp" |
+              python3 -c 'import json,sys;d=json.load(sys.stdin);assert d.get("ok") is True;print("HEALTH_OK=1")'
+            docker compose exec -T api node -e "console.log('RUNTIME_FLAGS='+JSON.stringify({AUTO_CONCILE_OBSERVER:process.env.AUTO_CONCILE_OBSERVER,JEV_ENABLED:process.env.JEV_ENABLED,JEV_PRODUCTION_MODE:process.env.JEV_PRODUCTION_MODE,JEV_MODEL:process.env.JEV_MODEL,PLUS05_ENABLED:process.env.PLUS05_ENABLED}))"
+            echo "SAFE_CLEANUP_END"
