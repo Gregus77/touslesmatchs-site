@@ -1,0 +1,50 @@
+name: Codex shadow paired audit 20261004
+on:
+  push:
+    branches: [codex/readonly-vps-audit-20261004]
+    paths: [.github/workflows/codex-shadow-paired-audit-20261004.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            docker compose exec -T api node <<'NODE'
+            const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
+            const agents=db.prepare("select distinct agent_name from shadow_evals where agent_name!='OR-KimiK3' order by agent_name").all().map(r=>r.agent_name);
+            const sql=db.prepare(`
+              SELECT COUNT(*) common,
+                SUM(CASE WHEN k.outcome='win' THEN 1 ELSE 0 END) kimi_w,
+                SUM(CASE WHEN k.outcome='loss' THEN 1 ELSE 0 END) kimi_l,
+                SUM(CASE WHEN o.outcome='win' THEN 1 ELSE 0 END) other_w,
+                SUM(CASE WHEN o.outcome='loss' THEN 1 ELSE 0 END) other_l,
+                SUM(CASE WHEN k.outcome='win' AND o.outcome='loss' THEN 1 ELSE 0 END) kimi_only_w,
+                SUM(CASE WHEN k.outcome='loss' AND o.outcome='win' THEN 1 ELSE 0 END) other_only_w
+              FROM shadow_evals k JOIN shadow_evals o ON o.match_key=k.match_key
+              WHERE k.agent_name='OR-KimiK3' AND o.agent_name=?
+                AND k.outcome IN ('win','loss') AND o.outcome IN ('win','loss')
+            `);
+            const out=agents.map(a=>({agent:a,...sql.get(a)}));
+            console.log('PAIRED='+JSON.stringify(out));
+            const commonAll=db.prepare(`
+              WITH x AS (
+                SELECT match_key,COUNT(DISTINCT agent_name) agents
+                FROM shadow_evals WHERE outcome IN ('win','loss')
+                GROUP BY match_key
+              )
+              SELECT COUNT(*) n FROM x WHERE agents>=3
+            `).get();
+            console.log('COMMON_3PLUS='+JSON.stringify(commonAll));
+            db.close();
+            NODE
