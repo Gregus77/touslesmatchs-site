@@ -1,3 +1,4 @@
+// Shadow only: no test may publish or authorize a client signal.
 'use strict';
 const test=require('node:test'),assert=require('node:assert');
 const {createPlus05JevShadow}=require('./plus05_jev_shadow');
