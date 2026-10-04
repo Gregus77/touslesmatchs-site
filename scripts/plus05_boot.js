@@ -12,6 +12,8 @@
 const fs = require('fs');
 const path = require('path');
 const { createPlus05Engine } = require('./plus05_engine');
+const { createPlus05ShadowLearning } = require('./plus05_shadow_learning');
+const { createPlus05JevShadow } = require('./plus05_jev_shadow');
 
 // Europe D1+D2, Norvege D1, Danemark D1+D2, Bresil, Argentine, Chili/Uruguay/Paraguay/Colombie D1, Japon, Coree K1.
 // MLS (253) : classement a conferences, ecarte automatiquement (regle : ne jamais melanger les groupes).
@@ -42,6 +44,7 @@ module.exports = function bootPlus05(ctx) {
       'Mistral-Large': { url: 'https://api.mistral.ai/v1/chat/completions', key: env.MISTRAL_API_KEY, model: env.MISTRAL_MODEL || 'mistral-large-latest' },
       'OpenRouter-Luna': { url: OR_URL, key: env.OPENROUTER_API_KEY, model: resolveModel(env.OR_LUNA_MODEL || 'openai/gpt-5.6-luna') },
       'OpenRouter-Qwen': { url: OR_URL, key: env.OPENROUTER_API_KEY, model: resolveModel(env.OR_QWEN_MODEL || 'qwen/qwen3.7-max'), reasoning: { effort: 'none' } },
+      'OpenRouter-Kimi': { url: OR_URL, key: env.OPENROUTER_API_KEY, model: resolveModel(env.OR_KIMI_MODEL || 'moonshotai/kimi-k2') },
     };
     return m[seat];
   }
@@ -64,7 +67,35 @@ module.exports = function bootPlus05(ctx) {
     fs.writeFileSync(latestFile, JSON.stringify(signal, null, 2));
   };
 
-  const engine = createPlus05Engine({ db, apiGet, fetchLiveMatches, callSeat, publisher, onSignal, leagueIds, flags, log });
+  const shadowLearning = createPlus05ShadowLearning({ db, log });
+  shadowLearning.ensureSchema();
+  const jevShadow = createPlus05JevShadow({ env, log });
+
+  function parseShadowVote(text) {
+    const m = String(text || '').match(/"vote"\s*:\s*"?\s*(OUI|NON|YES|NO)/i);
+    if (!m) return null;
+    const conf = String(text).match(/"confiance"\s*:\s*(\d{1,3})/i);
+    const raison = String(text).match(/"raison"\s*:\s*"([^"]{0,160})/i);
+    return { decision:/^(OUI|YES)$/i.test(m[1])?'yes':'no',
+      yes:/^(OUI|YES)$/i.test(m[1]), confidence:conf?Number(conf[1]):null, raison:raison?raison[1]:'' };
+  }
+
+  async function shadowVote(input) {
+    const out = [];
+    try {
+      const kimiRaw = await callSeat('OpenRouter-Kimi', input.prompt);
+      if (kimiRaw?.ok) {
+        const v = parseShadowVote(kimiRaw.text);
+        out.push(v ? { seat:'Kimi', failed:false, ...v } : { seat:'Kimi', failed:true, error:'illisible' });
+      } else out.push({ seat:'Kimi', failed:true, error:kimiRaw?.error || 'echec' });
+    } catch (e) { out.push({ seat:'Kimi', failed:true, error:e.message }); }
+    try { out.push(await jevShadow.evaluate(input)); }
+    catch (e) { out.push({ seat:'Jev', failed:true, error:e.message }); }
+    return out;
+  }
+
+  const engine = createPlus05Engine({ db, apiGet, fetchLiveMatches, callSeat, publisher, onSignal,
+    shadowLearning, shadowVote, leagueIds, flags, log });
   engine.ensureSchema();
 
   const guarded = (name, fn) => async () => {
@@ -90,6 +121,7 @@ module.exports = function bootPlus05(ctx) {
     if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: 'Acces admin requis' });
     try {
       res.json({ ok: true, flags: flags(), leagues: leagueIds.length,
+        jevShadow: { enabled: jevShadow.config.enabled, configured: jevShadow.config.configured, model: jevShadow.config.model },
         ...engine.adminReport({ limit: Math.min(500, Number(req.query.limit) || 100), includeDry: req.query.includeDry === '1' }) });
     } catch (e) { res.status(500).json({ ok: false, error: 'Journal indisponible' }); }
   });
