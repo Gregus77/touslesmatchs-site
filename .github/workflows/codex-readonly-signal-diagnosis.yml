@@ -1,4 +1,4 @@
-name: Codex deploy plus05 primary UI
+name: Codex plus05 runtime diagnosis
 on:
   push:
     branches: [codex/readonly-vps-audit-20261004]
@@ -9,33 +9,25 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 5
     steps:
-      - name: Deploy public +0.5 positioning
+      - name: Read plus05 runtime state
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 5m
           script: |
             set -eu
             cd /opt/touslesmatchs
-            test "$(git branch --show-current)" = "feat/plus05-favorite"
-            test -z "$(git status --porcelain --untracked-files=no)"
-            git fetch origin feat/plus05-favorite
-            git pull --ff-only origin feat/plus05-favorite
-            grep -Fq 'Votre signal<br>+0,5 but.' public/index.html
-            grep -Fq 'Signaux +0,5 but équipe favorite, votes IA et justification factuelle' public/index.html
-            grep -Fq 'Les signaux +0,5 but équipe favorite et les alertes membres' public/app.html
-            grep -Fq 'Stratégie principale : +0,5 but de l’équipe du Top 5 face aux 5 derniers.' public/live-ia.html
-            docker restart touslesmatchs-api >/dev/null
-            sleep 8
-            curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/health?plus05=$(date +%s)" >/tmp/health.json
-            python3 - <<'PY'
-            import json
-            d=json.load(open('/tmp/health.json'))
-            assert d.get('ok') is True
-            print('DEPLOY_PLUS05_UI_OK')
-            PY
+            docker exec touslesmatchs-api node -e "console.log(JSON.stringify({PLUS05_ENABLED:process.env.PLUS05_ENABLED,PLUS05_DRY_RUN:process.env.PLUS05_DRY_RUN,PLUS05_REQUIRE_HISTORY:process.env.PLUS05_REQUIRE_HISTORY,PLUS05_TICK_MS:process.env.PLUS05_TICK_MS,API_FOOTBALL_KEY:Boolean(process.env.API_FOOTBALL_KEY)}))"
+            echo LOGS_BEGIN
+            docker logs --since 10m touslesmatchs-api 2>&1 | grep -E '\[plus05\]|API-Sports|api-sports' | tail -120 || true
+            echo LOGS_END
+            docker exec touslesmatchs-api node - <<'NODE'
+            const D=require('better-sqlite3'),db=new D(process.env.DB_PATH||'/data/tlm.db',{readonly:true,fileMustExist:true});
+            console.log('WATCH='+JSON.stringify(db.prepare("select day,count(*) n,max(created_at) latest from plus05_watchlist group by day order by day desc limit 5").all()));
+            console.log('SIG='+JSON.stringify(db.prepare("select count(*) n,max(sent_at) latest from plus05_signals").all()));
+            db.close();
+            NODE
