@@ -152,3 +152,5 @@ jobs:
             echo "GOAL05_CURRENT_PRODUCT_DEPLOYED=$target"
             echo "OU25_HISTORY_PRESERVED=true"
             echo "BACKUP=$backup"
+
+# trigger production deployment after workflow installation
