@@ -70,17 +70,17 @@ def bootstrap_whoami(message, env):
     )
 
 
-def recent_after_restart(message, started, grace_seconds=600):
-    """Replay only recent authorized updates after a restart.
+def should_process_update(message, authorized_ok, bootstrap_ok, offsetfile_exists):
+    """Execute only authorized updates once a persistent Telegram offset exists.
 
-    This lets an interrupted voice/text request resume after a service restart
-    while still refusing stale queued commands from long before activation.
+    On normal restarts, any update returned by getUpdates is unacknowledged and
+    must be retried regardless of message age. On first-ever activation (no
+    offset file yet), queued historical updates are acknowledged without action
+    so old commands cannot suddenly execute.
     """
-    try:
-        message_date = int(message.get('date') or 0)
-    except Exception:
+    if not offsetfile_exists:
         return False
-    return message_date >= int(started) - int(grace_seconds)
+    return bool(authorized_ok or bootstrap_ok)
 
 
 def normalize(value):
@@ -402,8 +402,8 @@ def main():
         return
 
     offsetfile = DATA / 'owner_remote_offset.json'
-    offset = json.loads(offsetfile.read_text()).get('offset', 0) if offsetfile.exists() else 0
-    started = int(time.time())
+    offsetfile_exists = offsetfile.exists()
+    offset = json.loads(offsetfile.read_text()).get('offset', 0) if offsetfile_exists else 0
     audit = DATA / 'owner_remote_commands.jsonl'
     inbox = DATA / 'owner_missions'
 
@@ -435,7 +435,7 @@ def main():
                 with audit.open('a') as stream:
                     stream.write(json.dumps(event, ensure_ascii=False) + '\n')
 
-                if bootstrap and recent_after_restart(message, started):
+                if bootstrap and should_process_update(message, ok, bootstrap, offsetfile_exists):
                     telegram_request(token, 'sendMessage', {
                         'chat_id': env['TELEGRAM_ADMIN_CHAT_ID'],
                         'text': (
@@ -443,7 +443,7 @@ def main():
                             + '. Ajoute TELEGRAM_ADMIN_USER_ID avec cette valeur dans le .env puis redémarre tlm-owner-remote.'
                         ),
                     })
-                elif ok and recent_after_restart(message, started):
+                elif ok and should_process_update(message, ok, bootstrap, offsetfile_exists):
                     state = safe_state()
                     transcript = None
                     processing_error = None
@@ -482,6 +482,7 @@ def main():
 
                 offset = update.get('update_id', offset) + 1
                 offsetfile.write_text(json.dumps({'offset': offset}))
+                offsetfile_exists = True
         except Exception:
             time.sleep(10)
 
