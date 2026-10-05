@@ -32,6 +32,11 @@ jobs:
             cd /opt/touslesmatchs
             target='${{ github.sha }}'
             git fetch origin main
+            echo "VPS_HEAD=$(git rev-parse HEAD)"
+            echo "TARGET=$target"
+            echo "VPS_DIFF_BEGIN"
+            git diff --name-only HEAD "$target"
+            echo "VPS_DIFF_END"
             git show "${target}:scripts/deploy_goal05_current_product_20261005.sh" > /tmp/deploy_goal05_current_product_20261005.sh
             chmod 700 /tmp/deploy_goal05_current_product_20261005.sh
             bash -n /tmp/deploy_goal05_current_product_20261005.sh
