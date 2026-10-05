@@ -192,7 +192,7 @@ def telegram_request(token, method, payload):
     req = urllib.request.Request(
         'https://api.telegram.org/bot' + token + '/' + method,
         data=json.dumps(payload).encode(),
-        headers={'Content-Type': 'application/json', 'x-goog-api-key': api_key},
+        headers={'Content-Type': 'application/json'},
     )
     with urllib.request.urlopen(req, timeout=35) as response:
         return json.load(response)
@@ -281,7 +281,7 @@ def _transcribe_gemini(audio, suffix, api_key, model):
     }
     url = (
         'https://generativelanguage.googleapis.com/v1beta/models/'
-        + model + ':generateContent'
+        + model + ':generateContent?key=' + urllib.parse.quote(api_key, safe='')
     )
     request = urllib.request.Request(
         url,
