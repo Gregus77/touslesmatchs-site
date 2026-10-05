@@ -564,6 +564,10 @@ body{overflow-x:hidden}
 }
 </style>
 
+<style id="tlm-goal05-current-live-css">
+/* O/U 2,5 reste consultable dans l'historique, mais ses panneaux live ne sont plus le produit courant. */
+#tab-live .mc-vote-details,#tab-live .mc-analysis{display:none!important}
+</style>
 </head>
 <body class="tlm-wow tlm-page-live">
 
@@ -626,6 +630,14 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
 
 <!-- TAB: EN DIRECT -->
 <div class="tab-content active" id="tab-live">
+
+<div id="goal05-current-panel" style="max-width:900px;margin:18px auto 12px;padding:16px 18px;border:1px solid rgba(34,211,238,.32);border-radius:16px;background:linear-gradient(145deg,rgba(16,185,129,.13),rgba(34,211,238,.08));">
+  <div style="font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#7de8ff">Stratégie actuelle</div>
+  <div style="font-size:20px;font-weight:950;margin-top:5px">+0,5 but de l’équipe favorite</div>
+  <div style="font-size:12px;color:#cbd5ff;margin-top:6px">Top 5 vs Bottom 5 · 30′–85′ · équipe ciblée encore à 0 but · cote réelle ≥ 1,60 · consensus 4 IA sur 5.</div>
+  <div id="goal05-current-live" style="font-size:12px;color:#9ff3d1;margin-top:9px">Chargement de l’état +0,5…</div>
+  <div style="font-size:11px;color:#8f99bd;margin-top:6px">Les anciens votes et résultats O/U 2,5 restent consultables comme historique et ne sont plus la stratégie courante.</div>
+</div>
 
 <!-- AUTH BAR -->
 <div class="auth-bar" id="auth-bar">
@@ -1176,7 +1188,7 @@ function renderLiveOu25Details(m) {
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
     return '<div class="mc-vote-seat ' + dir + (!voted&&slot&&slot.status!=='pending'?' terminal':'') + (state.official&&!entryClosed?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + escHtml(choice) + confidence + '</small></div>';
   }).join("");
-  return TLMMatchLifecycle.entryNoticeHtml(m)+'<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>'+(entryClosed?'Analyse historique':'Conseil IA')+' · Over/Under 2,5</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · '+responseCount+'/5 IA ont répondu</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (state.official&&!entryClosed ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
+  return TLMMatchLifecycle.entryNoticeHtml(m)+'<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Historique · O/U 2,5 (ancien système)</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · '+responseCount+'/5 IA ont répondu</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (state.official&&!entryClosed ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
 }
 
 // ── Render ──
@@ -1884,7 +1896,7 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
   if (plan === 'premium' || plan === 'standard' || plan === 'elite' || plan === 'vip') {
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Bienvenue dans Premium — ton accès est actif !</div>' +
-      '<div style="color:#ccc;font-size:13px;line-height:1.6">Tu peux consulter les votes O/U 2,5 et tous les signaux admissibles sur le site, l’application et Telegram.</div>';
+      '<div style="color:#ccc;font-size:13px;line-height:1.6">Tu peux consulter les signaux +0,5 but admissibles sur le site, l’application et Telegram. L’ancien O/U 2,5 reste disponible dans l’historique.</div>';
   } else if (plan === 'carte') {
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Jeton crédité !</div>' +
@@ -2058,37 +2070,8 @@ function tlmMatchHour(m){
 </script>
 
 <script>
-/* TLM_DISPLAY_OU25_ONLY_V1 */
-(function(){
-  function allowedBet(text){
-    var t=String(text||"").toLowerCase();
-    if(!t)return true;
-    return t.indexOf("over 2.5")>=0 ||
-           t.indexOf("over 2,5")>=0 ||
-           t.indexOf("under 2.5")>=0 ||
-           t.indexOf("under 2,5")>=0 ||
-           t.indexOf("sélection réservée")>=0 ||
-           t.indexOf("selection reservee")>=0;
-  }
-
-  function cleanOldMarkets(){
-    document.querySelectorAll(
-      ".match-card,.analysis-card,.prediction-card,.item,.tlm-app-live-row"
-    ).forEach(function(el){
-      var t=el.textContent||"";
-
-      var oldMarket=
-        /victoire domicile|victoire extérieur|victoire exterieur|btts|but en 1[eè]re mi-temps|double chance/i.test(t);
-
-      if(oldMarket && !allowedBet(t)){
-        el.style.display="none";
-      }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded",cleanOldMarkets);
-  setInterval(cleanOldMarkets,3000);
-})();
+/* TLM_CURRENT_PRODUCT_GOAL05_V1
+   Aucun filtre ne masque les anciens résultats : +0,5 est courant, O/U 2,5 reste historique. */
 </script>
 <script id="TLM_EXTRA_COUNTRY_FLAGS_FINAL">
 window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨🇿", "Czechia": "🇨🇿", "Serbia": "🇷🇸", "Croatia": "🇭🇷", "Slovenia": "🇸🇮", "Hungary": "🇭🇺", "Romania": "🇷🇴", "Bulgaria": "🇧🇬", "Ukraine": "🇺🇦", "Georgia": "🇬🇪", "Poland": "🇵🇱", "Austria": "🇦🇹", "Switzerland": "🇨🇭", "Greece": "🇬🇷", "Norway": "🇳🇴", "Sweden": "🇸🇪", "Denmark": "🇩🇰", "Finland": "🇫🇮"};
@@ -2100,5 +2083,21 @@ function refresh(){paint(document.getElementById('hero-consensus-label'),documen
 if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
 new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
 })();</script>
+<script id="tlm-goal05-current-status-js">
+(function(){
+  function text(v){return String(v==null?"":v);}
+  function refreshGoal05Status(){
+    var el=document.getElementById("goal05-current-live");if(!el)return;
+    fetch("/api/goal05/latest?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){
+      var s=d&&(d.signal||d.lastSignal||d.current||null);
+      if(!s){el.textContent="Moteur +0,5 actif · aucun signal conforme à afficher pour le moment.";return;}
+      var team=s.team||s.targetTeam||"", minute=s.minute||"", odd=s.odd||s.cote||"";
+      el.textContent="Dernier signal +0,5 : "+(team||"équipe ciblée")+(minute?" · "+minute+"′":"")+(odd?" · cote "+odd:"");
+    }).catch(function(){el.textContent="Moteur +0,5 actif · état détaillé momentanément indisponible.";});
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",refreshGoal05Status);else refreshGoal05Status();
+  setInterval(refreshGoal05Status,30000);
+})();
+</script>
 </body>
 </html>

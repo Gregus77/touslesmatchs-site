@@ -122,7 +122,8 @@ TikTok -> TousLesMatchs.com -> Standard -> Premium -> Elite/VIP
 ```
 
 ### Analyses sportives
-- Default : Under 2.5 (moins de 2.5 buts)
+- **Produit courant** : +0,5 but de l’équipe favorite, selon `CURRENT_RULES.md` (Top 5 vs Bottom 5, 30–85, cote réelle fraîche ≥ 1,60, quorum 4/5).
+- **O/U 2,5** : historique uniquement ; conserver les anciennes données et ne jamais le réactiver comme produit courant.
 - Coupe du Monde exclue de toutes les analyses
 - Filtrage : LOW_TRUST d'abord (bloque), puis TRUSTED (passe), default = bloque
 - Cotes : `Math.min(1.95, ((1 / (confidence / 100)) * 1.45))`, jamais > 1.95
@@ -403,11 +404,13 @@ rend l'argument multi-sport honnête. Prévoir aussi des marchés adaptés : « 
 Lire `docs/HISTORY_REQUIREMENT.md` avant toute modification des données utilisées par les pronostics. Ne jamais déclarer cinq saisons couvertes sans vérifier `/api/historical-coverage`.
 
 
-## GARDE-FOU PRODUIT PERMANENT — décision propriétaire du 26/09/2026
+## GARDE-FOU PRODUIT PERMANENT — décision propriétaire du 05/10/2026
 
-Le marché officiel OVER/UNDER 2,5, ses votes et son affichage ne peuvent être supprimés, désactivés ou remplacés par une future IA/mise à jour sans accord explicite écrit du propriétaire.
+La stratégie client actuelle est **+0,5 but de l’équipe favorite**, telle que définie dans `CURRENT_RULES.md` : Top 5 vs Bottom 5, fenêtre live 30–85, équipe ciblée encore à 0 but, cote réelle fraîche >= 1,60 et consensus minimum 4 IA sur 5.
 
-- Tout snapshot valide conserve ses cinq sièges réels, sa direction et sa confiance autorisée sur Accueil, Live IA, application et API, y compris après la première mi-temps. Les droits d’accès existants restent respectés.
-- Le quorum propriétaire réaffirmé est 3/5 (historique : commit propriétaire 82054ec, réaffirmation du 26/09/2026). Ne pas le confondre avec la fin des cinq appels bornés ni modifier les autres garde-fous.
+- **O/U 2,5 est un ancien système.** Ses analyses, résultats, votes et preuves historiques doivent être conservés intégralement et rester consultables dans l’historique, mais ils ne doivent plus être présentés comme la stratégie actuelle.
+- Aucun déploiement, branche ou ancien test ne doit réactiver O/U 2,5 comme produit courant ni masquer/supprimer son historique.
+- Les nouvelles surfaces actives (Accueil, Live IA, application, Telegram et textes commerciaux) doivent présenter +0,5 but comme produit actuel.
+- Les lignes historiques doivent distinguer clairement `Ancien système — O/U 2,5` et `Stratégie actuelle — +0,5 but` lorsqu’elles coexistent.
 - Aucune donnée statistique ni aucun vote ne doit être inventé. Une couverture fournisseur absente est un blocage de collecte, jamais un accord IA.
-- Exécuter scripts/test_ou25_product_guard_20260926.js et les tests SQLite de snapshots avant toute livraison affectant le pipeline ou les trois surfaces. La CI vérifie ce garde-fou sur chaque push et pull request.
+- Exécuter `scripts/test_goal05_policy_20261005.js` et `scripts/test_current_product_goal05_20261005.js` avant toute livraison affectant le produit ou les surfaces publiques.

@@ -6,6 +6,7 @@ on:
       - public/index.html
       - public/app.html
       - public/faq.html
+      - public/cgv.html
       - public/live-ia.html
       - public/performances.html
       - public/bankroll.html
@@ -17,7 +18,12 @@ on:
       - scripts/test_i18n_integral_20260906.js
       - public/sw.js
       - scripts/test_match_lifecycle_20260906.js
-      - scripts/test_public_quorum_copy_3of5_20260906.js
+      - scripts/test_current_product_goal05_20261005.js
+      - scripts/test_goal05_policy_20261005.js
+      - AGENTS.md
+      - CLAUDE.md
+      - .github/workflows/codex-deploy-telegram-audit.yml
+      - .github/workflows/test-current-product-goal05-20261005.yml
       - .github/workflows/deploy-match-lifecycle.yml
 permissions:
   contents: read
@@ -50,12 +56,12 @@ jobs:
             test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
             while IFS= read -r file; do
               case "$file" in
-                CHANGELOG.md|public/index.html|public/app.html|public/faq.html|public/live-ia.html|public/performances.html|public/bankroll.html|public/dashboard.html|public/sw.js|public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|scripts/test_public_quorum_copy_3of5_20260906.js|.github/workflows/deploy-integral-i18n.yml|.github/workflows/deploy-match-lifecycle.yml) ;;
+                AGENTS.md|CLAUDE.md|CHANGELOG.md|public/index.html|public/app.html|public/faq.html|public/cgv.html|public/live-ia.html|public/performances.html|public/bankroll.html|public/dashboard.html|public/sw.js|public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|scripts/test_current_product_goal05_20261005.js|scripts/test_goal05_policy_20261005.js|.github/workflows/deploy-integral-i18n.yml|.github/workflows/codex-deploy-telegram-audit.yml|.github/workflows/test-current-product-goal05-20261005.yml|.github/workflows/deploy-match-lifecycle.yml) ;;
                 *) echo "STOP: unrelated change: $file"; exit 1 ;;
               esac
             done < <(git diff --name-only HEAD "$target")
             backup=$(mktemp -d /opt/backups/tlm-match-lifecycle.XXXXXX)
-            cp -a public/index.html public/app.html public/faq.html public/live-ia.html public/performances.html public/bankroll.html public/dashboard.html public/sw.js public/js/i18n.js public/js/tlm-wow-theme.js public/js/match-lifecycle.js "$backup/"
+            cp -a public/index.html public/app.html public/faq.html public/cgv.html public/live-ia.html public/performances.html public/bankroll.html public/dashboard.html public/sw.js public/js/i18n.js public/js/tlm-wow-theme.js public/js/match-lifecycle.js "$backup/"
             test ! -e public/js/i18n-auto.js || cp -a public/js/i18n-auto.js "$backup/"
             git rev-parse HEAD > "$backup/git-head.txt"
             rollback() {
@@ -63,6 +69,7 @@ jobs:
               cp -a "$backup/index.html" public/index.html
               cp -a "$backup/app.html" public/app.html
               cp -a "$backup/faq.html" public/faq.html
+              cp -a "$backup/cgv.html" public/cgv.html
               cp -a "$backup/live-ia.html" "$backup/performances.html" "$backup/bankroll.html" "$backup/dashboard.html" public/
               cp -a "$backup/sw.js" public/sw.js
               cp -a "$backup/i18n.js" "$backup/tlm-wow-theme.js" "$backup/match-lifecycle.js" public/js/
@@ -72,10 +79,9 @@ jobs:
             }
             trap rollback ERR
             git merge --ff-only "$target"
-            node scripts/test_homepage_consensus_20260905.js
-            node scripts/test_match_lifecycle_20260906.js
-            node scripts/test_public_quorum_copy_3of5_20260906.js
             node scripts/test_i18n_integral_20260906.js
+            node scripts/test_goal05_policy_20261005.js
+            node scripts/test_current_product_goal05_20261005.js
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/match-lifecycle.js?v=$target" -o "$backup/helper-public.js"
             cmp public/js/match-lifecycle.js "$backup/helper-public.js"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/?v=$target" -o "$backup/home-public.html"
@@ -84,6 +90,14 @@ jobs:
             cmp public/app.html "$backup/app-public.html"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/faq.html?v=$target" -o "$backup/faq-public.html"
             cmp public/faq.html "$backup/faq-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/cgv.html?v=$target" -o "$backup/cgv-public.html"
+            cmp public/cgv.html "$backup/cgv-public.html"
+            grep -qF '+0,5 but équipe favorite' "$backup/home-public.html"
+            grep -qF '4 IA / 5 minimum' "$backup/home-public.html"
+            grep -qF 'Votre signal +0,5 but équipe favorite' "$backup/app-public.html"
+            grep -qF 'Stratégie actuelle' public/live-ia.html
+            grep -qF 'La stratégie actuelle est +0,5 but de l’équipe favorite' public/performances.html
+            grep -qF 'ancien historique O/U 2,5 reste consultable' "$backup/cgv-public.html"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/i18n.js?v=$target" -o "$backup/i18n-public.js"
             cmp public/js/i18n.js "$backup/i18n-public.js"
             for file in i18n-auto.js tlm-wow-theme.js; do
@@ -103,7 +117,8 @@ jobs:
             if [ "$page" = app ]; then url="https://www.touslesmatchs.com/app.html?lifecycle=${{ github.sha }}"; fi
             google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --dump-dom "$url" > "/tmp/$page-lifecycle.html"
             grep -q 'match-lifecycle.js' "/tmp/$page-lifecycle.html"
-            ! grep -Eqi 'minimum (de )?4 (IA )?(sur|de) 5|au moins 4 votes sur 5|at least 4 of 5 AIs agree' "/tmp/$page-lifecycle.html"
+            grep -q '+0,5' "/tmp/$page-lifecycle.html"
+            grep -Eqi '4 IA / 5 minimum|4 IA sur 5|4/5' "/tmp/$page-lifecycle.html"
             google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --screenshot="/tmp/$page-lifecycle.png" "$url"
           done
       - uses: actions/upload-artifact@v4

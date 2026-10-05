@@ -1,0 +1,41 @@
+name: Test current Goal05 product and history
+
+on:
+  push:
+    branches:
+      - codex/goal05-single-product-history-20261005
+  pull_request:
+    branches: [main]
+    paths:
+      - AGENTS.md
+      - public/index.html
+      - public/app.html
+      - public/live-ia.html
+      - public/performances.html
+      - public/faq.html
+      - public/cgv.html
+      - public/js/i18n.js
+      - scripts/test_current_product_goal05_20261005.js
+      - scripts/test_goal05_policy_20261005.js
+      - .github/workflows/deploy-match-lifecycle.yml
+      - .github/workflows/test-current-product-goal05-20261005.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Goal05 product and history guards
+        run: |
+          set -euo pipefail
+          node scripts/test_current_product_goal05_20261005.js
+          node scripts/test_goal05_policy_20261005.js
+          node scripts/test_i18n_integral_20260906.js
+          echo CURRENT_GOAL05_PRODUCT_TESTS_OK

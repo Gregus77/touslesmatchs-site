@@ -451,12 +451,10 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
 @media(max-width:350px){body.tlm-page-app>header{padding-left:8px;padding-right:8px;gap:5px}body.tlm-page-app>header .brand{font-size:12px;gap:4px;min-width:0}body.tlm-page-app>header .brand img{width:26px;height:26px;flex:none}body.tlm-page-app>header .plan-chip{font-size:9px;padding:5px 4px}body.tlm-page-app>header #tlm-language-universal{width:78px;max-width:78px;padding:5px 4px;font-size:10px;flex:none}}
 </style>
 
-<style id="TLM_HIDE_GOAL05_FINAL">
-/* Ancien produit +0,5 abandonné. */
-[class^="goal05-"],
-[class*=" goal05-"]{
-  display:none !important;
-}
+<style id="TLM_GOAL05_CURRENT_PRODUCT">
+/* Produit courant : +0,5 but équipe. L'ancien O/U 2,5 reste historique uniquement. */
+.tlm-app-ai{display:none!important}
+.goal05-home:after{content:"+0,5"!important}
 </style>
 <!-- TLM-APP-SITE-MASTER-V2-20260830 -->
 
@@ -673,7 +671,7 @@ body{overflow-x:hidden}
 
   <section class="tlm-app-stadium-hero" aria-labelledby="app-hero-title">
     <div class="tlm-app-kicker">Football · Analyse live</div>
-    <h1 id="app-hero-title">Votre signal Over ou Under 2,5.<span>Décidé avant la mi-temps.</span></h1>
+    <h1 id="app-hero-title">Votre signal +0,5 but équipe favorite.<span>Suivi de la 30e à la 85e minute.</span></h1>
     <p class="tlm-app-copy">Les équipes, les logos, le score et les drapeaux ci-dessous viennent du match réellement en cours.</p>
     <div class="tlm-app-match" id="app-live-stage" aria-live="polite">
       <div class="tlm-app-match-head"><span class="tlm-app-live-label" id="app-live-status">Recherche du direct</span><strong class="tlm-app-minute" id="app-live-minute">—</strong></div>
@@ -1009,7 +1007,7 @@ body{overflow-x:hidden}
           ? '<a class="btn btn-g" href="/#plans" style="margin-top:12px">Découvrir Premium — 14,90 €/mois</a>'
           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button><button class="btn btn-o" type="button" onclick="enablePushNotifications()" style="margin-top:8px">Activer notifications meme app fermee</button>')
       + _statusHtml;
-    if (signal && goal05MemberAccess()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || 'Over / Under 2,5', cote: signal.odd, competition: signal.competition || signal.meta });
+    if (signal && goal05MemberAccess()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || '+0,5 but équipe', cote: signal.odd, competition: signal.competition || signal.meta });
   }
 
   function renderCurrentPick(data) {
@@ -1400,7 +1398,7 @@ $("perf-kpis").innerHTML =
 })();
 </script>
 
-<script id="tlm-goal05-live-pro-js" type="application/x-disabled">
+<script id="tlm-goal05-live-pro-js">
 (function(){
   function esc(v){return String(v == null ? "" : v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
   function get(u){return fetch(u,{cache:"no-store"}).then(function(r){return r.json();});}
@@ -1446,17 +1444,17 @@ $("perf-kpis").innerHTML =
     var pct=52;
     if(m.analysable)pct+=8;
     if(m.h2h_markets&&m.h2h_markets.first_half_goal_pct)pct+=Math.round((Number(m.h2h_markets.first_half_goal_pct)-50)/4);
-    if(min>=25&&min<=65)pct+=10;
+    if(min>=30&&min<=65)pct+=10;
     if(min>65&&min<=85)pct+=5;
     if(team&&((team===m.home&&sh<sa)||(team===m.away&&sa<sh)))pct+=8;
     pct=Math.max(35,Math.min(92,pct));
     var reasons=[];
     if(!allowed(m))reasons.push("Championnat non retenu pour le moteur +0,5.");
     if(!team)reasons.push("Le +0,5 équipe est déjà validé ou non pertinent.");
-    if(min<25)reasons.push("Trop tôt, on attend une vraie lecture live.");
+    if(min<30)reasons.push("Trop tôt : la fenêtre +0,5 commence à la 30e minute.");
     if(min>85)reasons.push("Trop tard hors exception top contre bas de tableau.");
     if(!reasons.length)reasons.push("Fenêtre live correcte, équipe ciblée sans but, match surveillable.");
-    var play=allowed(m)&&goal05HardCriteriaValid(m,team)&&min>=25&&min<=85&&pct>=85;
+    var play=allowed(m)&&goal05HardCriteriaValid(m,team)&&min>=30&&min<=85&&pct>=85;
     return {play:play,pct:pct,team:team||"Aucune équipe",text:reasons.join(" ")};
   }
   function renderLivePick(best){
@@ -1499,14 +1497,18 @@ $("perf-kpis").innerHTML =
   function renderPerf(){
     var kp=document.getElementById("perf-kpis"), list=document.getElementById("perf-list"); if(!kp||!list)return;
     Promise.all([get("/analysis-history?limit=300").catch(function(){return {analyses:[]};}),get("/api/goal05/latest").catch(function(){return {};})]).then(function(all){
-      var rows=((all[0].analyses)||[]).filter(is05);
+      var rows=((all[0].analyses)||[]).slice();
       [all[1].signal,all[1].lastSignal].forEach(function(s){var r=norm(s);if(r)rows.unshift(r);});
-      var done=rows.filter(function(a){return a.outcome==="win"||a.outcome==="loss";});
-      var wins=done.filter(function(a){return a.outcome==="win";}).length;
-      var wr=done.length?Math.round(wins/done.length*100):0;
-      kp.innerHTML=kpi(String(rows.length),"Signaux envoyés","c-cyan")+kpi(String(done.length),"Signaux terminés","")+kpi(done.length?wr+"%":"—","Réussite +0,5",wr>=60?"c-green":"");
-      if(!rows.length){list.innerHTML='<div class="state"><strong>Bilan +0,5 en attente</strong><br>Aucun signal +0,5 envoyé trouvé.</div>';return;}
-      list.innerHTML=rows.slice(0,50).map(function(a){var b=a.outcome==="win"?'<span class="badge b-win">Gagné</span>':a.outcome==="loss"?'<span class="badge b-loss">Perdu</span>':'<span class="badge b-wait">Envoyé / en attente</span>';return '<div class="item"><div class="mid"><div class="t">'+esc(a.home||"Signal +0,5")+(a.away?' — '+esc(a.away):'')+'</div><div class="m">'+esc((a.analysed_at||a.date||a.created_at||"").slice(0,10))+' · '+esc(a.competition||"")+'</div></div>'+b+'</div>';}).join("");
+      var seen={};rows=rows.filter(function(a){var key=[a.match_key||a.id||"",a.home||"",a.away||"",a.bet||a.best_bet||"",a.analysed_at||a.date||a.created_at||""].join("|");if(seen[key])return false;seen[key]=1;return true;});
+      var current=rows.filter(is05), legacy=rows.filter(function(a){return !is05(a);});
+      kp.innerHTML=kpi(String(rows.length),"Historique total","c-cyan")+kpi(String(legacy.length),"Ancien O/U 2,5","")+kpi(String(current.length),"Actuel +0,5","c-green");
+      if(!rows.length){list.innerHTML='<div class="state"><strong>Historique en attente</strong><br>Aucune analyse historique disponible.</div>';return;}
+      list.innerHTML=rows.slice(0,100).map(function(a){
+        var b=a.outcome==="win"?'<span class="badge b-win">Gagné</span>':a.outcome==="loss"?'<span class="badge b-loss">Perdu</span>':'<span class="badge b-wait">En attente</span>';
+        var strategy=is05(a)?'<span class="badge b-win">Actuel · +0,5</span>':'<span class="badge b-wait">Ancien · O/U 2,5</span>';
+        var market=a.bet||a.best_bet||a.selection||"";
+        return '<div class="item"><div class="mid"><div class="t">'+esc(a.home||"Analyse")+(a.away?' — '+esc(a.away):'')+'</div><div class="m">'+esc((a.analysed_at||a.date||a.created_at||"").slice(0,10))+' · '+esc(a.competition||"")+(market?' · '+esc(market):'')+'</div></div>'+strategy+b+'</div>';
+      }).join("");
     });
   }
   function run(){renderLive();renderPerf();}

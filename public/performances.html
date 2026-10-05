@@ -281,7 +281,7 @@ async function doLogin(){
 
 <div class="page">
   <div class="page-title">Performances du Concile</div>
-  <div class="page-sub">L'historique antérieur est conservé. La journée défectueuse du 26 août a été retraitée avec les bons critères. Depuis le 27 août 2026, chaque nouveau signal Over/Under 2,5 est associé à une preuve d'envoi Telegram.</div>
+  <div class="page-sub">La stratégie actuelle est +0,5 but de l’équipe favorite. L’historique O/U 2,5 antérieur est conservé intégralement et reste affiché comme ancien système ; aucun résultat historique n’est supprimé lors du changement de stratégie.</div>
 
   <div class="tier-tabs" id="tier-tabs">
     <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
@@ -310,7 +310,7 @@ async function doLogin(){
     <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65/100 Prudence</span>
   </div>
   <div class="freshness-banner"><span class="fb-icon">🔄</span><span>Statistiques calculées en temps réel à chaque chargement de cette page, directement depuis notre base de données — pas de mise à jour différée, aucun chiffre mis en cache.</span></div>
-  <div class="section-hint" id="history-hint">Depuis le 27 août : signaux Telegram vérifiés. Les lignes « Ancien système » ou « Livraison non prouvée » sont conservées séparément et ne prouvent pas un envoi.</div>
+  <div class="section-hint" id="history-hint">Les lignes +0,5 correspondent à la stratégie actuelle. Les anciennes lignes O/U 2,5 restent visibles comme historique ; « Livraison non prouvée » signifie seulement que l’envoi Telegram n’est pas démontré.</div>
   <div id="history-list" class="history-list">
     <div class="spinner-wrap"><div class="spinner"></div></div>
   </div>
@@ -443,6 +443,16 @@ function confMeta(conf) {
   return { cls: 'red', label: 'Prudence' };
 }
 
+function isGoal05HistoryRow(a) {
+  var text=[a&&a.bet,a&&a.best_bet,a&&a.market,a&&a.selection,a&&a.signal,a&&a.type].join(" ").toLowerCase();
+  return text.indexOf("+0,5")>=0 || text.indexOf("0,5")>=0 || text.indexOf("0.5")>=0 || text.indexOf("goal05")>=0;
+}
+function productHistoryBadge(a) {
+  return isGoal05HistoryRow(a)
+    ? '<span class="h-badge diffused">Actuel · +0,5 but</span>'
+    : '<span class="h-badge observed">Historique · O/U 2,5</span>';
+}
+
 function renderRow(a) {
   var badge;
   if (a.outcome === 'win') badge = '<span class="h-badge win">Gagné</span>';
@@ -485,7 +495,7 @@ function renderRow(a) {
     '<div class="h-match">' +
       '<div class="h-teams">' + esc(a.home) + ' — ' + esc(a.away) + (score ? ' <span style="color:var(--muted);font-weight:500">(' + esc(score) + ')</span>' : '') + '</div>' +
       '<div class="h-comp">' + esc(a.competition || a.sport || '') + '</div>' +
-      '<div class="h-tier">' + tierBadgeLabel(a.tier) + (confPillHtml ? ' ' + confPillHtml : '') + ' ' + diffusionHtml + '</div>' +
+      '<div class="h-tier">' + productHistoryBadge(a) + ' ' + tierBadgeLabel(a.tier) + (confPillHtml ? ' ' + confPillHtml : '') + ' ' + diffusionHtml + '</div>' +
     '</div>' +
     '<div class="h-bet">' + esc(betText) + '</div>' +
     '<div class="h-odds">' + cote + '</div>' +
