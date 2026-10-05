@@ -309,6 +309,34 @@ const footballAttempts = liveStateCoherence.createAttemptStore(db);
 const jevEngine = jevDecisionEngine.createEngine({db, logger: event => console.log('[jev]', JSON.stringify(event))});
 const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
 const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 18 * 60 * 60 * 1000);
+function goal05EnvFlag(value) { return /^(1|true|yes|on)$/i.test(String(value || "").trim()); }
+const GOAL05_ENABLED = goal05EnvFlag(process.env.GOAL05_ENABLED);
+const GOAL05_PUSH_ENABLED = GOAL05_ENABLED && goal05EnvFlag(process.env.GOAL05_PUSH_ENABLED);
+const GOAL05_POLICY_FROM_MINUTE = 30;
+const GOAL05_POLICY_TO_MINUTE = 85;
+const GOAL05_POLICY_MIN_ODD = 1.60;
+const GOAL05_POLICY_MIN_VOTES = 4;
+const GOAL05_ODD_MAX_AGE_MS = Math.max(30000, Number(process.env.GOAL05_ODD_MAX_AGE_MS || 120000));
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS goal05_signal_registry (
+    signal_key TEXT PRIMARY KEY,
+    fixture_id TEXT NOT NULL,
+    team TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    minute INTEGER NOT NULL,
+    score_home INTEGER NOT NULL,
+    score_away INTEGER NOT NULL,
+    odd REAL NOT NULL,
+    votes INTEGER NOT NULL,
+    criteria_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    telegram_delivered INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
 
 function readGoal05LatestSignal() {
   try {
@@ -322,6 +350,26 @@ function readGoal05LatestSignal() {
   } catch (e) {
     console.error("[goal05-latest]", e.message);
     return { ok: false, signal: null, error: "lecture_signal_goal05_impossible" };
+  }
+}
+
+function validateGoal05TelegramDelivery(row) {
+  try {
+    const proof=db.prepare("SELECT * FROM goal05_signal_registry WHERE signal_key=?").get(row.match_key);
+    if(!proof) return {ok:false,terminal:true};
+    if(Date.parse(proof.expires_at)<=Date.now()) return {ok:false,terminal:true};
+    const criteria=JSON.parse(proof.criteria_json||"{}");
+    const ok=criteria.eligible===true && criteria.play===true &&
+      Number(proof.minute)>=GOAL05_POLICY_FROM_MINUTE &&
+      Number(proof.minute)<=GOAL05_POLICY_TO_MINUTE &&
+      Number(proof.odd)>=GOAL05_POLICY_MIN_ODD &&
+      Number(proof.votes)>=GOAL05_POLICY_MIN_VOTES &&
+      criteria.oddFreshVerified===true &&
+      criteria.aiConsensusVerified===true;
+    return {ok,terminal:!ok};
+  } catch(error) {
+    console.error("[goal05-telegram-validate]",error.message);
+    return {ok:false,terminal:false};
   }
 }
 
@@ -1216,13 +1264,16 @@ const validateFirstHalfDelivery = firstHalfDelivery.createValidator({
   },
 });
 const clientTelegramPublisher = telegramClient.createPublisher({
-  validateSignal: validateFirstHalfDelivery,
+  validateSignal: row => row.kind==="goal05" ? validateGoal05TelegramDelivery(row) : validateFirstHalfDelivery(row),
   paymentAvailable:()=>Date.now()<telegramPaymentVerifiedUntil,
   db, env: process.env,
   onDelivered: row => {
     _integrationHealth.telegram.last_delivery_at = row.created_at || new Date().toISOString();
     if (!row.match_key) return;
     storedTelegramDeliveryCache.delete(row.match_key);
+    if(row.kind === 'goal05') {
+      try { db.prepare("UPDATE goal05_signal_registry SET telegram_delivered=1 WHERE signal_key=?").run(row.match_key); } catch (_) {}
+    }
     if(row.kind === 'signal') {
       const analysis=db.prepare('SELECT * FROM concile_analyses WHERE match_key=?').get(row.match_key);
       if(analysis && ['win','loss'].includes(analysis.outcome))
@@ -3103,168 +3154,165 @@ async function goal05History(match,targetId,opponentId) {
   };
 }
 
+function goal05PositiveTeamBet(bet) {
+  const value=String(bet||"").toLowerCase();
+  return value.includes("marque") && !value.includes("ne marque pas");
+}
+
+function goal05AiConsensus(match,side) {
+  const snapshotKey=getPredictionSnapshotKey(match);
+  const minute=parseLiveMinuteValue(match?.minute)??0;
+  const firstLine=side==="home"?"mt1_dom":"mt1_ext";
+  const secondLine=side==="home"?"mt2_dom":"mt2_ext";
+  const placeholders=CONCILE_AGENT_NAMES.map(()=>"?").join(",");
+  try {
+    const rows=db.prepare(`
+      SELECT agent_name,market_line,bet,confidence,created_at
+      FROM agent_market_predictions
+      WHERE match_key=? AND agent_name IN (${placeholders})
+        AND market_line IN (?,?)
+      ORDER BY id ASC
+    `).all(snapshotKey,...CONCILE_AGENT_NAMES,firstLine,secondLine);
+    const byAgent=new Map();
+    for(const row of rows) {
+      const name=String(row.agent_name||"");
+      if(!CONCILE_AGENT_NAMES.includes(name)) continue;
+      const ballot=byAgent.get(name)||{};
+      ballot[row.market_line]=row; byAgent.set(name,ballot);
+    }
+    const votes=CONCILE_AGENT_NAMES.map(agent=>{
+      const ballot=byAgent.get(agent)||{};
+      const relevant=(minute<=45?[ballot[firstLine],ballot[secondLine]]:[ballot[secondLine]]).filter(Boolean);
+      if(!relevant.length) return {agent,direction:null,confidence:null,status:"pending"};
+      const yes=relevant.some(row=>goal05PositiveTeamBet(row.bet));
+      const confidence=Math.max(...relevant.map(row=>Number(row.confidence)||0));
+      return {agent,direction:yes?"yes":"no",confidence,status:"voted"};
+    });
+    const yesBallots=votes.filter(v=>v.direction==="yes");
+    const yesVotes=yesBallots.length;
+    const activeVotes=votes.filter(v=>v.direction!==null).length;
+    const avgYesConfidence=yesVotes?Math.round(yesBallots.reduce((s,v)=>s+Number(v.confidence||0),0)/yesVotes):0;
+    return {snapshotKey,yesVotes,activeVotes,totalSeats:5,avgYesConfidence,verified:yesVotes>=GOAL05_POLICY_MIN_VOTES,votes};
+  } catch(error) {
+    console.error("[goal05-ai-consensus]",error.message);
+    return {snapshotKey,yesVotes:0,activeVotes:0,totalSeats:5,avgYesConfidence:0,verified:false,votes:[],error:"consensus_unavailable"};
+  }
+}
+
 async function buildStrictGoal05Criteria(match) {
-  const minute=Number(match.minute||0);
-  const homeScore=Number(match.score_home||0);
-  const awayScore=Number(match.score_away||0);
-
-  const rejected=reason=>({
-    eligible:false,play:false,reason,
-    historicalVerified:false,formVerified:false,
-    opponentConcedes:false,attackersAvailable:false,
-    liveStatsVerified:false,motivationVerified:false,
-    rankGap:null,liveOdd:null
+  const minute=Number(match.minute||0),homeScore=Number(match.score_home||0),awayScore=Number(match.score_away||0);
+  const rejected=(reason,extra={})=>({
+    eligible:false,play:false,reason,historicalVerified:false,formVerified:false,
+    opponentConcedes:false,attackersAvailable:false,liveStatsVerified:false,
+    motivationVerified:false,rankGap:null,liveOdd:null,oddFreshVerified:false,
+    aiConsensusVerified:false,aiVotes:0,...extra
   });
-
-  if (match.sport!=="Football" || match.source!=="api-sports")
-    return rejected("source_non_eligible");
-  if (!match.homeId || !match.awayId || !match.leagueId || !match.season)
-    return rejected("identifiants_manquants");
-  if (minute<25 || minute>80)
-    return rejected("minute_hors_fenetre");
-  if (homeScore>0 && awayScore>0)
-    return rejected("les_deux_equipes_ont_deja_marque");
+  if(!GOAL05_ENABLED) return rejected("goal05_desactive");
+  if(match.sport!=="Football"||match.source!=="api-sports") return rejected("source_non_eligible");
+  if(isWomenMatch(match)||isCategoryBanned(match)||isUsaOrCanadaMatch(match)||isLowTrustCompetition(match)||isBlacklistedForLiveDisplay(match))
+    return rejected("competition_non_autorisee");
+  const tier=leagueTier(match);
+  if(tier!=="trusted_major"&&tier!=="trusted_secondary") return rejected("championnat_non_autorise");
+  if(!match.homeId||!match.awayId||!match.leagueId||!match.season) return rejected("identifiants_manquants");
+  if(minute<GOAL05_POLICY_FROM_MINUTE||minute>GOAL05_POLICY_TO_MINUTE) return rejected("minute_hors_fenetre");
 
   try {
     const standings=await fetchStandings(match.leagueId,match.season);
     const homeRank=standings?.rows?.find(r=>Number(r.teamId)===Number(match.homeId));
     const awayRank=standings?.rows?.find(r=>Number(r.teamId)===Number(match.awayId));
+    if(!homeRank||!awayRank) return rejected("classement_non_verifie");
+    if(Number(homeRank.groupIndex)!==Number(awayRank.groupIndex)) return rejected("groupes_classement_differents");
+    const groupTotal=Number(homeRank.groupTotal||awayRank.groupTotal||standings?.total||0);
+    if(!Number.isFinite(groupTotal)||groupTotal<10) return rejected("taille_classement_non_verifiee");
+    const bottomThreshold=Math.max(1,groupTotal-4);
+    const homeEligible=homeRank.rank<=5&&awayRank.rank>=bottomThreshold;
+    const awayEligible=awayRank.rank<=5&&homeRank.rank>=bottomThreshold;
 
-    if (!homeRank || !awayRank) return rejected("classement_non_verifie");
+    let side,targetId,opponentId,targetName,opponentName,targetRank,opponentRank,targetScore;
+    if(homeEligible) {
+      side="home";targetId=match.homeId;opponentId=match.awayId;targetName=match.home;opponentName=match.away;
+      targetRank=homeRank.rank;opponentRank=awayRank.rank;targetScore=homeScore;
+    } else if(awayEligible) {
+      side="away";targetId=match.awayId;opponentId=match.homeId;targetName=match.away;opponentName=match.home;
+      targetRank=awayRank.rank;opponentRank=homeRank.rank;targetScore=awayScore;
+    } else return rejected("pas_top5_bottom5",{homeRank:homeRank.rank,awayRank:awayRank.rank,groupTotal});
 
-    let side,targetId,opponentId,targetName,opponentName,targetRank,opponentRank;
-
-    if (homeScore===0 && awayScore>0) {
-      side="home"; targetId=match.homeId; opponentId=match.awayId;
-      targetName=match.home; opponentName=match.away;
-      targetRank=Number(homeRank.rank); opponentRank=Number(awayRank.rank);
-    } else if (awayScore===0 && homeScore>0) {
-      side="away"; targetId=match.awayId; opponentId=match.homeId;
-      targetName=match.away; opponentName=match.home;
-      targetRank=Number(awayRank.rank); opponentRank=Number(homeRank.rank);
-    } else {
-      const homeBetter=Number(homeRank.rank)<Number(awayRank.rank);
-      side=homeBetter?"home":"away";
-      targetId=homeBetter?match.homeId:match.awayId;
-      opponentId=homeBetter?match.awayId:match.homeId;
-      targetName=homeBetter?match.home:match.away;
-      opponentName=homeBetter?match.away:match.home;
-      targetRank=homeBetter?Number(homeRank.rank):Number(awayRank.rank);
-      opponentRank=homeBetter?Number(awayRank.rank):Number(homeRank.rank);
-    }
-
+    if(targetScore>0) return rejected("equipe_cible_a_deja_marque",{team:targetName,side,targetRank,opponentRank,groupTotal});
     const rankGap=opponentRank-targetRank;
-    const minuteVerified=(minute<=65)||(minute<=80 && rankGap>=10);
 
-    const [
-      targetStats,opponentStats,injuries,liveStats,odds,
-      lineups,discipline,history
-    ]=await Promise.all([
+    const [targetStats,opponentStats,injuries,liveStats,odds,lineups,discipline,history]=await Promise.all([
       fetchTeamStatistics(match.leagueId,match.season,targetId),
       fetchTeamStatistics(match.leagueId,match.season,opponentId),
-      fetchInjuries(match),
-      fetchMatchStats(match.fixtureId),
-      fetchRealOdds(match),
-      fetchGoal05Lineups(match),
-      fetchGoal05Discipline(match),
-      goal05History(match,targetId,opponentId)
+      fetchInjuries(match),fetchMatchStats(match.fixtureId),
+      fetchRealOdds(match,{maxAgeMs:GOAL05_ODD_MAX_AGE_MS}),
+      fetchGoal05Lineups(match),fetchGoal05Discipline(match),goal05History(match,targetId,opponentId)
     ]);
 
     const targetForm=String(targetStats?.form||"").toUpperCase();
-    const wins=(targetForm.match(/W/g)||[]).length;
-    const draws=(targetForm.match(/D/g)||[]).length;
-    const formPoints=wins*3+draws;
-
-    const targetInjuries=side==="home" ? injuries?.home : injuries?.away;
-    const targetLineup=(lineups||[]).find(
-      l=>Number(l?.team?.id)===Number(targetId)
-    );
-    const forwards=(targetLineup?.startXI||[]).filter(
-      p=>String(p?.player?.pos||"").toUpperCase()==="F"
-    );
-
-    const shotsOnTarget=goal05Metric(
-      liveStats,side,["shots_on_goal","shotsOnGoal"]
-    );
-    const totalShots=goal05Metric(
-      liveStats,side,["shots","total_shots","shotsTotal"]
-    );
-    const possession=goal05Metric(
-      liveStats,side,["possession","ball_possession"]
-    );
-
+    const wins=(targetForm.match(/W/g)||[]).length,draws=(targetForm.match(/D/g)||[]).length,formPoints=wins*3+draws;
+    const targetInjuries=side==="home"?injuries?.home:injuries?.away;
+    const targetLineup=(lineups||[]).find(l=>Number(l?.team?.id)===Number(targetId));
+    const forwards=(targetLineup?.startXI||[]).filter(p=>String(p?.player?.pos||"").toUpperCase()==="F");
+    const shotsOnTarget=goal05Metric(liveStats,side,["shots_on_goal","shotsOnGoal"]);
+    const totalShots=goal05Metric(liveStats,side,["shots","total_shots","shotsTotal"]);
+    const possession=goal05Metric(liveStats,side,["possession","ball_possession"]);
     const liveOdd=goal05TeamOdd(odds,side,targetName);
+    const oddFetchedAt=odds?.fetchedAt||null;
+    const oddAgeMs=oddFetchedAt?Date.now()-Date.parse(oddFetchedAt):Infinity;
+    const oddFreshVerified=Number.isFinite(oddAgeMs)&&oddAgeMs>=0&&oddAgeMs<=GOAL05_ODD_MAX_AGE_MS;
+
     const historicalVerified=history.verified===true;
-    const formVerified=targetForm.length>=4 && wins>=2 && formPoints>=8 &&
-      Number(targetStats?.gfAvg||0)>=1;
+    const formVerified=targetForm.length>=4&&wins>=2&&formPoints>=8&&Number(targetStats?.gfAvg||0)>=1;
     const opponentConcedes=Number(opponentStats?.gaAvg||0)>=1.1;
-    const attackersAvailable=Array.isArray(targetInjuries) &&
-      targetInjuries.length===0 && forwards.length>=1;
+    const attackersAvailable=Array.isArray(targetInjuries)&&targetInjuries.length===0&&forwards.length>=1;
     const disciplineVerified=discipline?.redCards===0;
-    const liveStatsVerified=shotsOnTarget!==null && totalShots!==null &&
-      possession!==null && shotsOnTarget>=3 && totalShots>=8 &&
-      possession>=52 && disciplineVerified;
-    const motivationVerified=targetRank<=5 ||
-      opponentRank>=Math.max(1,Number(standings.total||0)-4);
+    const liveStatsVerified=shotsOnTarget!==null&&totalShots!==null&&possession!==null&&shotsOnTarget>=3&&totalShots>=8&&possession>=52&&disciplineVerified;
+    const motivationVerified=targetRank<=5&&opponentRank>=bottomThreshold;
+    const aiConsensus=goal05AiConsensus(match,side);
+    const aiVotes=aiConsensus.yesVotes,aiConsensusVerified=aiConsensus.verified===true;
 
     const checks={
-      minuteVerified,
-      rankVerified:rankGap>=5,
-      historicalVerified,
-      formVerified,
-      opponentConcedes,
-      attackersAvailable,
-      liveStatsVerified,
-      motivationVerified,
-      oddVerified:liveOdd!==null && liveOdd>=1.60
+      minuteVerified:minute>=GOAL05_POLICY_FROM_MINUTE&&minute<=GOAL05_POLICY_TO_MINUTE,
+      rankVerified:motivationVerified,historicalVerified,formVerified,opponentConcedes,
+      attackersAvailable,liveStatsVerified,motivationVerified,
+      oddVerified:liveOdd!==null&&liveOdd>=GOAL05_POLICY_MIN_ODD,
+      oddFreshVerified,aiConsensusVerified
     };
-
-    const missing=Object.entries(checks)
-      .filter(([,ok])=>!ok).map(([name])=>name);
-
+    const missing=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
     const eligible=missing.length===0;
-
     return {
-      eligible,play:eligible,
-      team:targetName,opponent:opponentName,side,
-      reason:eligible ? "tous_les_criteres_stricts_valides" : missing.join(","),
-      rankGap,targetRank,opponentRank,
-      historicalVerified,history,
-      formVerified,targetForm,formPoints,
+      eligible,play:eligible,team:targetName,opponent:opponentName,side,
+      reason:eligible?"tous_les_criteres_stricts_valides":missing.join(","),
+      rankGap,targetRank,opponentRank,groupTotal,bottomThreshold,
+      historicalVerified,history,formVerified,targetForm,formPoints,
       opponentConcedes,opponentGaAvg:opponentStats?.gaAvg??null,
       attackersAvailable,forwards:forwards.map(p=>p?.player?.name).filter(Boolean),
-      liveStatsVerified,disciplineVerified,
-      shotsOnTarget,totalShots,possession,
-      motivationVerified,liveOdd,
+      liveStatsVerified,disciplineVerified,shotsOnTarget,totalShots,possession,
+      motivationVerified,liveOdd,oddFetchedAt,oddAgeMs,oddFreshVerified,
+      aiConsensusVerified,aiVotes,aiActiveVotes:aiConsensus.activeVotes,aiTotalSeats:5,
+      aiConfidence:aiConsensus.avgYesConfidence,aiSnapshotKey:aiConsensus.snapshotKey,aiVoteDetails:aiConsensus.votes,
       checkedAt:new Date().toISOString()
     };
-  } catch(e) {
-    console.error("[goal05-strict]",match.home,match.away,e.message);
+  } catch(error) {
+    console.error("[goal05-strict]",match.home,match.away,error.message);
     return rejected("erreur_verification_stricte");
   }
 }
 
 async function enrichStrictGoal05(matches) {
-  const candidates=matches.filter(m=>{
+  if(!GOAL05_ENABLED) return (matches||[]).map(m=>({...m,goal05Criteria:{eligible:false,play:false,reason:"goal05_desactive"}}));
+  const candidates=(matches||[]).filter(m=>{
     const minute=Number(m.minute||0);
-    const hs=Number(m.score_home||0),as=Number(m.score_away||0);
-    return m.sport==="Football" && m.source==="api-sports" &&
-      minute>=25 && minute<=80 && !(hs>0 && as>0);
+    return m.sport==="Football"&&m.source==="api-sports"&&
+      minute>=GOAL05_POLICY_FROM_MINUTE&&minute<=GOAL05_POLICY_TO_MINUTE;
   });
-
   const max=Math.max(1,Number(process.env.GOAL05_MAX_DEEP_CANDIDATES||3));
   const selected=new Set(candidates.slice(0,max).map(m=>String(m.fixtureId||m.id)));
-
-  const enriched=await Promise.all(matches.map(async m=>{
+  const enriched=await Promise.all((matches||[]).map(async m=>{
     const id=String(m.fixtureId||m.id);
-    if (!selected.has(id)) {
-      return {...m,goal05Criteria:{
-        eligible:false,play:false,reason:"hors_selection_profonde"
-      }};
-    }
+    if(!selected.has(id)) return {...m,goal05Criteria:{eligible:false,play:false,reason:"hors_selection_profonde"}};
     return {...m,goal05Criteria:await buildStrictGoal05Criteria(m)};
   }));
-
   await publishStrictGoal05Signals(enriched);
   return enriched;
 }
@@ -3274,7 +3322,7 @@ async function enrichStrictGoal05(matches) {
 let goal05PushObserverRunning = false;
 
 async function runGoal05PushObserver() {
-  if (goal05PushObserverRunning) return;
+  if (!GOAL05_ENABLED || goal05PushObserverRunning) return;
   goal05PushObserverRunning = true;
 
   try {
@@ -5757,21 +5805,29 @@ async function fetchTeamStatistics(leagueId, season, teamId) {
 async function fetchStandings(leagueId, season) {
   if (!API_SPORTS_KEY || !leagueId || !season) return null;
   const ck = `stand_${leagueId}_${season}`;
-  const c = standingsCache.get(ck);
-  if (c && Date.now() - c.ts < 6 * 3600 * 1000) return c.data;
+  const cached = standingsCache.get(ck);
+  if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
   try {
     const data = await httpGet(
       `https://v3.football.api-sports.io/standings?league=${leagueId}&season=${season}`,
       { "x-apisports-key": API_SPORTS_KEY }
     );
-    const table = data?.response?.[0]?.league?.standings?.[0] || [];
-    const rows = table.map(t => ({
-      teamId: t.team?.id, rank: t.rank, points: t.points, goalsDiff: t.goalsDiff,
-    })).filter(r => r.teamId);
-    const out = rows.length ? { rows, total: rows.length } : null;
-    standingsCache.set(ck, { data: out, ts: Date.now() });
+    const groups = data?.response?.[0]?.league?.standings || [];
+    const rows=[];
+    groups.forEach((table,groupIndex)=>{
+      const groupTotal=Array.isArray(table)?table.length:0;
+      (table||[]).forEach(t=>{
+        if(!t?.team?.id) return;
+        rows.push({
+          teamId:t.team.id,rank:Number(t.rank),points:t.points,goalsDiff:t.goalsDiff,
+          groupIndex,groupTotal,groupName:t.group||null
+        });
+      });
+    });
+    const out=rows.length?{rows,total:groups.length===1?rows.length:null,groups:groups.length}:null;
+    standingsCache.set(ck,{data:out,ts:Date.now()});
     return out;
-  } catch (e) { console.error("[standings]", e.message); return null; }
+  } catch(e) { console.error("[standings]",e.message); return null; }
 }
 
 // Décision propriétaire du 12/09/2026 : aucun signal client O/U 2,5 sans
@@ -5779,25 +5835,23 @@ async function fetchStandings(leagueId, season) {
 // bottom 5 est prioritaire, mais ne remplace jamais les autres garde-fous.
 async function evaluateOu25StandingGap(match) {
   if (!match?.leagueId || !match?.season || !match?.homeId || !match?.awayId) {
-    return { ok: false, reason: "classement non vérifiable", home_rank: null, away_rank: null, rank_gap: null, top5_bottom5: false };
+    return { ok:false,reason:"classement non vérifiable",home_rank:null,away_rank:null,rank_gap:null,top5_bottom5:false };
   }
-  const standings = await fetchStandings(match.leagueId, match.season);
-  const home = standings?.rows?.find((row) => Number(row.teamId) === Number(match.homeId));
-  const away = standings?.rows?.find((row) => Number(row.teamId) === Number(match.awayId));
-  if (!home || !away || !Number.isFinite(Number(home.rank)) || !Number.isFinite(Number(away.rank))) {
-    return { ok: false, reason: "classement non vérifiable", home_rank: null, away_rank: null, rank_gap: null, top5_bottom5: false };
+  const standings=await fetchStandings(match.leagueId,match.season);
+  const home=standings?.rows?.find(row=>Number(row.teamId)===Number(match.homeId));
+  const away=standings?.rows?.find(row=>Number(row.teamId)===Number(match.awayId));
+  if(!home||!away||!Number.isFinite(home.rank)||!Number.isFinite(away.rank)) {
+    return { ok:false,reason:"classement non vérifiable",home_rank:null,away_rank:null,rank_gap:null,top5_bottom5:false };
   }
-  const homeRank = Number(home.rank), awayRank = Number(away.rank);
-  const rankGap = Math.abs(homeRank - awayRank);
-  const bottomThreshold = Math.max(1, Number(standings.total || 0) - 4);
-  const top5Bottom5 = (homeRank <= 5 && awayRank >= bottomThreshold) || (awayRank <= 5 && homeRank >= bottomThreshold);
+  const rankGap=Math.abs(home.rank-away.rank);
+  const sameGroup=Number(home.groupIndex)===Number(away.groupIndex);
+  const groupTotal=sameGroup?Number(home.groupTotal||away.groupTotal||standings?.total||0):0;
+  const bottomThreshold=groupTotal?Math.max(1,groupTotal-4):Infinity;
+  const top5Bottom5=sameGroup && ((home.rank<=5&&away.rank>=bottomThreshold)||(away.rank<=5&&home.rank>=bottomThreshold));
   return {
-    ok: rankGap >= 5,
-    reason: rankGap >= 5 ? "écart de classement vérifié" : `écart de classement ${rankGap} < 5`,
-    home_rank: homeRank,
-    away_rank: awayRank,
-    rank_gap: rankGap,
-    top5_bottom5: top5Bottom5,
+    ok:rankGap>=5,
+    reason:rankGap>=5?"écart de classement vérifié":`écart de classement ${rankGap} < 5`,
+    home_rank:home.rank,away_rank:away.rank,rank_gap:rankGap,top5_bottom5:top5Bottom5
   };
 }
 
@@ -5912,7 +5966,7 @@ const ODDS_ENDPOINT_BY_SPORT = {
   baseball:   { host: "v1.baseball.api-sports.io",   param: "game",    key: "baseball" },
 };
 
-async function fetchRealOdds(match) {
+async function fetchRealOdds(match, options = {}) {
   if (!API_SPORTS_KEY || match.source !== "api-sports") return null;
   const sportLc = String(match.sport || "Football").toLowerCase();
   const cfg = ODDS_ENDPOINT_BY_SPORT[sportLc];
@@ -5934,7 +5988,8 @@ async function fetchRealOdds(match) {
   // etait deja retombee a 1.50 apres un but.
   const ck = `odds_${sportLc}_${gameId}_${match.score_home ?? "x"}_${match.score_away ?? "x"}`;
   const c = oddsCache.get(ck);
-  if (c && Date.now() - c.ts < 10 * 60 * 1000) return c.data;
+  const maxAgeMs=Math.max(1000,Number(options.maxAgeMs || 10 * 60 * 1000));
+  if (c && Date.now() - c.ts < maxAgeMs) return c.data;
   let data = null;
   try {
     const resp = await httpGet(
@@ -11916,137 +11971,81 @@ app.post("/fcm/unregister", (req, res) => {
 });
 
 async function publishStrictGoal05Signals(matches) {
-  const eligible = (matches || []).filter(function (match) {
-    return match?.goal05Criteria?.eligible === true &&
-      match?.goal05Criteria?.play === true;
-  });
+  if(!GOAL05_PUSH_ENABLED) return;
+  const eligible=(matches||[]).filter(match=>match?.goal05Criteria?.eligible===true&&match?.goal05Criteria?.play===true);
 
-  for (const match of eligible) {
-    const criteria = match.goal05Criteria;
-    const fixtureId = String(match.fixtureId || match.id || "");
-    const team = String(criteria.team || "");
-    const signalKey = fixtureId + "_" +
-      team.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase().replace(/[^a-z0-9]/g, "") +
-      "_goal05";
+  for(const match of eligible) {
+    const criteria=match.goal05Criteria;
+    const fixtureId=String(match.fixtureId||match.id||"");
+    const team=String(criteria.team||"");
+    const signalKey=fixtureId+"_"+team.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"")+"_goal05";
+    const now=new Date();
+    const expiresAt=new Date(now.getTime()+2*60*1000).toISOString();
 
-    const alreadySent = db.prepare(
-      "SELECT signal_key FROM fcm_notifications WHERE signal_key=?"
-    ).get(signalKey);
-
-    if (alreadySent) continue;
-
-    const signal = {
-      ok: true,
-      id: signalKey,
-      type: "goal05_team_over_0_5",
-      status: "active",
-      sentAt: new Date().toISOString(),
-      fixtureId: fixtureId,
-      match: String(match.home || "") + " - " + String(match.away || ""),
-      home: match.home,
-      away: match.away,
-      team: team,
-      opponent: criteria.opponent,
-      competition: match.competition || "",
-      minute: Number(match.minute || 0),
-      score_home: Number(match.score_home || 0),
-      score_away: Number(match.score_away || 0),
-      odd: Number(criteria.liveOdd || 0),
-      bet: team + " +0,5 but",
-      reason: "Tous les critères stricts sont validés",
-      checks: criteria
+    const signal={
+      ok:true,id:signalKey,type:"goal05_team_over_0_5",status:"active",sentAt:now.toISOString(),
+      fixtureId,match:String(match.home||"")+" - "+String(match.away||""),home:match.home,away:match.away,
+      team,opponent:criteria.opponent,competition:match.competition||"",minute:Number(match.minute||0),
+      score_home:Number(match.score_home||0),score_away:Number(match.score_away||0),
+      odd:Number(criteria.liveOdd||0),bet:team+" +0,5 but",
+      reason:"Top 5 vs Bottom 5 · cote réelle fraîche · contrôles live/historiques valides · "+Number(criteria.aiVotes||0)+"/5 IA",
+      checks:criteria
     };
 
-    fs.mkdirSync(require("path").dirname(GOAL05_LATEST_SIGNAL_FILE), {
-      recursive: true
-    });
-    fs.writeFileSync(
-      GOAL05_LATEST_SIGNAL_FILE,
-      JSON.stringify(signal, null, 2)
-    );
+    db.prepare(`INSERT OR IGNORE INTO goal05_signal_registry
+      (signal_key,fixture_id,team,home,away,minute,score_home,score_away,odd,votes,criteria_json,created_at,expires_at)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+        signalKey,fixtureId,team,String(match.home||""),String(match.away||""),signal.minute,
+        signal.score_home,signal.score_away,signal.odd,Number(criteria.aiVotes||0),
+        JSON.stringify(criteria),signal.sentAt,expiresAt
+      );
 
-    const devices = db.prepare(
-      "SELECT token,email,session_token FROM fcm_devices WHERE enabled=1"
-    ).all();
+    fs.mkdirSync(require("path").dirname(GOAL05_LATEST_SIGNAL_FILE),{recursive:true});
+    fs.writeFileSync(GOAL05_LATEST_SIGNAL_FILE,JSON.stringify(signal,null,2));
 
-    const validDevices = devices.filter(function (device) {
-      const valid = verifyFcmSubscriber(device.email, device.session_token);
-      if (!valid) {
-        db.prepare(
-          "UPDATE fcm_devices SET enabled=0 WHERE token=?"
-        ).run(device.token);
-      }
+    const telegramData={
+      matchKey:signalKey,home:match.home,away:match.away,competition:match.competition||"",
+      minute:signal.minute,scoreHome:signal.score_home,scoreAway:signal.score_away,
+      targetTeam:team,market:signal.bet,votes:Number(criteria.aiVotes||0),
+      confidence:Number(criteria.aiConfidence||0),odd:signal.odd,reason:signal.reason
+    };
+    for(const dest of clientTelegramPublisher.targets) {
+      clientTelegramPublisher.enqueue("goal05",telegramData,dest,signalKey,Date.parse(expiresAt));
+    }
+    clientTelegramPublisher.flush().catch(error=>console.error("[goal05-telegram]",error.message));
+
+    // FCM uses its own durable dedupe. A previous FCM must never suppress Telegram.
+    const alreadySent=db.prepare("SELECT signal_key FROM fcm_notifications WHERE signal_key=?").get(signalKey);
+    if(alreadySent) continue;
+
+    const devices=db.prepare("SELECT token,email,session_token FROM fcm_devices WHERE enabled=1").all();
+    const validDevices=devices.filter(device=>{
+      const valid=verifyFcmSubscriber(device.email,device.session_token);
+      if(!valid) db.prepare("UPDATE fcm_devices SET enabled=0 WHERE token=?").run(device.token);
       return Boolean(valid);
     });
-
-    let successCount = 0;
-    let failureCount = 0;
-
-    if (tlmFirebaseMessaging && validDevices.length) {
-      for (let index = 0; index < validDevices.length; index += 500) {
-        const batch = validDevices.slice(index, index + 500);
-
-        const response = await tlmFirebaseMessaging.sendEachForMulticast({
-          tokens: batch.map(function (device) { return device.token; }),
-          notification: {
-            title: "Signal +0,5 but validé",
-            body: team + " peut marquer · " +
-              String(match.home || "") + " - " +
-              String(match.away || "") + " · " +
-              Number(match.minute || 0) + "'"
-          },
-          data: {
-            signalKey: signalKey,
-            fixtureId: fixtureId,
-            team: team,
-            route: "https://www.touslesmatchs.com/app.html?tab=pick"
-          },
-          android: {
-            priority: "high",
-            notification: {
-              channelId: "goal05_signals",
-              sound: "default"
-            }
-          }
+    let successCount=0,failureCount=0;
+    if(tlmFirebaseMessaging&&validDevices.length) {
+      for(let index=0;index<validDevices.length;index+=500) {
+        const batch=validDevices.slice(index,index+500);
+        const response=await tlmFirebaseMessaging.sendEachForMulticast({
+          tokens:batch.map(device=>device.token),
+          notification:{title:"Signal +0,5 but validé",body:team+" peut marquer · "+String(match.home||"")+" - "+String(match.away||"")+" · "+signal.minute+"'"},
+          data:{signalKey,fixtureId,team,route:"https://www.touslesmatchs.com/app.html?tab=pick"},
+          android:{priority:"high",notification:{channelId:"goal05_signals",sound:"default"}}
         });
-
-        successCount += response.successCount;
-        failureCount += response.failureCount;
-
-        response.responses.forEach(function (item, position) {
-          if (item.success) return;
-
-          const code = String(item.error?.code || "");
-          if (
-            code.includes("registration-token-not-registered") ||
-            code.includes("invalid-registration-token")
-          ) {
-            db.prepare(
-              "UPDATE fcm_devices SET enabled=0 WHERE token=?"
-            ).run(batch[position].token);
-          }
+        successCount+=response.successCount; failureCount+=response.failureCount;
+        response.responses.forEach((item,position)=>{
+          if(item.success) return;
+          const code=String(item.error?.code||"");
+          if(code.includes("registration-token-not-registered")||code.includes("invalid-registration-token"))
+            db.prepare("UPDATE fcm_devices SET enabled=0 WHERE token=?").run(batch[position].token);
         });
       }
     }
-
-    db.prepare(
-      "INSERT INTO fcm_notifications " +
-      "(signal_key,fixture_id,team,success_count,failure_count) " +
-      "VALUES (?,?,?,?,?)"
-    ).run(
-      signalKey,
-      fixtureId,
-      team,
-      successCount,
-      failureCount
-    );
-
-    console.log(
-      "[fcm] signal " + signalKey +
-      " publie: " + successCount +
-      " succes, " + failureCount + " echec"
-    );
+    db.prepare("INSERT INTO fcm_notifications (signal_key,fixture_id,team,success_count,failure_count) VALUES (?,?,?,?,?)")
+      .run(signalKey,fixtureId,team,successCount,failureCount);
+    console.log("[goal05] signal "+signalKey+" · Telegram queue + FCM "+successCount+"/"+validDevices.length);
   }
 }
 
@@ -19838,13 +19837,13 @@ app.listen(PORT, () => {
       2,
       Number(process.env.GOAL05_PUSH_INTERVAL_MIN || 5)
     ) * 60 * 1000;
-    setTimeout(runGoal05PushObserver, 60000);
-    setInterval(runGoal05PushObserver, goal05PushIntervalMs);
-    console.log(
-      "[fcm] Observateur autonome actif: " +
-      Math.round(goal05PushIntervalMs / 60000) +
-      " min"
-    );
+    if(GOAL05_ENABLED) {
+      setTimeout(runGoal05PushObserver,60000);
+      setInterval(runGoal05PushObserver,goal05PushIntervalMs);
+      console.log("[goal05] Observateur actif: "+Math.round(goal05PushIntervalMs/60000)+" min · push="+GOAL05_PUSH_ENABLED);
+    } else {
+      console.log("[goal05] Observateur désactivé par GOAL05_ENABLED");
+    }
 
     setInterval(checkAnalyticsSchedule, 60000);
     setTimeout(() => {
