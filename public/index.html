@@ -1206,7 +1206,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
             <div class="tlm-stage-score"><span id="hero-live-score">— - —</span><small class="tlm-stage-period" id="hero-live-period">En attente</small></div>
             <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-away-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
           </div>
-          <div class="tlm-goal05-current-box"><strong>Stratégie actuelle · +0,5 but</strong><span>Top 5 vs Bottom 5 · 30′–85′ · cote réelle ≥ 1,60 · 4/5 IA</span><small>L’ancien O/U 2,5 reste conservé uniquement dans l’historique des résultats.</small></div><div class="tlm-ai-box tlm-ou25-current-hidden">
+          <div class="tlm-goal05-current-box"><strong>Stratégie actuelle · +0,5 but</strong><span>Top 5 vs Bottom 5 · 30′–85′ · cote réelle ≥ 1,60 · 4/5 IA</span><small>L’ancien système reste conservé uniquement dans l’historique technique.</small></div><div class="tlm-ai-box tlm-ou25-current-hidden">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
             <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><button type="button" class="tlm-ai-vote"><i>1</i>IA 1</button><button type="button" class="tlm-ai-vote"><i>2</i>IA 2</button><button type="button" class="tlm-ai-vote"><i>3</i>IA 3</button><button type="button" class="tlm-ai-vote"><i>4</i>IA 4</button><button type="button" class="tlm-ai-vote"><i>5</i>IA 5</button></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0/5</strong><span id="hero-response-count">0/5 IA ont répondu</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
             <div class="tlm-vote-snapshot" id="hero-vote-explanation" aria-live="polite"></div>
@@ -1216,7 +1216,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           </div>
         </div>
       </div>
-      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 4 sur 5.</span></div><div><strong>Historique conservé</strong><span>Les anciens O/U 2,5 restent consultables.</span></div></div>
+      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 4 sur 5.</span></div><div><strong>Historique conservé</strong><span>L’ancien système reste archivé dans l’historique technique.</span></div></div>
     </section>
 
   </div>
@@ -1926,7 +1926,7 @@ function renderHeroLive(m){
   var analysisLink=document.getElementById('hero-analysis-link');
   setHeroText('hero-live-date',new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}));
   if(!m){
-    if(status)status.textContent='Aucun match entre la 35e minute et la fin de première mi-temps';
+    if(status)status.textContent='Aucun match actuellement dans la fenêtre +0,5 (30e à 85e minute)';
     setHeroText('hero-live-minute','—');setHeroText('hero-live-period','Prochaine actualisation automatique');
     setHeroText('hero-home-name','En attente');setHeroText('hero-away-name','En attente');setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','');setHeroText('hero-consensus-current','0/5');
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
@@ -1953,17 +1953,17 @@ function renderHeroLive(m){
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<35);
   var alignedCount=Number(voteState.consensusCount)||consensus.count;
   var direction=voteState.consensusDirection||consensus.direction;
-  setHeroText('hero-consensus-current',votes?(voteState.locked?'CONSENSUS '+alignedCount+'/5':(direction==='over'?'OVER':'UNDER')+' 2,5 — '+alignedCount+'/5'):'0/5');
+  setHeroText('hero-consensus-current',votes?(voteState.locked?'CONSENSUS '+alignedCount+'/5':'ANALYSE +0,5 — '+alignedCount+'/5'):'0/5');
   setHeroText('hero-response-count',heroResponseCount(voteState.slots)+'/5 IA ont répondu');
   setHeroText('hero-ai-title',voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Tendance IA en cours':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisWaiting?'Analyse à venir':'En attente d’analyse');
   var paidExplanation='';
   if(votes&&!voteState.locked&&voteState.official){
-    paidExplanation=(voteState.recommendationStatus||('Signal officiel à '+voteState.snapshotMinute+"′, score "+voteState.snapshotScore))+' · '+(voteState.consensusDirection==='over'?'Over':'Under')+' 2,5 · '+voteState.consensusCount+'/5 votes';
+    paidExplanation=(voteState.recommendationStatus||('Signal officiel à '+voteState.snapshotMinute+"′, score "+voteState.snapshotScore))+' · '+'Analyse +0,5 · '+voteState.consensusCount+'/5 votes';
     if(voteState.officialConfidence!=null)paidExplanation+=' · confiance '+voteState.officialConfidence+'/100';
     paidExplanation+=voteState.officialOdd!=null?' · cote '+Number(voteState.officialOdd).toFixed(2):' · cote indisponible';
     if(voteState.outcome==='win')paidExplanation+=' · gagné';else if(voteState.outcome==='loss')paidExplanation+=' · perdu';
   }else if(votes&&!voteState.locked&&!voteState.official){
-    paidExplanation=tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel':('Tendance IA en cours · '+(consensus.direction==='over'?'Over':'Under')+' 2,5 · '+consensus.count+'/5 avis');
+    paidExplanation=tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel':('Tendance IA en cours · +0,5 · '+consensus.count+'/5 avis');
   }
   if(votes&&!voteState.locked&&voteState.official){
     if(voteState.snapshotMinute!=null)paidExplanation+=' · enregistré à '+voteState.snapshotMinute+"'";
@@ -2291,7 +2291,7 @@ async function loadPick(){
         '<div class="pick-match"><div class="pick-team"><div class="pick-team-logo">'+logo(proof.home_logo,proof.home)+'</div><div class="pick-team-name">'+esc(proof.home)+'</div></div>'+
         '<div class="pick-vs">VS</div><div class="pick-team"><div class="pick-team-logo">'+logo(proof.away_logo,proof.away)+'</div><div class="pick-team-name">'+esc(proof.away)+'</div></div></div>'+
         '<div class="pick-score-badge '+(proofWin?'win':'loss')+'">'+proofScore+' · '+(proofWin?'✓ Gagné':'✗ Perdu')+'</div>'+
-        '<div class="pick-bet">'+esc(proof.bet||'Over / Under 2,5')+'</div>'+
+        '<div class="pick-bet">+0,5 but équipe favorite</div>'+
         '<div class="empty-note">Aucun nouveau pick ne respecte encore les critères aujourd\'hui. Le moteur continue l\'analyse.</div>'+
         '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le prochain pick</button>';
       return;
@@ -2799,7 +2799,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
      Vert = snapshot officiel validé par le backend uniquement.
    */
    if(o.official===true){
-     var direction=o.consensus_direction==="over"?"OVER 2,5":"UNDER 2,5";
+     var direction="ANALYSE +0,5";
      var confidence=o.official_confidence;
      var odd=o.official_odd;
 
@@ -2832,7 +2832,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
          ? votes+"/5 IA ont répondu · décision en cours"
          : minute>=35
            ? "Interrogation des 5 IA en cours"
-           : "Analyse disponible à partir de la 35e minute"
+           : "Analyse disponible à partir de la 30e minute"
      };
    }
 
@@ -2844,7 +2844,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
        var under=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="under"}).length;
        d=over>=under?"over":"under";
      }
-     trend=(d==="over"?"Over 2,5":"Under 2,5")+" ("+aligned+"/5)";
+     trend="Analyse +0,5 ("+aligned+"/5)";
    }
 
    return {
