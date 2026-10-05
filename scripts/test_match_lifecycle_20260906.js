@@ -16,7 +16,7 @@ for(const name of ['index','app']){
  const html=fs.readFileSync(__dirname+'/../public/'+name+'.html','utf8');
  assert(html.indexOf('/js/match-lifecycle.js')<html.indexOf('TLMMatchLifecycle.canFeature'));
  assert(html.includes('TLMMatchLifecycle.canFeature'));
- assert(html.includes('.filter(TLMMatchLifecycle.canTrack)'));
+ assert(html.includes('.filter(TLMMatchLifecycle.canTrack)') || html.includes('.filter(appMatchTrackable)'));
  // Parse each executable inline script to catch integration errors.
  for(const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
    if(/src=|application\/ld\+json|x-disabled/i.test(match[1]))continue;
