@@ -29,6 +29,9 @@ jobs:
             echo "=== HERMES SERVICES ==="
             systemctl is-active tlm-owner-remote.service
             systemctl is-active tlm-hermes-guardian.service
+            echo "=== OWNER OFFSET ==="
+            cat /opt/touslesmatchs/data/owner_remote_offset.json 2>/dev/null || true
+            echo
             echo "=== LAST OWNER REMOTE AUDIT EVENTS ==="
             tail -n 30 /opt/touslesmatchs/data/owner_remote_commands.jsonl 2>/dev/null || true
             echo "=== END READ-ONLY PROOF ==="
