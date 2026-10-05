@@ -1,5 +1,17 @@
 # 📖 PROJECT_STATE.md — Mémoire vivante de TousLesMatchs
 
+## 🔥 PRIORITÉ COURANTE — 5 octobre 2026
+
+- **Source de vérité sportive** : `CURRENT_RULES.md`.
+- **Stratégie principale** : +0,5 but équipe favorite.
+- **Sélection** : Top 5 vs Bottom 5 dans la compétition/groupe autorisé.
+- **Live** : 30'–85', équipe ciblée encore à 0 but, cote réelle fraîche >= 1,60.
+- **Consensus** : 4 IA sur 5 minimum.
+- **Hermès** : Guardian/rapporteur/console propriétaire uniquement ; il ne décide, ne bloque et ne publie aucun signal sportif.
+- **Télécommande** : commandes Telegram texte + voix, avec actions sensibles soumises à confirmation.
+
+> Toute section historique ci-dessous qui contredit ces points est conservée comme historique et ne doit pas être appliquée en production.
+
 **Toute IA reprenant le projet DOIT lire ce fichier en premier**, avant même
 `CLAUDE.md`. C'est la seule source de vérité sur l'état actuel du projet.
 
