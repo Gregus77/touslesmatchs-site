@@ -1,0 +1,125 @@
+name: Deploy Goal05 policy safely 20261005
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-goal05-policy-20261005.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy Goal05 code with flags OFF
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            ROOT=/opt/touslesmatchs
+            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            BACKUP="/opt/backups/goal05-safe-$STAMP"
+            mkdir -p "$BACKUP"
+            chmod 700 "$BACKUP"
+            cd "$ROOT"
+
+            git fetch origin main
+            git status --porcelain --untracked-files=no > "$BACKUP/tracked-status.txt"
+            git diff > "$BACKUP/tracked-working.patch"
+            git diff --cached > "$BACKUP/tracked-staged.patch"
+            cp .env "$BACKUP/.env"
+            cp data/tlm.db "$BACKUP/tlm.db"
+            cp scripts/api_server.js "$BACKUP/api_server.js"
+            cp scripts/telegram_client.js "$BACKUP/telegram_client.js"
+            chmod 600 "$BACKUP/.env" "$BACKUP/tlm.db"
+
+            if test -s "$BACKUP/tracked-status.txt"; then
+              git stash push -m "codex-preserved-before-goal05-$STAMP"
+              echo "TRACKED_CHANGES_PRESERVED"
+            fi
+
+            if test "$(git branch --show-current)" != "main"; then
+              git switch main
+            fi
+            git branch --set-upstream-to=origin/main main
+            git pull --ff-only origin main
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+            # The first pass must remain incapable of publishing Goal05.
+            python3 - <<'PY'
+            from pathlib import Path
+            values={}
+            for line in Path('.env').read_text().splitlines():
+                if '=' in line and not line.lstrip().startswith('#'):
+                    k,v=line.split('=',1)
+                    values[k.strip()]=v.strip().strip('"').strip("'")
+            truthy={'1','true','yes','on'}
+            assert values.get('GOAL05_ENABLED','').lower() not in truthy
+            assert values.get('GOAL05_PUSH_ENABLED','').lower() not in truthy
+            print('GOAL05_FLAGS_CONFIRMED_OFF')
+            PY
+
+            node --check scripts/api_server.js
+            node --check scripts/telegram_client.js
+            node scripts/test_goal05_policy_20261005.js
+            echo "GOAL05_POLICY_TESTS_OK"
+
+            grep -q 'const GOAL05_POLICY_FROM_MINUTE = 30;' scripts/api_server.js
+            grep -q 'const GOAL05_POLICY_TO_MINUTE = 85;' scripts/api_server.js
+            grep -q 'const GOAL05_POLICY_MIN_ODD = 1.60;' scripts/api_server.js
+            grep -q 'const GOAL05_POLICY_MIN_VOTES = 4;' scripts/api_server.js
+            grep -q 'goal05AiConsensus' scripts/api_server.js
+            grep -q 'goal05_signal_registry' scripts/api_server.js
+            grep -q "kind==='goal05'" scripts/telegram_client.js
+            echo "GOAL05_SOURCE_MARKERS_OK"
+
+            BEFORE="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api 2>/dev/null || true)"
+            docker compose up -d --build --force-recreate api
+            sleep 15
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
+            AFTER="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api)"
+            test -n "$AFTER"
+            test "$AFTER" != "$BEFORE"
+            echo "API_RESTARTED=$AFTER"
+
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_FROM_MINUTE = 30;' /app/server.js
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_TO_MINUTE = 85;' /app/server.js
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_MIN_ODD = 1.60;' /app/server.js
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_MIN_VOTES = 4;' /app/server.js
+            docker exec touslesmatchs-api grep -q 'goal05AiConsensus' /app/server.js
+            docker exec touslesmatchs-api grep -q 'goal05_signal_registry' /app/server.js
+            docker exec touslesmatchs-api grep -q "kind==='goal05'" /app/telegram_client.js
+            echo "GOAL05_CONTAINER_CODE_OK"
+
+            docker exec touslesmatchs-api node - <<'NODE'
+            const Database=require('better-sqlite3');
+            const db=new Database('/data/tlm.db',{readonly:true});
+            const row=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='goal05_signal_registry'").get();
+            if(!row) process.exit(1);
+            console.log('GOAL05_REGISTRY_TABLE_OK');
+            NODE
+
+            curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" >/tmp/goal05-health.json
+            node -e 'const x=require("/tmp/goal05-health.json");if(!x.ok)process.exit(1);console.log("PUBLIC_HEALTH_OK")'
+            curl -fsS -o /dev/null -w '%{http_code}\n' "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" | grep -qx '200'
+            echo "PUBLIC_LIVE_ROUTE_OK"
+
+            docker logs touslesmatchs-api --since "$AFTER" 2>&1 | grep -q '\[goal05\] Observateur désactivé par GOAL05_ENABLED'
+            echo "GOAL05_RUNTIME_CONFIRMED_OFF"
+
+            test -z "$(git status --porcelain --untracked-files=no)"
+            echo "GOAL05_SAFE_CODE_DEPLOYED_FLAGS_OFF"
