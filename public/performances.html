@@ -281,7 +281,7 @@ async function doLogin(){
 
 <div class="page">
   <div class="page-title">Performances du Concile</div>
-  <div class="page-sub">La stratégie actuelle est +0,5 but de l’équipe favorite. L’historique O/U 2,5 antérieur est conservé intégralement et reste affiché comme ancien système ; aucun résultat historique n’est supprimé lors du changement de stratégie.</div>
+  <div class="page-sub">La stratégie actuelle est +0,5 but de l’équipe favorite. L’ancien historique est conservé intégralement comme ancien système ; aucun résultat historique n’est supprimé lors du changement de stratégie.</div>
 
   <div class="tier-tabs" id="tier-tabs">
     <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
@@ -310,7 +310,7 @@ async function doLogin(){
     <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65/100 Prudence</span>
   </div>
   <div class="freshness-banner"><span class="fb-icon">🔄</span><span>Statistiques calculées en temps réel à chaque chargement de cette page, directement depuis notre base de données — pas de mise à jour différée, aucun chiffre mis en cache.</span></div>
-  <div class="section-hint" id="history-hint">Les lignes +0,5 correspondent à la stratégie actuelle. Les anciennes lignes O/U 2,5 restent visibles comme historique ; « Livraison non prouvée » signifie seulement que l’envoi Telegram n’est pas démontré.</div>
+  <div class="section-hint" id="history-hint">Les lignes +0,5 correspondent à la stratégie actuelle. Les anciennes lignes restent identifiées comme ancien système ; « Livraison non prouvée » signifie seulement que l’envoi Telegram n’est pas démontré.</div>
   <div id="history-list" class="history-list">
     <div class="spinner-wrap"><div class="spinner"></div></div>
   </div>
@@ -450,7 +450,7 @@ function isGoal05HistoryRow(a) {
 function productHistoryBadge(a) {
   return isGoal05HistoryRow(a)
     ? '<span class="h-badge diffused">Actuel · +0,5 but</span>'
-    : '<span class="h-badge observed">Historique · O/U 2,5</span>';
+    : '<span class="h-badge observed">Historique · ancien système</span>';
 }
 
 function renderRow(a) {
@@ -460,7 +460,7 @@ function renderRow(a) {
   else badge = '<span class="h-badge pending">En attente</span>';
 
   var resolved = a.outcome === 'win' || a.outcome === 'loss';
-  var betText = a.bet || (a.locked ? '🔒 Réservé' : '—');
+  var betText = a.history_mode === 'legacy' ? 'Ancien signal' : (a.bet || (a.locked ? '🔒 Réservé' : '—'));
   var score = a.final_score || a.score || '';
   var cote = (a.cote != null && a.cote > 1) ? '@' + Number(a.cote).toFixed(2) : '';
   var cm = confMeta(a.confidence);
