@@ -97,7 +97,7 @@ jobs:
             grep -qF 'Votre signal +0,5 but équipe favorite' "$backup/app-public.html"
             grep -qF 'Stratégie actuelle' public/live-ia.html
             grep -qF 'La stratégie actuelle est +0,5 but de l’équipe favorite' public/performances.html
-            grep -qF 'ancien historique O/U 2,5 reste consultable' "$backup/cgv-public.html"
+            grep -qF 'ancien historique reste consultable comme ancien système' "$backup/cgv-public.html"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/i18n.js?v=$target" -o "$backup/i18n-public.js"
             cmp public/js/i18n.js "$backup/i18n-public.js"
             for file in i18n-auto.js tlm-wow-theme.js; do
