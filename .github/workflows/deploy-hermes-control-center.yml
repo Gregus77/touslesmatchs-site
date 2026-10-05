@@ -257,3 +257,7 @@ jobs:
                 print('GEMINI_SYNTHETIC_BODY='+body.replace('\n',' ')[:800])
                 raise
             PY
+
+            echo "HERMES_OWNER_REMOTE_JOURNAL_BEGIN"
+            journalctl -u tlm-owner-remote.service --since "15 minutes ago" --no-pager -n 120 2>/dev/null | tail -n 120 || true
+            echo "HERMES_OWNER_REMOTE_JOURNAL_END"
