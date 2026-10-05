@@ -1193,9 +1193,9 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <div class="tlm-hero-grid">
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
-          <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
-          <p class="tlm-hero-lead">De la 35e minute à la fin réelle de la première mi-temps, arrêts de jeu compris, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 3 avis concordants sur 5 et les autres critères de qualité.</p>
-          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">3 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
+          <h1 id="hero-title">Votre signal<br>+0,5 but équipe favorite.<span class="hero-gradient">Suivi en direct.</span></h1>
+          <p class="tlm-hero-lead">De la 30e à la 85e minute, le système surveille les rencontres Top 5 contre Bottom 5. Le signal vise l’équipe favorite qui n’a pas encore marqué, avec une cote réelle fraîche d’au moins 1,60 et un accord minimum de 4 IA sur 5.</p>
+          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">+0,5 but équipe</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
         </div>
@@ -1206,7 +1206,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
             <div class="tlm-stage-score"><span id="hero-live-score">— - —</span><small class="tlm-stage-period" id="hero-live-period">En attente</small></div>
             <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-away-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
           </div>
-          <div class="tlm-ai-box">
+          <div class="tlm-goal05-current-box"><strong>Stratégie actuelle · +0,5 but</strong><span>Top 5 vs Bottom 5 · 30′–85′ · cote réelle ≥ 1,60 · 4/5 IA</span><small>L’ancien O/U 2,5 reste conservé uniquement dans l’historique des résultats.</small></div><div class="tlm-ai-box tlm-ou25-current-hidden">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
             <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><button type="button" class="tlm-ai-vote"><i>1</i>IA 1</button><button type="button" class="tlm-ai-vote"><i>2</i>IA 2</button><button type="button" class="tlm-ai-vote"><i>3</i>IA 3</button><button type="button" class="tlm-ai-vote"><i>4</i>IA 4</button><button type="button" class="tlm-ai-vote"><i>5</i>IA 5</button></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0/5</strong><span id="hero-response-count">0/5 IA ont répondu</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
             <div class="tlm-vote-snapshot" id="hero-vote-explanation" aria-live="polite"></div>
@@ -1216,7 +1216,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           </div>
         </div>
       </div>
-      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 3 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
+      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 4 sur 5.</span></div><div><strong>Historique conservé</strong><span>Les anciens O/U 2,5 restent consultables.</span></div></div>
     </section>
 
   </div>
@@ -1296,7 +1296,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <div class="plan-price">14,90 € <span>/mois</span></div>
       <ul class="plan-feats">
         <li><span class="plan-check">✓</span><span data-i18n="plan_prem_1">Tous les signaux admissibles, sans plafond quotidien</span></li>
-        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Votes O/U 2,5 détaillés et justification factuelle</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Signaux +0,5 but détaillés et justification factuelle</span></li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <a id="premium-main-cta" class="btn btn-prim btn-block" href="/api/premium-checkout?lang=fr">Passer Premium — 14,90 €/mois</a>
@@ -2902,5 +2902,11 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
 })();
 </script>
 
+
+<style id="tlm-goal05-current-product-css">
+.tlm-goal05-current-box{margin-top:16px;padding:16px 18px;border:1px solid rgba(34,211,238,.32);border-radius:16px;background:linear-gradient(145deg,rgba(16,185,129,.12),rgba(34,211,238,.08));display:flex;flex-direction:column;gap:6px}
+.tlm-goal05-current-box strong{font-size:18px;color:#fff}.tlm-goal05-current-box span{font-size:13px;color:#bff7e7;font-weight:850}.tlm-goal05-current-box small{font-size:11px;color:#aeb8df;line-height:1.45}
+.tlm-ou25-current-hidden,.tlm-row-vote-block{display:none!important}
+</style>
 </body>
 </html>
