@@ -28,7 +28,7 @@ class OwnerMissionRunnerTests(unittest.TestCase):
     def test_prompt_keeps_production_and_secrets_out(self):
         prompt = mission_prompt({'task': 'Corrige le texte de la page accueil'})
         self.assertIn('Ne modifie jamais directement /opt/touslesmatchs', prompt)
-        self.assertIn('Ne lis, n'affiche et ne modifie aucun secret', prompt)
+        self.assertIn("Ne lis, n'affiche et ne modifie aucun secret", prompt)
         self.assertIn('Ne déploie pas directement la production', prompt)
 
 
