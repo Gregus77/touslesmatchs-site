@@ -27,8 +27,11 @@ assert.match(snapshots,/const MIN_CONSENSUS_VOTES = 3;/);
 // Les surfaces ne doivent pas masquer l'historique O/U.
 assert.doesNotMatch(app,/var rows=\(\(all\[0\]\.analyses\)\|\|\[\]\)\.filter\(is05\)/);
 assert.match(app,/Historique total/);
-assert.match(app,/Ancien O\/U 2,5/);
-assert.match(perf,/Historique · O\/U 2,5/);
+assert.match(app,/Ancien système/);
+assert.match(perf,/Historique · ancien système/);
 assert.match(perf,/Actuel · \+0,5 but/);
+for(const [name,html] of [['app',app],['performances',perf]]){
+  assert.doesNotMatch(html,/(?:O\/U 2,5|Over \/ Under 2,5|Over\/Under 2,5|Over ou Under 2,5|Over 2,5|Under 2,5|35e minute)/,'legacy customer wording remains in '+name);
+}
 
 console.log('LEGACY_OU25_HISTORY_PRESERVED_CURRENT_GOAL05_OK');

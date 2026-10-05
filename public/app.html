@@ -56,7 +56,7 @@
 
 
   .goal05-home{position:relative;overflow:hidden;border:1px solid rgba(34,211,238,.30);border-radius:23px;padding:18px;margin:0 0 14px;background:linear-gradient(145deg,rgba(34,211,238,.13),rgba(124,58,237,.17) 62%,rgba(11,16,37,.82));box-shadow:0 18px 46px rgba(34,211,238,.12),inset 0 1px 0 rgba(255,255,255,.06)}
-  .goal05-home:after{content:"O/U 2,5";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
+  .goal05-home:after{content:"+0,5";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
   .goal05-kicker{position:relative;font-size:10px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
   .goal05-title{position:relative;margin:7px 0 8px;font-size:30px;line-height:.98;letter-spacing:-.065em;font-weight:1000;text-shadow:0 10px 26px rgba(0,0,0,.22)}
   .goal05-copy{position:relative;margin:0;color:#dbe4ff;font-size:13px;line-height:1.55}
@@ -452,7 +452,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
 </style>
 
 <style id="TLM_GOAL05_CURRENT_PRODUCT">
-/* Produit courant : +0,5 but équipe. L'ancien O/U 2,5 reste historique uniquement. */
+/* Produit courant : +0,5 but équipe. L'ancien système reste historique uniquement. */
 .tlm-app-ai{display:none!important}
 .goal05-home:after{content:"+0,5"!important}
 </style>
@@ -695,7 +695,7 @@ body{overflow-x:hidden}
 
   <!-- â•â• PERFORMANCES â•â• -->
   <section id="s-perf">
-    <h2>Résultats Over / Under 2,5</h2>
+    <h2>Résultats +0,5 but équipe favorite</h2>
     <p class="sub">Historique des analyses. Les envois Telegram vérifiés sont distingués de l’ancien système.</p>
     <div class="kpis" id="perf-kpis"></div>
     <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
@@ -963,7 +963,7 @@ body{overflow-x:hidden}
     var badge = hasSignal ? 'SIGNAL VALIDÉ' : 'SIGNAL EN ATTENTE';
     var badgeClass = hasSignal ? 'goal05-verdict-badge ok' : 'goal05-verdict-badge';
     var odd = hasSignal && signal.odd ? '@' + esc(signal.odd) : '@—';
-    var team = hasSignal ? esc(signal.team || 'Sélection Over / Under 2,5') : 'Aucun signal Over / Under 2,5 validé';
+    var team = hasSignal ? esc(signal.team || 'Signal +0,5 but équipe favorite') : 'Aucun signal +0,5 but équipe favorite validé';
     var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Football uniquement · moteur en surveillance';
     var checks = hasSignal && signal.checks ? signal.checks : [
       { ok:false, text:'Écart historique favorable' },
@@ -987,7 +987,7 @@ body{overflow-x:hidden}
   }
 
   function goal05MemberRow() {
-    return '<div class="offer-stack" aria-label="Accès Premium Over / Under 2,5"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">Over / Under 2,5 — Premium</div><div class="offer-desc">Tous les signaux admissibles et les alertes membres</div></div><div class="offer-price">14,90 €/mois</div></a></div>';
+    return '<div class="offer-stack" aria-label="Accès Premium +0,5 but équipe favorite"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">+0,5 but équipe favorite — Premium</div><div class="offer-desc">Tous les signaux admissibles et les alertes membres</div></div><div class="offer-price">14,90 €/mois</div></a></div>';
   }
 
   function renderGoal05Pick(signal) {
@@ -1018,12 +1018,12 @@ body{overflow-x:hidden}
     if (!p) {
       var emptyHeroCta = document.querySelector('.tlm-app-cta');
       if (emptyHeroCta) emptyHeroCta.textContent = 'Voir le signal gratuit';
-      box.innerHTML = '<div class="tlm-app-pick-card tlm-app-empty-signal"><strong>Aucun signal gratuit validé pour le moment</strong>La carte apparaîtra uniquement lorsqu’un vrai signal Over ou Under 2,5 sera disponible.</div>';
+      box.innerHTML = '<div class="tlm-app-pick-card tlm-app-empty-signal"><strong>Aucun signal gratuit validé pour le moment</strong>La carte apparaîtra uniquement lorsqu’un vrai signal +0,5 but équipe favorite sera disponible.</div>';
       return;
     }
     var home = (p.teamA && p.teamA.name) || p.home || 'Équipe à domicile';
     var away = (p.teamB && p.teamB.name) || p.away || "Équipe à l'extérieur";
-    var signal = p.bet || p.best_bet || p.selection || 'Over / Under 2,5';
+    var signal = p.bet || p.best_bet || p.selection || '+0,5 but équipe favorite';
     var confidence = Number(p.confidence || p.score || 0);
     var odd = Number(p.real_odd || p.cote || p.odd || 0);
     var outcome = String(p.status || p.result || p.outcome || '').toLowerCase();
@@ -1090,7 +1090,7 @@ body{overflow-x:hidden}
   function renderAppHero(m){
     var country=appCountry(m), flag=appFlagUrl(country), voteState=appOu25(m), votes=voteState.voteCount, status=$("app-live-status");
     if(!m){
-      status.textContent='Aucun match actuellement dans la fenêtre d’analyse à partir de la 35e minute';$("app-live-minute").textContent='—';$("app-live-period").textContent='Actualisation automatique';$("app-live-score").textContent='— - —';$("app-home-name").textContent='';$("app-away-name").textContent='';$("app-home-country").textContent='';$("app-away-country").textContent='';$("app-ai-total").textContent='0/5';$("app-ai-responses").textContent='0/5 IA ont répondu';$("app-ai-label").textContent='Les 5 IA attendent le prochain match';$("app-ai-result").textContent='Aucun signal affiché sans match réel';
+      status.textContent='Aucun match actuellement dans la fenêtre d’analyse à partir de la 30e minute';$("app-live-minute").textContent='—';$("app-live-period").textContent='Actualisation automatique';$("app-live-score").textContent='— - —';$("app-home-name").textContent='';$("app-away-name").textContent='';$("app-home-country").textContent='';$("app-away-country").textContent='';$("app-ai-total").textContent='0/5';$("app-ai-responses").textContent='0/5 IA ont répondu';$("app-ai-label").textContent='Les 5 IA attendent le prochain match';$("app-ai-result").textContent='Aucun signal affiché sans match réel';
       $("app-vote-explanation").textContent='';appLogo($("app-home-logo"),'/logo192.png','TousLesMatchs');appLogo($("app-away-logo"),'/logo192.png','TousLesMatchs');[$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(img)img.hidden=true;});Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){el.classList.remove('on','over','under','terminal','old');el.textContent=String(i+1);el.removeAttribute('title');el.removeAttribute('aria-label');delete el.dataset.explanation;});return;
     }
     status.textContent='En direct';$("app-live-minute").textContent=m.minute?esc(m.minute)+"'":'Live';
@@ -1100,20 +1100,20 @@ body{overflow-x:hidden}
     var hs=appHomeScore(m),as=appAwayScore(m);$("app-live-score").textContent=(hs===''?'—':hs)+' - '+(as===''?'—':as);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
     var minute=Number(String(m.minute||'').replace(/[^0-9.]/g,''));
     var analysisClosed=TLMMatchLifecycle.entryClosed(m)||!TLMMatchLifecycle.canFeature(m);
-    var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<35);
+    var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<30);
     var exclusionReason=String(m.analysis_exclusion_reason||'');
     var aligned=Number(voteState.consensusCount)||Math.max(voteState.overCount,voteState.underCount);
     var direction=voteState.consensusDirection||(voteState.overCount>=voteState.underCount?'over':'under');
-    $("app-ai-total").textContent=votes?(voteState.locked?'CONSENSUS '+aligned+'/5':(direction==='over'?'OVER':'UNDER')+' 2,5 — '+aligned+'/5'):'0/5';
+    $("app-ai-total").textContent=votes?(voteState.locked?'CONSENSUS '+aligned+'/5':'ANALYSE +0,5 — '+aligned+'/5'):'0/5';
     $("app-ai-responses").textContent=appResponseCount(voteState.slots)+'/5 IA ont répondu';
-    $("app-ai-label").textContent=voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':exclusionReason?'Analyse non lancée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
+    $("app-ai-label").textContent=voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Analyse IA +0,5':exclusionReason?'Analyse non lancée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
     var preservedAt=voteState.snapshotMinute!=null?(" · enregistré à "+voteState.snapshotMinute+"'"):'';var preservedClock=appVoteTime(voteState.consensusAt);if(preservedClock)preservedAt+=' à '+preservedClock;
     if(TLMMatchLifecycle.entryClosed(m))$("app-ai-label").textContent='Analyse historique — entrée fermée';
     $("app-ai-result").textContent=voteState.official?(m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
       :votes&&analysisClosed?'Anciennes tendances — aucun signal officiel'
-      :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
+      :votes&&isFinite(minute)&&minute<30?'Tendance — pas encore de signal'
       :votes?(m.diffusion_block||exclusionReason||'Tendance — autres critères non remplis, aucun signal')
-      :exclusionReason||m.block_reason||m.data_notice||(analysisWaiting?'Analyse en cours — affichage à partir de la 35e minute':'En attente des IA');
+      :exclusionReason||m.block_reason||m.data_notice||(analysisWaiting?'Analyse en cours — affichage à partir de la 30e minute':'En attente des IA');
     $("app-vote-explanation").textContent='';
     Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted',terminal=appTerminalCaption(slot);el.classList.toggle('on',voted);el.classList.toggle('terminal',!!terminal);el.classList.toggle('old',voted&&!voteState.official);el.classList.toggle('over',voted&&!voteState.locked&&dir==='over');el.classList.toggle('under',voted&&!voteState.locked&&dir==='under');el.textContent=voted?(voteState.locked?'✓':dir==='over'?'O':dir==='under'?'U':'?'):terminal?terminal.mark:String(i+1);var detail=voted?(voteState.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente')),voteTime=appVoteTime(slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;el.title=detail;el.dataset.explanation=detail;el.setAttribute('aria-label',detail);});
     applyAppEntryClosure(m);
@@ -1229,12 +1229,12 @@ body{overflow-x:hidden}
     var roi=total?Math.round((profit/(total*10))*100):0;
 $("perf-kpis").innerHTML =
         kpi(String(total), "Signaux terminés", "")
-      + kpi(total ? wr + "%" : "—", "Réussite O/U 2,5", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
+      + kpi(total ? wr + "%" : "—", "Réussite +0,5", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
       + kpi(total ? eur(profit) : "0€", "Profit simulé 10€", profit >= 0 ? "c-green" : "c-red")
       + kpi(total ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
 
     if (!rows.length) {
-      $("perf-list").innerHTML = '<div class="state"><strong>Bilan Over / Under 2,5 en cours</strong><br>Aucun signal terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
+      $("perf-list").innerHTML = '<div class="state"><strong>Bilan +0,5 but équipe favorite en cours</strong><br>Aucun signal terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
       return;
     }
     var html = "";
@@ -1245,7 +1245,7 @@ $("perf-kpis").innerHTML =
       var odd = num(a.real_odd || a.odd || a.cote) > 1 ? " · @" + num(a.real_odd || a.odd || a.cote).toFixed(2) : "";
       var provenance=a.telegram_delivery_proven?'Livraison Telegram prouvée':a.official_signal_snapshot_id?'Signal officiel enregistré · livraison Telegram non prouvée':'Historique archivé';
       html += '<a class="item" href="'+(a.official_signal_snapshot_id?'/live-ia?fixture='+encodeURIComponent(a.fixture_id||a.fixtureId||a.match_key||''):'#')+'" style="color:inherit;text-decoration:none"><div class="mid">'
-        + '<div class="t">' + esc(a.home || a.match || 'Signal Over / Under 2,5') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
+        + '<div class="t">' + esc(a.home || a.match || 'Signal +0,5 but équipe favorite') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
         + '<div class="m">' + esc((a.analysed_at || a.date || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + ' · '+esc(provenance)+'</div>'
         + appMiniVotes(a) + '<div class="m">Match terminé · score final '+esc(a.final_score||'indisponible')+' · Votes à '+esc(a.minute==null?'minute inconnue':a.minute+'′')+', score '+esc(a.score||'indisponible')+'</div>'
         + '</div>' + b + '</a>';
@@ -1285,7 +1285,7 @@ $("perf-kpis").innerHTML =
       + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
       + '<button class="btn btn-g" id="btn-lead">Créer mon compte gratuit</button>'
       + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
-      + '<div class="app-auth-note">Les sélections Over / Under 2,5 et les alertes membres sont disponibles avec Premium à 14,90 €/mois.</div></div></div>';
+      + '<div class="app-auth-note">Les signaux +0,5 but équipe favorite et les alertes membres sont disponibles avec Premium à 14,90 €/mois.</div></div></div>';
 
     $("btn-in").addEventListener("click", function () {
       var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
@@ -1501,12 +1501,12 @@ $("perf-kpis").innerHTML =
       [all[1].signal,all[1].lastSignal].forEach(function(s){var r=norm(s);if(r)rows.unshift(r);});
       var seen={};rows=rows.filter(function(a){var key=[a.match_key||a.id||"",a.home||"",a.away||"",a.bet||a.best_bet||"",a.analysed_at||a.date||a.created_at||""].join("|");if(seen[key])return false;seen[key]=1;return true;});
       var current=rows.filter(is05), legacy=rows.filter(function(a){return !is05(a);});
-      kp.innerHTML=kpi(String(rows.length),"Historique total","c-cyan")+kpi(String(legacy.length),"Ancien O/U 2,5","")+kpi(String(current.length),"Actuel +0,5","c-green");
+      kp.innerHTML=kpi(String(rows.length),"Historique total","c-cyan")+kpi(String(legacy.length),"Ancien système","")+kpi(String(current.length),"Actuel +0,5","c-green");
       if(!rows.length){list.innerHTML='<div class="state"><strong>Historique en attente</strong><br>Aucune analyse historique disponible.</div>';return;}
       list.innerHTML=rows.slice(0,100).map(function(a){
         var b=a.outcome==="win"?'<span class="badge b-win">Gagné</span>':a.outcome==="loss"?'<span class="badge b-loss">Perdu</span>':'<span class="badge b-wait">En attente</span>';
-        var strategy=is05(a)?'<span class="badge b-win">Actuel · +0,5</span>':'<span class="badge b-wait">Ancien · O/U 2,5</span>';
-        var market=a.bet||a.best_bet||a.selection||"";
+        var strategy=is05(a)?'<span class="badge b-win">Actuel · +0,5</span>':'<span class="badge b-wait">Ancien système</span>';
+        var market=is05(a)?(a.bet||a.best_bet||a.selection||""):"Ancien signal";
         return '<div class="item"><div class="mid"><div class="t">'+esc(a.home||"Analyse")+(a.away?' — '+esc(a.away):'')+'</div><div class="m">'+esc((a.analysed_at||a.date||a.created_at||"").slice(0,10))+' · '+esc(a.competition||"")+(market?' · '+esc(market):'')+'</div></div>'+strategy+b+'</div>';
       }).join("");
     });
@@ -1932,7 +1932,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
      Vert = snapshot officiel validé par le backend uniquement.
    */
    if(o.official===true){
-     var direction=o.consensus_direction==="over"?"OVER 2,5":"UNDER 2,5";
+     var direction="ANALYSE +0,5";
      var confidence=o.official_confidence;
      var odd=o.official_odd;
 
@@ -1963,9 +1963,9 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
        title:"ANALYSE EN COURS",
        detail:votes
          ? votes+"/5 IA ont répondu · décision en cours"
-         : minute>=35
+         : minute>=30
            ? "Interrogation des 5 IA en cours"
-           : "Analyse disponible à partir de la 35e minute"
+           : "Analyse disponible à partir de la 30e minute"
      };
    }
 
@@ -1977,7 +1977,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
        var under=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="under"}).length;
        d=over>=under?"over":"under";
      }
-     trend=(d==="over"?"Over 2,5":"Under 2,5")+" ("+aligned+"/5)";
+     trend="Analyse +0,5 ("+aligned+"/5)";
    }
 
    return {
