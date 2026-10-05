@@ -230,7 +230,7 @@ jobs:
 
             env=config()
             key=env.get('GOOGLE_API_KEY','')
-            model=env.get('HERMES_GEMINI_TRANSCRIPTION_MODEL','gemini-3.8-flash')
+            model=env.get('HERMES_GEMINI_TRANSCRIPTION_MODEL','gemini-3.5-flash-lite')
             if not key:
                 raise SystemExit('GEMINI_SYNTHETIC_NO_KEY')
 
