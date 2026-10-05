@@ -1,0 +1,43 @@
+name: Inspect VPS worktrees 20261005
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/inspect-vps-worktrees-20261005.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read-only worktree inspection
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            echo "=== ROOT ==="
+            printf 'BRANCH='; git branch --show-current || true
+            printf 'HEAD='; git rev-parse HEAD
+            git status --short --untracked-files=no || true
+            echo "=== WORKTREES ==="
+            git worktree list --porcelain
+            echo "=== JEV WORKTREE ==="
+            if [ -d /tmp/tlm-jev-main-integration ]; then
+              git -C /tmp/tlm-jev-main-integration status --short --untracked-files=no || true
+              printf 'JEV_HEAD='; git -C /tmp/tlm-jev-main-integration rev-parse HEAD || true
+              printf 'JEV_BRANCH='; git -C /tmp/tlm-jev-main-integration branch --show-current || true
+            else
+              echo "JEV_WORKTREE_ABSENT"
+            fi
