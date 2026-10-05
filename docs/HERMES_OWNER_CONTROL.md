@@ -58,3 +58,7 @@ Le Guardian en lecture seule produit un rapport propriétaire à 20 h (Europe/Pa
 - `scripts/tlm_hourly_director.py` : autoréparation technique limitée et allowlistée.
 
 Hermès ne doit jamais devenir une seconde couche de filtrage sportif.
+
+## Activation production — 5 octobre 2026
+
+Déploiement via `.github/workflows/deploy-hermes-control-center.yml` : backup, tests, installation systemd de `tlm-hermes-guardian` et `tlm-owner-remote`, puis preuve runtime des règles Goal +0,5 (30–85, cote réelle 1,60, quorum 4/5). La console propriétaire reste sans shell arbitraire et sans pouvoir de décision sportive.
