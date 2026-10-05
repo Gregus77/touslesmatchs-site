@@ -1,14 +1,17 @@
 # CLAUDE.md — TousLesMatchs
 
+> **RÈGLE PRIORITAIRE — 5 octobre 2026** : lire `CURRENT_RULES.md` AVANT tout autre document. En cas de contradiction avec une règle historique de ce fichier ou d'un handoff ancien, `CURRENT_RULES.md` prévaut. La stratégie sportive principale active est Goal +0,5 équipe favorite ; les anciennes règles O/U 2,5 sont historiques.
+
 ## 📖 ORDRE DE LECTURE OBLIGATOIRE À CHAQUE SESSION
 
-1. `PROJECT_STATE.md` — mémoire vivante, état courant, chantiers ouverts
-2. `VERSION_LOCK.md` — commit de référence interdit de rollback
-3. `CLAUDE.md` — ce fichier (règles + économie de tokens)
-4. `docs/CONSTITUTION.md` — vision, organisation, départements
-5. `docs/INFRASTRUCTURE.md` — VPS, Docker, sécurité, backups
-6. `docs/HERMES_COUNCIL.md` — moteur IA, agents, consensus
-7. `docs/BUSINESS_GROWTH.md` — roadmap commercial, priorisation ROI
+1. `CURRENT_RULES.md` — source de vérité sportive actuelle (priorité absolue)
+2. `PROJECT_STATE.md` — mémoire vivante, état courant, chantiers ouverts
+3. `VERSION_LOCK.md` — commit de référence interdit de rollback
+4. `CLAUDE.md` — ce fichier (règles + économie de tokens)
+5. `docs/CONSTITUTION.md` — vision, organisation, départements
+6. `docs/INFRASTRUCTURE.md` — VPS, Docker, sécurité, backups
+7. `docs/HERMES_COUNCIL.md` — moteur IA, agents, consensus
+8. `docs/BUSINESS_GROWTH.md` — roadmap commercial, priorisation ROI
 
 Ces 7 fichiers constituent la **fondation** du projet. Toute IA reprenant
 le projet DOIT les lire avant d'agir, dans cet ordre.
