@@ -1,0 +1,123 @@
+name: Activate Goal05 production 20261005
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/activate-goal05-production-20261005.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Activate verified Goal05 runtime
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script_stop: false
+          script: |
+            set -euo pipefail
+            ROOT=/opt/touslesmatchs
+            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            BACKUP="/opt/backups/goal05-activate-$STAMP"
+            mkdir -p "$BACKUP"
+            chmod 700 "$BACKUP"
+            cd "$ROOT"
+
+            git fetch origin main
+            test "$(git branch --show-current)" = "main"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git pull --ff-only origin main
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+            cp .env "$BACKUP/.env"
+            cp data/tlm.db "$BACKUP/tlm.db"
+            chmod 600 "$BACKUP/.env" "$BACKUP/tlm.db"
+
+            set_env() {
+              key="$1"
+              value="$2"
+              if grep -q "^$key=" .env; then
+                sed -i "s/^$key=.*/$key=$value/" .env
+              else
+                printf '\n%s=%s\n' "$key" "$value" >> .env
+              fi
+            }
+
+            set_env GOAL05_ENABLED 1
+            set_env GOAL05_PUSH_ENABLED 1
+            set_env GOAL05_PUSH_INTERVAL_MIN 5
+            set_env GOAL05_MAX_DEEP_CANDIDATES 3
+
+            grep -qx 'GOAL05_ENABLED=1' .env
+            grep -qx 'GOAL05_PUSH_ENABLED=1' .env
+            echo "GOAL05_ENV_ENABLED"
+
+            node --check scripts/api_server.js
+            node --check scripts/telegram_client.js
+            node scripts/test_goal05_policy_20261005.js
+            echo "GOAL05_POLICY_TESTS_OK"
+
+            grep -q 'const GOAL05_POLICY_FROM_MINUTE = 30;' scripts/api_server.js
+            grep -q 'const GOAL05_POLICY_TO_MINUTE = 85;' scripts/api_server.js
+            grep -q 'const GOAL05_POLICY_MIN_ODD = 1.60;' scripts/api_server.js
+            grep -q 'const GOAL05_POLICY_MIN_VOTES = 4;' scripts/api_server.js
+            grep -q 'goal05AiConsensus' scripts/api_server.js
+            grep -q 'goal05_signal_registry' scripts/api_server.js
+            echo "GOAL05_SOURCE_POLICY_OK"
+
+            BEFORE="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api 2>/dev/null || true)"
+            docker compose up -d --build --force-recreate api
+            sleep 15
+
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
+            AFTER="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api)"
+            test -n "$AFTER"
+            test "$AFTER" != "$BEFORE"
+            echo "API_RESTARTED=$AFTER"
+
+            test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_ENABLED"')" = "1"
+            test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_PUSH_ENABLED"')" = "1"
+            echo "GOAL05_CONTAINER_FLAGS_ON"
+
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_FROM_MINUTE = 30;' /app/server.js
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_TO_MINUTE = 85;' /app/server.js
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_MIN_ODD = 1.60;' /app/server.js
+            docker exec touslesmatchs-api grep -q 'const GOAL05_POLICY_MIN_VOTES = 4;' /app/server.js
+            echo "GOAL05_CONTAINER_POLICY_OK"
+
+            curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" >/tmp/goal05-health.json
+            node -e 'const x=require("/tmp/goal05-health.json");if(!x.ok)process.exit(1);console.log("PUBLIC_HEALTH_OK")'
+            curl -fsS -o /dev/null -w '%{http_code}\n' "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" | grep -qx '200'
+            echo "PUBLIC_LIVE_ROUTE_OK"
+
+            OBSERVER_OK=0
+            for attempt in $(seq 1 12); do
+              docker logs touslesmatchs-api --since "$AFTER" 2>&1 > "$BACKUP/api-startup.log"
+              if grep -q '\[goal05\] Observateur actif:' "$BACKUP/api-startup.log" && grep -q 'push=true' "$BACKUP/api-startup.log"; then
+                OBSERVER_OK=1
+                break
+              fi
+              sleep 5
+            done
+            test "$OBSERVER_OK" = "1"
+            grep '\[goal05\] Observateur actif:' "$BACKUP/api-startup.log" | tail -n 3
+            echo "GOAL05_OBSERVER_ACTIVE"
+
+            docker exec touslesmatchs-api node -e "const Database=require('better-sqlite3');const db=new Database('/data/tlm.db',{readonly:true});const x=db.prepare(\"SELECT COUNT(*) n FROM goal05_signal_registry\").get();console.log('GOAL05_REGISTRY_ROWS='+x.n)"
+            echo "GOAL05_PRODUCTION_ACTIVATED"
+
+            test -z "$(git status --porcelain --untracked-files=no)"
