@@ -3113,6 +3113,65 @@ async function goal05History(match,targetId,opponentId) {
   };
 }
 
+function goal05PositiveTeamBet(bet) {
+  const value=String(bet||"").toLowerCase();
+  return value.includes("marque") && !value.includes("ne marque pas");
+}
+
+function goal05AiConsensus(match, side) {
+  const snapshotKey=getPredictionSnapshotKey(match);
+  const minute=parseLiveMinuteValue(match?.minute) ?? 0;
+  const firstLine=side==="home" ? "mt1_dom" : "mt1_ext";
+  const secondLine=side==="home" ? "mt2_dom" : "mt2_ext";
+  const placeholders=CONCILE_AGENT_NAMES.map(()=>"?").join(",");
+  try {
+    const rows=db.prepare(`
+      SELECT agent_name,market_line,bet,confidence,created_at
+      FROM agent_market_predictions
+      WHERE match_key=?
+        AND agent_name IN (${placeholders})
+        AND market_line IN (?,?)
+      ORDER BY id ASC
+    `).all(snapshotKey,...CONCILE_AGENT_NAMES,firstLine,secondLine);
+
+    const byAgent=new Map();
+    for(const row of rows) {
+      const name=String(row.agent_name||"");
+      if(!CONCILE_AGENT_NAMES.includes(name)) continue;
+      const current=byAgent.get(name)||{};
+      current[row.market_line]=row;
+      byAgent.set(name,current);
+    }
+
+    const votes=CONCILE_AGENT_NAMES.map(agent=>{
+      const ballot=byAgent.get(agent)||{};
+      const first=ballot[firstLine];
+      const second=ballot[secondLine];
+      const relevant=minute<=45 ? [first,second].filter(Boolean) : [second].filter(Boolean);
+      if(!relevant.length) return {agent,direction:null,confidence:null,status:"pending"};
+      const yes=relevant.some(row=>goal05PositiveTeamBet(row.bet));
+      const confidence=Math.max(...relevant.map(row=>Number(row.confidence)||0));
+      return {agent,direction:yes?"yes":"no",confidence,status:"voted"};
+    });
+    const yesVotes=votes.filter(v=>v.direction==="yes").length;
+    const activeVotes=votes.filter(v=>v.direction!==null).length;
+    return {
+      snapshotKey,
+      yesVotes,
+      activeVotes,
+      totalSeats:CONCILE_AGENT_NAMES.length,
+      verified:yesVotes>=GOAL05_POLICY_MIN_VOTES,
+      votes
+    };
+  } catch(error) {
+    console.error("[goal05-ai-consensus]",error.message);
+    return {
+      snapshotKey,yesVotes:0,activeVotes:0,totalSeats:5,verified:false,votes:[],
+      error:"consensus_unavailable"
+    };
+  }
+}
+
 async function buildStrictGoal05Criteria(match) {
   const minute=Number(match.minute||0);
   const homeScore=Number(match.score_home||0);
@@ -3130,6 +3189,13 @@ async function buildStrictGoal05Criteria(match) {
   if (!GOAL05_ENABLED) return rejected("goal05_desactive");
   if (match.sport!=="Football" || match.source!=="api-sports")
     return rejected("source_non_eligible");
+  if (isWomenMatch(match) || isCategoryBanned(match) || isUsaOrCanadaMatch(match)
+      || isLowTrustCompetition(match) || isBlacklistedForLiveDisplay(match)) {
+    return rejected("competition_non_autorisee");
+  }
+  const goal05Tier=leagueTier(match);
+  if (goal05Tier!=="trusted_major" && goal05Tier!=="trusted_secondary")
+    return rejected("championnat_non_autorise");
   if (!match.homeId || !match.awayId || !match.leagueId || !match.season)
     return rejected("identifiants_manquants");
   if (minute<GOAL05_POLICY_FROM_MINUTE || minute>GOAL05_POLICY_TO_MINUTE)
@@ -3234,10 +3300,9 @@ async function buildStrictGoal05Criteria(match) {
     };
 
     const missing=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
-    // Le quorum IA est ajouté au lot B. Tant qu'il n'est pas présent, aucun signal
-    // client ne peut être déclaré éligible.
-    const aiVotes=0;
-    const aiConsensusVerified=aiVotes>=GOAL05_POLICY_MIN_VOTES;
+    const aiConsensus=goal05AiConsensus(match,side);
+    const aiVotes=aiConsensus.yesVotes;
+    const aiConsensusVerified=aiConsensus.verified===true;
     if (!aiConsensusVerified) missing.push("ai_consensus_non_verifie");
 
     const eligible=missing.length===0;
@@ -3253,7 +3318,9 @@ async function buildStrictGoal05Criteria(match) {
       liveStatsVerified,disciplineVerified,
       shotsOnTarget,totalShots,possession,
       motivationVerified,liveOdd,
-      aiConsensusVerified,aiVotes,
+      aiConsensusVerified,aiVotes,aiActiveVotes:aiConsensus.activeVotes,
+      aiTotalSeats:aiConsensus.totalSeats,aiSnapshotKey:aiConsensus.snapshotKey,
+      aiVoteDetails:aiConsensus.votes,
       checkedAt:new Date().toISOString()
     };
   } catch(e) {
