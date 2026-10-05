@@ -151,3 +151,16 @@ jobs:
             echo "REMOTE=$REMOTE"
             echo "SOURCE_COMMIT=$(git rev-parse origin/main)"
             echo "BACKUP=$BACKUP"
+
+            # Real outbound proof + owner voice-test prompt. Token stays on VPS and is never printed.
+            cd "$DEPLOY_ROOT"
+            TLM_ROOT="$PROJECT" python3 - <<'PY'
+            from tlm_guardian import config, send_owner
+            mid = send_owner(
+                "✅ Hermès console active. Test vocal : envoie-moi maintenant un message vocal disant : « Quel est le statut de la production ? »",
+                config(),
+            )
+            if not mid:
+                raise SystemExit("owner_voice_prompt_delivery_failed")
+            print("VOICE_PROMPT_MESSAGE_ID=" + str(mid))
+            PY
