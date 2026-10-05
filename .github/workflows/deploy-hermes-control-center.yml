@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - name: Deploy Hermes Guardian and owner remote
+      - name: Deploy Hermes beside production checkout
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -40,44 +40,62 @@ jobs:
           script_stop: true
           script: |
             set -euo pipefail
-            cd /opt/touslesmatchs
 
-            OLD_HEAD="$(git rev-parse HEAD)"
-            BRANCH="$(git branch --show-current)"
-            UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')"
-            test "$BRANCH" = "main"
-            test "$UPSTREAM" = "origin/main"
-            test -z "$(git status --porcelain --untracked-files=no)"
-
-            git fetch origin main
-            COUNTS="$(git rev-list --left-right --count HEAD...origin/main)"
-            test "$(printf '%s' "$COUNTS" | awk '{print $1}')" = "0"
-
+            PROJECT=/opt/touslesmatchs
+            DEPLOY_ROOT=/opt/tlm-hermes-control
+            STAGE="$(mktemp -d /tmp/tlm-hermes-control.XXXXXX)"
             BACKUP="/opt/backups/hermes-control-$(date -u +%Y%m%dT%H%M%SZ)"
+
+            cleanup() { rm -rf "$STAGE"; }
+            trap cleanup EXIT
+
+            cd "$PROJECT"
+            git fetch origin main
+
+            # Never switch branch, reset, pull or touch tracked production files.
+            git show origin/main:scripts/tlm_guardian.py > "$STAGE/tlm_guardian.py"
+            git show origin/main:scripts/tlm_owner_remote.py > "$STAGE/tlm_owner_remote.py"
+            git show origin/main:scripts/test_owner_remote_20260926.py > "$STAGE/test_owner_remote_20260926.py"
+            git show origin/main:scripts/test_hermes_control_center_20261005.py > "$STAGE/test_hermes_control_center_20261005.py"
+            git show origin/main:CURRENT_RULES.md > "$STAGE/CURRENT_RULES.md"
+            git show origin/main:ops/systemd/tlm-hermes-guardian.service > "$STAGE/tlm-hermes-guardian.service"
+            git show origin/main:ops/systemd/tlm-owner-remote.service > "$STAGE/tlm-owner-remote.service"
+
+            python3 -m py_compile "$STAGE/tlm_guardian.py" "$STAGE/tlm_owner_remote.py"
+            (
+              cd "$STAGE"
+              PYTHONPATH="$STAGE" python3 test_owner_remote_20260926.py
+              PYTHONPATH="$STAGE" python3 test_hermes_control_center_20261005.py
+            )
+
+            grep -q "min_votes': 4" "$STAGE/tlm_guardian.py"
+            ! grep -q "rules.get('min_votes')!=3" "$STAGE/tlm_guardian.py"
+            grep -q "automatic_execution.*False" "$STAGE/tlm_owner_remote.py"
+            grep -q "gpt-4o-mini-transcribe" "$STAGE/tlm_owner_remote.py"
+            grep -q "30 et 85" "$STAGE/CURRENT_RULES.md"
+            grep -q "4 IA sur 5" "$STAGE/CURRENT_RULES.md"
+
             install -d -m 700 "$BACKUP"
-            cp -a scripts/tlm_guardian.py scripts/tlm_owner_remote.py "$BACKUP/" 2>/dev/null || true
+            if [ -d "$DEPLOY_ROOT" ]; then cp -a "$DEPLOY_ROOT" "$BACKUP/control-root"; fi
             cp -a /etc/systemd/system/tlm-hermes-guardian.service "$BACKUP/" 2>/dev/null || true
             cp -a /etc/systemd/system/tlm-owner-remote.service "$BACKUP/" 2>/dev/null || true
 
-            git pull --ff-only origin main
+            install -d -m 700 "$DEPLOY_ROOT"
+            install -m 0700 "$STAGE/tlm_guardian.py" "$DEPLOY_ROOT/tlm_guardian.py"
+            install -m 0700 "$STAGE/tlm_owner_remote.py" "$DEPLOY_ROOT/tlm_owner_remote.py"
+            install -m 0600 "$STAGE/CURRENT_RULES.md" "$DEPLOY_ROOT/CURRENT_RULES.md"
 
-            python3 -m py_compile scripts/tlm_guardian.py scripts/tlm_owner_remote.py
-            (
-              cd scripts
-              python3 test_owner_remote_20260926.py
-              python3 test_hermes_control_center_20261005.py
-            )
+            install -m 0644 "$STAGE/tlm-hermes-guardian.service" /etc/systemd/system/tlm-hermes-guardian.service
+            install -m 0644 "$STAGE/tlm-owner-remote.service" /etc/systemd/system/tlm-owner-remote.service
 
-            grep -q "CURRENT_RULES.md" CLAUDE.md
-            grep -q "min_votes': 4" scripts/tlm_guardian.py
-            ! grep -q "rules.get('min_votes')!=3" scripts/tlm_guardian.py
-            grep -q "automatic_execution.*False" scripts/tlm_owner_remote.py
-            grep -q "gpt-4o-mini-transcribe" scripts/tlm_owner_remote.py
-
-            install -m 0644 ops/systemd/tlm-hermes-guardian.service /etc/systemd/system/tlm-hermes-guardian.service
-            install -m 0644 ops/systemd/tlm-owner-remote.service /etc/systemd/system/tlm-owner-remote.service
             systemctl daemon-reload
+            systemctl stop tlm-owner-remote.service 2>/dev/null || true
+            systemctl stop tlm-hermes-guardian.service 2>/dev/null || true
+            pkill -f '/opt/touslesmatchs/scripts/tlm_owner_remote.py' 2>/dev/null || true
+            pkill -f '/opt/touslesmatchs/scripts/tlm_guardian.py' 2>/dev/null || true
+
             systemctl enable --now tlm-hermes-guardian.service
+            systemctl is-active --quiet tlm-hermes-guardian.service
 
             if python3 - <<'PY'
             from pathlib import Path
@@ -89,24 +107,33 @@ jobs:
             PY
             then
               systemctl enable --now tlm-owner-remote.service
+              systemctl is-active --quiet tlm-owner-remote.service
               REMOTE="active"
             else
               systemctl disable --now tlm-owner-remote.service 2>/dev/null || true
               REMOTE="waiting_for_bot_or_chat"
             fi
 
-            systemctl is-active --quiet tlm-hermes-guardian.service
-
-            for i in $(seq 1 20); do
-              test -s data/hermes_guardian_state.json && break
+            for i in $(seq 1 25); do
+              if python3 - <<'PY'
+            import json
+            from pathlib import Path
+            p=Path('/opt/touslesmatchs/data/hermes_guardian_state.json')
+            if not p.exists(): raise SystemExit(1)
+            try: state=json.loads(p.read_text())
+            except Exception: raise SystemExit(1)
+            goal=state.get('goal05') or {}
+            ok=(goal.get('min_votes')==4 and goal.get('from_minute')==30 and goal.get('to_minute')==85 and float(goal.get('min_real_fresh_odd',0))==1.60)
+            raise SystemExit(0 if ok else 1)
+            PY
+              then break; fi
               sleep 3
             done
-            test -s data/hermes_guardian_state.json
 
             python3 - <<'PY'
             import json
             from pathlib import Path
-            state=json.loads(Path('data/hermes_guardian_state.json').read_text())
+            state=json.loads(Path('/opt/touslesmatchs/data/hermes_guardian_state.json').read_text())
             goal=state.get('goal05') or {}
             assert goal.get('min_votes') == 4
             assert goal.get('from_minute') == 30
@@ -119,5 +146,5 @@ jobs:
             PY
 
             echo "REMOTE=$REMOTE"
-            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
+            echo "SOURCE_COMMIT=$(git rev-parse origin/main)"
             echo "BACKUP=$BACKUP"
