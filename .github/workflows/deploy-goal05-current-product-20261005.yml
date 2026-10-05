@@ -70,12 +70,13 @@ jobs:
             BEFORE_TG="$(db_count telegram_signal_deliveries)"
             BEFORE_G05="$(db_count goal05_signal_registry)"
 
+            git diff --name-only "$old_head" "$target" > "$backup/deploy-files.txt"
             while IFS= read -r file; do
               case "$file" in
                 .github/workflows/codex-deploy-telegram-audit.yml|.github/workflows/deploy-match-lifecycle.yml|.github/workflows/test-current-product-goal05-20261005.yml|.github/workflows/deploy-goal05-current-product-20261005.yml|AGENTS.md|CLAUDE.md|public/app.html|public/cgv.html|public/faq.html|public/index.html|public/js/i18n.js|public/live-ia.html|public/performances.html|scripts/test_current_product_goal05_20261005.js|scripts/test_match_lifecycle_20260906.js|scripts/test_ou25_product_guard_20260926.js) ;;
                 *) echo "STOP: unrelated deployment file: $file"; exit 42 ;;
               esac
-            done < <(git diff --name-only "$old_head" "$target")
+            done < "$backup/deploy-files.txt"
 
             rollback() {
               trap - ERR
@@ -153,3 +154,5 @@ jobs:
 # simplified sqlite count trigger
 
 # missing-table-safe history count trigger
+
+# POSIX-safe deploy file loop trigger
