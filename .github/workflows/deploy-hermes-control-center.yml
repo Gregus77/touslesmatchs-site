@@ -91,8 +91,9 @@ jobs:
             systemctl daemon-reload
             systemctl stop tlm-owner-remote.service 2>/dev/null || true
             systemctl stop tlm-hermes-guardian.service 2>/dev/null || true
-            pkill -f '/opt/touslesmatchs/scripts/tlm_owner_remote.py' 2>/dev/null || true
-            pkill -f '/opt/touslesmatchs/scripts/tlm_guardian.py' 2>/dev/null || true
+            # Stop only exact legacy Python processes. Anchored patterns avoid killing this SSH shell.
+            pkill -f '^(/usr/bin/)?python3 /opt/touslesmatchs/scripts/tlm_owner_remote[.]py$' 2>/dev/null || true
+            pkill -f '^(/usr/bin/)?python3 /opt/touslesmatchs/scripts/tlm_guardian[.]py$' 2>/dev/null || true
 
             systemctl enable --now tlm-hermes-guardian.service
             systemctl is-active --quiet tlm-hermes-guardian.service
