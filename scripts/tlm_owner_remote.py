@@ -329,6 +329,8 @@ def main():
                     })
                 elif ok and message.get('date', 0) >= started:
                     state = safe_state()
+                    transcript = None
+                    processing_error = None
                     try:
                         if source == 'voice':
                             transcript = transcribe_voice(message, env, token)
@@ -338,7 +340,8 @@ def main():
                         else:
                             answer = handle(message, env, state, inbox)
                     except Exception as error:
-                        answer = 'Commande reçue mais non traitée : ' + type(error).__name__
+                        processing_error = type(error).__name__
+                        answer = 'Commande reçue mais non traitée : ' + processing_error
                     if answer:
                         sent = telegram_request(token, 'sendMessage', {
                             'chat_id': env['TELEGRAM_ADMIN_CHAT_ID'],
@@ -355,8 +358,9 @@ def main():
                             'reply_message_id': reply_id,
                         }
                         if source == 'voice':
-                            result_event['transcription_ok'] = True
-                            result_event['intent'] = read_intent(transcript) or 'mission'
+                            result_event['transcription_ok'] = bool(transcript)
+                            result_event['transcription_error'] = processing_error
+                            result_event['intent'] = (read_intent(transcript) or 'mission') if transcript else None
                         with audit.open('a') as stream:
                             stream.write(json.dumps(result_event, ensure_ascii=False) + '\n')
 
