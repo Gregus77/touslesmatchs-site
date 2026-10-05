@@ -221,3 +221,39 @@ jobs:
                 except Exception:
                     print('GROQ_TRANSCRIPTION_MODEL_HTTP=network_error')
             PY
+
+            # Synthetic, non-user audio proof for Gemini transcription.
+            TLM_ROOT="$PROJECT" PYTHONPATH="$DEPLOY_ROOT" python3 - <<'PY'
+            import io, wave, math, struct, urllib.error
+            from tlm_guardian import config
+            from tlm_owner_remote import _transcribe_gemini
+
+            env=config()
+            key=env.get('GOOGLE_API_KEY','')
+            model=env.get('HERMES_GEMINI_TRANSCRIPTION_MODEL','gemini-3.8-flash')
+            if not key:
+                raise SystemExit('GEMINI_SYNTHETIC_NO_KEY')
+
+            rate=16000
+            frames=[]
+            for i in range(rate):
+                sample=int(6000*math.sin(2*math.pi*440*i/rate))
+                frames.append(struct.pack('<h',sample))
+            buf=io.BytesIO()
+            with wave.open(buf,'wb') as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(rate)
+                w.writeframes(b''.join(frames))
+            audio=buf.getvalue()
+
+            try:
+                text=_transcribe_gemini(audio,'.wav',key,model)
+                print('GEMINI_SYNTHETIC_AUDIO_OK')
+                print('GEMINI_SYNTHETIC_TEXT_LEN='+str(len(text)))
+            except urllib.error.HTTPError as e:
+                body=e.read(800).decode('utf-8','replace')
+                print('GEMINI_SYNTHETIC_HTTP='+str(e.code))
+                print('GEMINI_SYNTHETIC_BODY='+body.replace('\n',' ')[:800])
+                raise
+            PY
