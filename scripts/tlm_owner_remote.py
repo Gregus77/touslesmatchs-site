@@ -314,17 +314,25 @@ def transcribe_voice(message, env, token):
 
     google_key = env.get('GOOGLE_API_KEY', '')
     if google_key:
-        try:
-            return _transcribe_gemini(
-                audio,
-                suffix,
-                google_key,
-                env.get('HERMES_GEMINI_TRANSCRIPTION_MODEL', 'gemini-3.8-flash'),
-            )
-        except urllib.error.HTTPError as error:
-            errors.append('google_http_' + str(error.code))
-        except Exception as error:
-            errors.append('google_' + type(error).__name__)
+        configured = env.get('HERMES_GEMINI_TRANSCRIPTION_MODEL', 'gemini-3.5-flash-lite')
+        google_models = []
+        for model in (configured, 'gemini-3.5-flash-lite', 'gemini-3.8-flash', 'gemini-3.6-flash'):
+            if model and model not in google_models:
+                google_models.append(model)
+        transient = {429, 500, 502, 503, 504}
+        for model in google_models:
+            for attempt in range(2):
+                try:
+                    return _transcribe_gemini(audio, suffix, google_key, model)
+                except urllib.error.HTTPError as error:
+                    errors.append('google_' + model + '_http_' + str(error.code))
+                    if error.code in transient and attempt == 0:
+                        time.sleep(1.5)
+                        continue
+                    break
+                except Exception as error:
+                    errors.append('google_' + model + '_' + type(error).__name__)
+                    break
 
     openai_key = env.get('OPENAI_API_KEY', '')
     if openai_key:
