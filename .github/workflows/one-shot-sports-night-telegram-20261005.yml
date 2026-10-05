@@ -1,0 +1,107 @@
+name: One-shot sports night Telegram 20261005
+
+on:
+  push:
+    branches:
+      - ops/send-sports-night-20261005
+    paths:
+      - ".github/workflows/one-shot-sports-night-telegram-20261005.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send sports night report to owner Telegram
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
+          script_stop: true
+          script: |
+            set -Eeuo pipefail
+            cd /opt/touslesmatchs
+            docker compose exec -T api node - <<'NODE'
+            const https = require('https');
+
+            const token = (process.env.HERMES_ADMIN_TLM_BOT || process.env.TELEGRAM_BOT_TOKEN || '').trim();
+            const chatId = (process.env.TELEGRAM_ADMIN_CHAT_ID || process.env.TELEGRAM_HERMES_CHAT_ID || '').trim();
+            if (!token || !chatId) throw new Error('Telegram admin configuration missing');
+
+            const text = `🌙 SCANNER SPORTS NUIT — 05/10/2026
+
+Méthode : priorité Top 5 vs Bottom 5. En début de saison / playoffs, les anciens classements ou seeds ne servent qu'à signaler des profils à surveiller, pas à fabriquer un signal vert.
+
+⚽ FOOTBALL
+Aucun candidat Top 5 vs Bottom 5 de championnat suffisamment vérifié pour être classé 🟢 ce soir.
+
+🏀 NBA — pré-saison
+01:00 Memphis @ Atlanta
+01:00 Phoenix @ Detroit
+01:00 New York Knicks @ Philadelphia
+02:00 Minnesota @ Milwaukee
+04:00 LA Lakers @ Sacramento
+⚠️ Pré-saison : classement 2026-27 non significatif. Pas de signal Top5/Bottom5 strict.
+
+🏒 NHL — début de saison
+01:00 Philadelphia @ Tampa Bay
+01:30 Ottawa @ Boston
+01:30 Winnipeg @ Pittsburgh
+02:00 San Jose @ Dallas
+⚠️ Saison trop jeune pour utiliser le classement actuel comme filtre strict.
+
+⚾ MLB — playoffs
+23:00 Chicago White Sox @ Cleveland
+02:00 New York Yankees @ Tampa Bay
+⚠️ Playoffs : analyse par seed/série, pas par Top5/Bottom5.
+
+VERDICT
+🟠 Plusieurs matchs à surveiller, mais aucun 🟢 strict ce soir avec la méthode Top5/Bottom5 sans forcer les données.
+
+Prochain scanner : demain vers 10h30, priorité Asie + autres matchs de journée.`;
+
+            const body = JSON.stringify({
+              chat_id: chatId,
+              text,
+              disable_web_page_preview: true
+            });
+
+            const req = https.request({
+              hostname: 'api.telegram.org',
+              path: '/bot' + token + '/sendMessage',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(body)
+              },
+              timeout: 15000
+            }, (res) => {
+              let raw = '';
+              res.on('data', d => raw += d);
+              res.on('end', () => {
+                let data = {};
+                try { data = JSON.parse(raw); } catch {}
+                const ok = res.statusCode === 200 && data.ok === true && Number.isInteger(data.result?.message_id);
+                if (!ok) {
+                  console.error('TELEGRAM_SEND_OK=false HTTP=' + res.statusCode);
+                  process.exit(1);
+                }
+                console.log('TELEGRAM_SEND_OK=true');
+                console.log('TELEGRAM_MESSAGE_ID=' + data.result.message_id);
+              });
+            });
+            req.on('error', (err) => {
+              console.error('TELEGRAM_SEND_OK=false');
+              console.error(err.message);
+              process.exit(1);
+            });
+            req.on('timeout', () => req.destroy(new Error('timeout')));
+            req.write(body);
+            req.end();
+            NODE
