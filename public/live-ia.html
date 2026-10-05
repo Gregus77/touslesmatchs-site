@@ -1184,7 +1184,7 @@ function renderLiveOu25Details(m) {
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
     return '<div class="mc-vote-seat ' + dir + (!voted&&slot&&slot.status!=='pending'?' terminal':'') + (state.official&&!entryClosed?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + escHtml(choice) + confidence + '</small></div>';
   }).join("");
-  return TLMMatchLifecycle.entryNoticeHtml(m)+'<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>'+'Historique · O/U 2,5 (ancien système)'</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · '+responseCount+'/5 IA ont répondu</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (state.official&&!entryClosed ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
+  return TLMMatchLifecycle.entryNoticeHtml(m)+'<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Historique · O/U 2,5 (ancien système)</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · '+responseCount+'/5 IA ont répondu</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (state.official&&!entryClosed ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
 }
 
 // ── Render ──
