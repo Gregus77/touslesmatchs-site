@@ -382,6 +382,13 @@ def transcribe_voice(message, env, token):
     raise RuntimeError('transcription_failed_' + '_'.join(errors))
 
 
+def audit_event(audit, payload):
+    payload = dict(payload)
+    payload.setdefault('at', datetime.datetime.now(datetime.timezone.utc).isoformat())
+    with audit.open('a') as stream:
+        stream.write(json.dumps(payload, ensure_ascii=False) + '\n')
+
+
 def safe_state():
     try:
         return json.loads((DATA / 'hermes_guardian_state.json').read_text())
@@ -432,8 +439,7 @@ def main():
                     'source': source,
                     'command': raw_command if raw_command in COMMANDS else ('natural' if ok else 'unknown'),
                 }
-                with audit.open('a') as stream:
-                    stream.write(json.dumps(event, ensure_ascii=False) + '\n')
+                audit_event(audit, event)
 
                 if bootstrap and should_process_update(message, ok, bootstrap, offsetfile_exists):
                     telegram_request(token, 'sendMessage', {
@@ -477,13 +483,22 @@ def main():
                             result_event['transcription_ok'] = bool(transcript)
                             result_event['transcription_error'] = processing_error
                             result_event['intent'] = (read_intent(transcript) or 'mission') if transcript else None
-                        with audit.open('a') as stream:
-                            stream.write(json.dumps(result_event, ensure_ascii=False) + '\n')
+                        audit_event(audit, result_event)
 
                 offset = update.get('update_id', offset) + 1
                 offsetfile.write_text(json.dumps({'offset': offset}))
                 offsetfile_exists = True
-        except Exception:
+        except Exception as error:
+            try:
+                audit_event(audit, {
+                    'phase': 'loop_error',
+                    'outcome': 'exception',
+                    'error_type': type(error).__name__,
+                    'error': clean(str(error))[:500],
+                    'offset': offset,
+                })
+            except Exception:
+                pass
             time.sleep(10)
 
 
