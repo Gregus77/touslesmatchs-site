@@ -1,0 +1,18 @@
+[Unit]
+Description=TousLesMatchs Hermes Guardian
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/touslesmatchs
+Environment=TLM_ROOT=/opt/touslesmatchs
+ExecStart=/usr/bin/python3 /opt/touslesmatchs/scripts/tlm_guardian.py
+Restart=always
+RestartSec=10
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
