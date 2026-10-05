@@ -2,7 +2,7 @@ import pathlib
 import tempfile
 import unittest
 
-from tlm_owner_remote import authorized, handle, handle_text, mission_risk, read_intent, recent_after_restart
+from tlm_owner_remote import authorized, handle, handle_text, mission_risk, read_intent, should_process_update
 
 
 class Security(unittest.TestCase):
@@ -46,11 +46,11 @@ class Security(unittest.TestCase):
             self.assertEqual(payload['status'], 'pending_review')
             self.assertFalse(payload['automatic_execution'])
 
-    def test_recent_interrupted_message_can_resume(self):
-        started = 1_000
-        self.assertTrue(recent_after_restart({'date': 950}, started))
-        self.assertTrue(recent_after_restart({'date': 401}, started))
-        self.assertFalse(recent_after_restart({'date': 399}, started))
+    def test_persistent_offset_makes_restart_replay_safe(self):
+        self.assertTrue(should_process_update({'date': 1}, True, False, True))
+        self.assertTrue(should_process_update({'date': 1}, False, True, True))
+        self.assertFalse(should_process_update({'date': 1}, True, False, False))
+        self.assertFalse(should_process_update({'date': 1}, False, False, True))
 
     def test_sensitive_actions_require_confirmation(self):
         self.assertEqual(mission_risk('Fais un virement bancaire de 100 euros'), 'confirmation_required')
