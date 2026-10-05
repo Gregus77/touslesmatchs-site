@@ -132,14 +132,17 @@ def persist_mission(task, message, inbox, source='text', transcript=None):
     inbox.mkdir(mode=0o700, parents=True, exist_ok=True)
     message_id = str(message.get('message_id', 'unknown'))
     path = inbox / (message_id + '.json')
+    risk = mission_risk(task)
+    automatic = risk != 'confirmation_required'
     payload = {
         'received_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'task': clean(task),
         'source': source,
         'transcript': clean(transcript) if transcript else None,
-        'risk': mission_risk(task),
-        'status': 'pending_review',
-        'automatic_execution': False,
+        'risk': risk,
+        'status': 'pending_execution' if automatic else 'awaiting_confirmation',
+        'automatic_execution': automatic,
+        'runner_version': 1,
         'message_id': message.get('message_id'),
         'owner_user_id': str(message.get('from', {}).get('id', '')),
         'chat_id': str(message.get('chat', {}).get('id', '')),
@@ -180,7 +183,7 @@ def handle_text(text, message, env, state, inbox, source='text'):
             if len(parts) < 2:
                 return 'Utilise /mission suivi de la demande.'
             payload = persist_mission(parts[1], message, inbox, source=source, transcript=text if source == 'voice' else None)
-            return 'Mission enregistrée. Risque : ' + payload['risk'] + '. Aucune commande système arbitraire n’est exécutée depuis Telegram.'
+            return ('Mission transmise à Codex.' if payload['automatic_execution'] else 'Mission enregistrée. Confirmation obligatoire avant exécution.') + ' Risque : ' + payload['risk'] + '.'
         return read_answer(first, state)
 
     intent = read_intent(raw)
@@ -188,10 +191,16 @@ def handle_text(text, message, env, state, inbox, source='text'):
         return read_answer(intent, state)
 
     payload = persist_mission(raw, message, inbox, source=source, transcript=text if source == 'voice' else None)
+    if payload['automatic_execution']:
+        return (
+            'Mission transmise à Codex depuis ' + ('la voix' if source == 'voice' else 'le texte')
+            + '. Risque : ' + payload['risk']
+            + '. Exécution isolée et traçable en cours.'
+        )
     return (
         'Mission enregistrée depuis ' + ('la voix' if source == 'voice' else 'le texte')
         + '. Risque : ' + payload['risk']
-        + '. Elle reste traçable et soumise au garde-fou adapté.'
+        + '. Confirmation obligatoire avant toute exécution.'
     )
 
 
