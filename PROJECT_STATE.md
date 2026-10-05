@@ -1,5 +1,25 @@
 # 📖 PROJECT_STATE.md — Mémoire vivante de TousLesMatchs
 
+> ## ⚠️ RÈGLES ACTIVES — 5 OCTOBRE 2026 — PRIORITAIRES
+> Cette section remplace toute règle sportive plus ancienne contradictoire dans ce dépôt.
+>
+> - Football uniquement.
+> - Stratégie principale : **équipe favorite +0,5 but**.
+> - Préfiltre : **Top 5 vs 5 dernières** du championnat/groupe applicable.
+> - Live : **30e à 85e minute** et l'équipe ciblée n'a pas encore marqué.
+> - Cote obligatoire : **cote bookmaker réelle et fraîche équipe +0,5 >= 1,60**.
+> - Historique/attaque/buteurs/contexte live doivent être valides.
+> - Consensus : **4 IA sur 5 minimum** dans le même sens.
+> - Sans cote réelle fraîche ou sans 4/5 : aucun signal client.
+> - O/U 2,5 et les anciennes règles 35'-75'/3 sur 5 sont historiques, pas la stratégie active.
+>
+> **Hermès = Guardian / observateur / rapporteur / console propriétaire.**
+> Il ne choisit pas le signal, ne modifie pas les règles sportives, ne bloque pas et
+> n'envoie pas les signaux clients. Le moteur API/Concile reste seul responsable de
+> la décision sportive et de la diffusion.
+>
+> Priorité documentaire : cette section datée > production observée > handoff récent > historique.
+
 ## 🔥 PRIORITÉ COURANTE — 5 octobre 2026
 
 - **Source de vérité sportive** : `CURRENT_RULES.md`.
