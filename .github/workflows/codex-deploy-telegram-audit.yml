@@ -14,11 +14,6 @@ on:
       - scripts/verify_telegram_channels_20260912.js
       - scripts/test_ou25_post_analysis_odds_20260905.js
       - scripts/test_ou25_consensus_3of5_20260905.js
-      - public/index.html
-      - public/faq.html
-      - public/cgv.html
-      - public/js/i18n.js
-      - .github/workflows/codex-deploy-telegram-audit.yml
 
 permissions:
   contents: read
