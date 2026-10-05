@@ -25,7 +25,7 @@ class Security(unittest.TestCase):
     def test_mission_persisted_once(self):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)
-            self.assertIn('enregistrée', handle({**self.good, 'text': '/mission audit sans modification'}, self.env, self.state, p))
+            self.assertIn('Codex', handle({**self.good, 'text': '/mission audit sans modification'}, self.env, self.state, p))
             self.assertEqual(len(list(p.iterdir())), 1)
             handle({**self.good, 'text': '/mission autre'}, self.env, self.state, p)
             self.assertEqual(len(list(p.iterdir())), 1)
@@ -39,11 +39,22 @@ class Security(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)
             answer = handle_text('Répare le VPS sans rien supprimer', self.good, self.env, self.state, p)
-            self.assertIn('Mission enregistrée', answer)
+            self.assertIn('Codex', answer)
             files = list(p.iterdir())
             self.assertEqual(len(files), 1)
             payload = __import__('json').loads(files[0].read_text())
-            self.assertEqual(payload['status'], 'pending_review')
+            self.assertEqual(payload['status'], 'pending_execution')
+            self.assertTrue(payload['automatic_execution'])
+            self.assertEqual(payload['runner_version'], 1)
+
+
+    def test_sensitive_mission_waits_for_confirmation(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d)
+            answer = handle_text('Fais un virement bancaire de 100 euros', self.good, self.env, self.state, p)
+            self.assertIn('Confirmation obligatoire', answer)
+            payload = __import__('json').loads(next(p.iterdir()).read_text())
+            self.assertEqual(payload['status'], 'awaiting_confirmation')
             self.assertFalse(payload['automatic_execution'])
 
     def test_persistent_offset_makes_restart_replay_safe(self):
