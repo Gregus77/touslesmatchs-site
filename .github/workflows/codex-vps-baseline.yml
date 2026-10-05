@@ -44,4 +44,9 @@ jobs:
             crontab -l 2>/dev/null | grep -Ei 'telegram|hermes|poll|tg_poll' || true
             grep -RIlE 'tg_poll|hermes_poll|getUpdates' /etc/systemd/system /etc/cron.d /etc/cron.hourly /etc/cron.daily 2>/dev/null | head -50 || true
             echo "=== END TELEGRAM POLLERS ==="
+            echo "=== TELEGRAM BOT UNIT ==="
+            systemctl show telegram-bot.service -p ExecStart -p FragmentPath -p EnvironmentFiles --no-pager 2>/dev/null || true
+            PID="$(systemctl show telegram-bot.service -p MainPID --value 2>/dev/null || true)"
+            if [ -n "$PID" ] && [ "$PID" != "0" ]; then ps -p "$PID" -o pid,etimes,cmd --no-headers || true; fi
+            echo "=== END TELEGRAM BOT UNIT ==="
             echo "=== END READ-ONLY PROOF ==="
