@@ -133,6 +133,15 @@ def read_intent(text):
 
 def mission_risk(text):
     value = normalize(text)
+    # A negative instruction such as "sans rien supprimer" is a safeguard,
+    # not a request for a destructive action.
+    risk_value = value
+    for safe_phrase in (
+        'sans rien supprimer', 'sans supprimer', 'ne supprime rien',
+        'ne supprime pas', 'sans effacer', 'ne change pas les regles',
+        'sans changer les regles', 'sans changer la strategie',
+    ):
+        risk_value = risk_value.replace(safe_phrase, '')
     red = (
         'virement', 'banque', 'payer', 'paiement', 'carte bancaire',
         'supprime', 'efface', 'rm -rf', 'mot de passe', 'password',
@@ -145,9 +154,9 @@ def mission_risk(text):
         'corrige', 'repare', 'envoie un email', 'envoie le mail',
         'cree un rendez-vous', 'annule', 'archive'
     )
-    if any(term in value for term in red):
+    if any(term in risk_value for term in red):
         return 'confirmation_required'
-    if any(term in value for term in orange):
+    if any(term in risk_value for term in orange):
         return 'review_required'
     return 'review_required'
 
