@@ -1,0 +1,18 @@
+[Unit]
+Description=TousLesMatchs Owner Mission Codex Runner
+After=network-online.target tlm-owner-remote.service
+Wants=network-online.target
+Requires=tlm-owner-remote.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/tlm-hermes-control
+Environment=TLM_ROOT=/opt/touslesmatchs
+ExecStart=/usr/bin/python3 /opt/tlm-hermes-control/tlm_owner_mission_runner.py
+Restart=always
+RestartSec=10
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target
