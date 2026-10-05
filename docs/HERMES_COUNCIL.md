@@ -1,5 +1,7 @@
 # 🤖 HERMÈS & LE CONCILE DES IA
 
+> **MISE À JOUR PRIORITAIRE — 5 octobre 2026** : `CURRENT_RULES.md` prévaut sur les règles historiques de ce document. Hermès n'est plus une couche de décision sportive : il observe, audite, rapporte et reçoit les commandes propriétaire. Les anciennes règles O/U 2,5, fenêtres 35–75 et seuils historiques ci-dessous sont conservés comme historique uniquement.
+
 ## Principe fondateur
 
 Hermès n'est plus une IA parmi d'autres — c'est le **Conseil d'administration
