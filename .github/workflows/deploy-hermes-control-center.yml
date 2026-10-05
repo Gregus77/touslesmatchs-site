@@ -204,4 +204,20 @@ jobs:
                     print('OPENAI_TRANSCRIPTION_MODEL_HTTP=' + str(e.code))
                 except Exception as e:
                     print('OPENAI_TRANSCRIPTION_MODEL_HTTP=network_error')
+
+            groq=env.get('GROQ_API_KEY','')
+            print('GROQ_KEY_PRESENT=' + str(bool(groq)))
+            if groq:
+                model=env.get('HERMES_GROQ_TRANSCRIPTION_MODEL','whisper-large-v3-turbo')
+                req=urllib.request.Request(
+                    'https://api.groq.com/openai/v1/models/' + model,
+                    headers={'Authorization':'Bearer ' + groq}
+                )
+                try:
+                    with urllib.request.urlopen(req,timeout=20) as response:
+                        print('GROQ_TRANSCRIPTION_MODEL_HTTP=' + str(response.status))
+                except urllib.error.HTTPError as e:
+                    print('GROQ_TRANSCRIPTION_MODEL_HTTP=' + str(e.code))
+                except Exception:
+                    print('GROQ_TRANSCRIPTION_MODEL_HTTP=network_error')
             PY
