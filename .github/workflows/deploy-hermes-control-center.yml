@@ -37,7 +37,9 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           command_timeout: 10m
-          script_stop: true
+          # set -euo pipefail in the remote script already stops on errors.
+          # appleboy script_stop injects shell guards after each line and corrupts Python heredocs.
+          script_stop: false
           script: |
             set -euo pipefail
 
