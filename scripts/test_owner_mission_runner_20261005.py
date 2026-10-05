@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import inspect
 import tempfile
 import unittest
 from pathlib import Path
@@ -33,6 +34,11 @@ class OwnerMissionRunnerTests(unittest.TestCase):
         # Pure parser behavior is indirectly protected by path normalization:
         # renamed paths use their destination and duplicates are removed.
         self.assertEqual(runner.safe_branch_piece('Mission 12 / Test'), 'mission-12-test')
+
+    def test_codex_permissions_do_not_mix_conflicting_flags(self):
+        source = inspect.getsource(runner.process_mission)
+        self.assertIn('"--approve-for-me"', source)
+        self.assertNotIn('"--sandbox"', source)
 
 
 if __name__ == '__main__':
