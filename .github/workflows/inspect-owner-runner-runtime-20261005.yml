@@ -1,0 +1,38 @@
+name: Inspect owner runner runtime 20261005
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/inspect-owner-runner-runtime-20261005.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read-only runner inspection
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            echo "RUNNER=$(systemctl is-active tlm-owner-mission-runner.service || true)"
+            FILE=/opt/touslesmatchs/data/owner_missions/runtime-test-20261005-1606.json
+            if [ -f "$FILE" ]; then
+              python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("MISSION_STATUS="+str(d.get("status"))); print("MISSION_ERROR="+str(d.get("error"))); print("MISSION_RESULT="+str(d.get("codex_result"))[:500])' "$FILE"
+            else
+              echo "MISSION_FILE_MISSING"
+            fi
+            echo "=== JOURNAL ==="
+            journalctl -u tlm-owner-mission-runner.service --since "10 minutes ago" --no-pager -n 120 || true
+            echo "=== CODEX PROCESS ==="
+            pgrep -af 'codex exec|codex-cli' || true
