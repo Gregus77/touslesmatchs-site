@@ -50,6 +50,21 @@ class Security(unittest.TestCase):
         self.assertIsNone(read_intent('Répare la production puis déploie'))
         self.assertTrue(mission_deploy_requested('Mets en production après les tests'))
         self.assertFalse(mission_deploy_requested('Vérifie seulement la production'))
+        self.assertFalse(mission_deploy_requested('Fais les tests, mais ne déploie rien en production'))
+
+    def test_negative_deploy_instruction_stays_isolated(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d)
+            message = {**self.good, 'message_id': 4}
+            answer = handle_text(
+                'Ajoute la documentation Hermès. Fais les tests mais ne déploie rien en production.',
+                message, self.env, self.state, p
+            )
+            self.assertIn('branche isolée', answer)
+            files = list(p.iterdir())
+            self.assertEqual(len(files), 1)
+            payload = __import__('json').loads(files[0].read_text())
+            self.assertFalse(payload['deploy_requested'])
 
     def test_persistent_offset_makes_restart_replay_safe(self):
         self.assertTrue(should_process_update({'date': 1}, True, False, True))

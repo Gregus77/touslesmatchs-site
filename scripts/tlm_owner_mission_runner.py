@@ -230,7 +230,8 @@ def process_mission(path):
         command = [
             "codex", "exec",
             "--ephemeral",
-            "--sandbox", "workspace-write",
+            # --approve-for-me already selects the managed workspace-write
+            # sandbox; passing --sandbox explicitly conflicts with it.
             "--approve-for-me",
             "-C", str(worktree),
             "-o", str(result_file),

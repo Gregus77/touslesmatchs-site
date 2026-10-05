@@ -103,6 +103,18 @@ def looks_like_action_request(text):
 
 def mission_deploy_requested(text):
     value = normalize(text)
+    # Explicit negative deployment instructions always win over deployment
+    # keywords that may appear later in the same natural-language sentence.
+    negative_terms = (
+        'ne deploie rien', 'ne deploie pas', 'ne pas deployer', 'sans deployer',
+        'pas de deploiement', 'aucun deploiement',
+        'ne mets rien en production', 'ne mets pas en production',
+        'ne pas mettre en production', 'sans mise en production',
+        'pas de mise en production', 'aucune mise en production',
+    )
+    if any(term in value for term in negative_terms):
+        return False
+
     terms = (
         'deploie', 'deploy', 'mets en production', 'met en production',
         'mise en production', 'mets en place', 'met en place',
