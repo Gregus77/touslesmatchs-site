@@ -12,9 +12,12 @@ on:
       - ".env.example"
       - "scripts/tlm_guardian.py"
       - "scripts/tlm_owner_remote.py"
+      - "scripts/tlm_owner_mission_runner.py"
+      - "scripts/test_owner_mission_runner_20261005.py"
       - "scripts/test_hermes_control_center_20261005.py"
       - "ops/systemd/tlm-hermes-guardian.service"
       - "ops/systemd/tlm-owner-remote.service"
+      - "ops/systemd/tlm-owner-mission-runner.service"
       - ".github/workflows/deploy-hermes-control-center.yml"
 
 permissions:
@@ -57,22 +60,30 @@ jobs:
             # Never switch branch, reset, pull or touch tracked production files.
             git show origin/main:scripts/tlm_guardian.py > "$STAGE/tlm_guardian.py"
             git show origin/main:scripts/tlm_owner_remote.py > "$STAGE/tlm_owner_remote.py"
+            git show origin/main:scripts/tlm_owner_mission_runner.py > "$STAGE/tlm_owner_mission_runner.py"
             git show origin/main:scripts/test_owner_remote_20260926.py > "$STAGE/test_owner_remote_20260926.py"
+            git show origin/main:scripts/test_owner_mission_runner_20261005.py > "$STAGE/test_owner_mission_runner_20261005.py"
             git show origin/main:scripts/test_hermes_control_center_20261005.py > "$STAGE/test_hermes_control_center_20261005.py"
             git show origin/main:CURRENT_RULES.md > "$STAGE/CURRENT_RULES.md"
             git show origin/main:ops/systemd/tlm-hermes-guardian.service > "$STAGE/tlm-hermes-guardian.service"
             git show origin/main:ops/systemd/tlm-owner-remote.service > "$STAGE/tlm-owner-remote.service"
+            git show origin/main:ops/systemd/tlm-owner-mission-runner.service > "$STAGE/tlm-owner-mission-runner.service"
 
-            python3 -m py_compile "$STAGE/tlm_guardian.py" "$STAGE/tlm_owner_remote.py"
+            python3 -m py_compile "$STAGE/tlm_guardian.py" "$STAGE/tlm_owner_remote.py" "$STAGE/tlm_owner_mission_runner.py"
             (
               cd "$STAGE"
               PYTHONPATH="$STAGE" python3 test_owner_remote_20260926.py
+              PYTHONPATH="$STAGE" python3 test_owner_mission_runner_20261005.py
               PYTHONPATH="$STAGE" python3 test_hermes_control_center_20261005.py
             )
 
             grep -q "min_votes': 4" "$STAGE/tlm_guardian.py"
             ! grep -q "rules.get('min_votes')!=3" "$STAGE/tlm_guardian.py"
-            grep -q "automatic_execution.*False" "$STAGE/tlm_owner_remote.py"
+            grep -q "automatic_execution': automatic" "$STAGE/tlm_owner_remote.py"
+            grep -q "risk == 'review_required'" "$STAGE/tlm_owner_remote.py"
+            grep -q -- '--sandbox", "workspace-write"' "$STAGE/tlm_owner_mission_runner.py"
+            ! grep -q -- '--dangerously-bypass-approvals-and-sandbox' "$STAGE/tlm_owner_mission_runner.py"
+            grep -q "confirmation_required" "$STAGE/tlm_owner_mission_runner.py"
             grep -q "gpt-4o-mini-transcribe" "$STAGE/tlm_owner_remote.py"
             grep -q "30 et 85" "$STAGE/CURRENT_RULES.md"
             grep -q "4 IA sur 5" "$STAGE/CURRENT_RULES.md"
@@ -81,16 +92,20 @@ jobs:
             if [ -d "$DEPLOY_ROOT" ]; then cp -a "$DEPLOY_ROOT" "$BACKUP/control-root"; fi
             cp -a /etc/systemd/system/tlm-hermes-guardian.service "$BACKUP/" 2>/dev/null || true
             cp -a /etc/systemd/system/tlm-owner-remote.service "$BACKUP/" 2>/dev/null || true
+            cp -a /etc/systemd/system/tlm-owner-mission-runner.service "$BACKUP/" 2>/dev/null || true
 
             install -d -m 700 "$DEPLOY_ROOT"
             install -m 0700 "$STAGE/tlm_guardian.py" "$DEPLOY_ROOT/tlm_guardian.py"
             install -m 0700 "$STAGE/tlm_owner_remote.py" "$DEPLOY_ROOT/tlm_owner_remote.py"
+            install -m 0700 "$STAGE/tlm_owner_mission_runner.py" "$DEPLOY_ROOT/tlm_owner_mission_runner.py"
             install -m 0600 "$STAGE/CURRENT_RULES.md" "$DEPLOY_ROOT/CURRENT_RULES.md"
 
             install -m 0644 "$STAGE/tlm-hermes-guardian.service" /etc/systemd/system/tlm-hermes-guardian.service
             install -m 0644 "$STAGE/tlm-owner-remote.service" /etc/systemd/system/tlm-owner-remote.service
+            install -m 0644 "$STAGE/tlm-owner-mission-runner.service" /etc/systemd/system/tlm-owner-mission-runner.service
 
             systemctl daemon-reload
+            systemctl stop tlm-owner-mission-runner.service 2>/dev/null || true
             systemctl stop tlm-owner-remote.service 2>/dev/null || true
             systemctl stop tlm-hermes-guardian.service 2>/dev/null || true
             # Stop only exact legacy Python processes. Anchored patterns avoid killing this SSH shell.
@@ -115,6 +130,16 @@ jobs:
             else
               systemctl disable --now tlm-owner-remote.service 2>/dev/null || true
               REMOTE="waiting_for_bot_or_chat"
+            fi
+
+            RUNNER="disabled"
+            if [ "$REMOTE" = "active" ] && command -v codex >/dev/null 2>&1 && codex login status 2>&1 | grep -q "Logged in"; then
+              systemctl enable --now tlm-owner-mission-runner.service
+              systemctl is-active --quiet tlm-owner-mission-runner.service
+              RUNNER="active"
+            else
+              systemctl disable --now tlm-owner-mission-runner.service 2>/dev/null || true
+              RUNNER="waiting_for_remote_or_codex"
             fi
 
             for i in $(seq 1 25); do
@@ -149,6 +174,7 @@ jobs:
             PY
 
             echo "REMOTE=$REMOTE"
+            echo "RUNNER=$RUNNER"
             echo "SOURCE_COMMIT=$(git rev-parse origin/main)"
             echo "BACKUP=$BACKUP"
 
