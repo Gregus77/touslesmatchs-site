@@ -53,6 +53,9 @@ jobs:
             PID="$(systemctl show telegram-bot.service -p MainPID --value 2>/dev/null || true)"
             if [ -n "$PID" ] && [ "$PID" != "0" ]; then
               SCRIPT="$(tr '\0' '\n' < "/proc/$PID/cmdline" 2>/dev/null | grep -E '\.py
+            echo "=== OWNER REMOTE JOURNAL 12:53-13:00 UTC ==="
+            journalctl -u tlm-owner-remote.service --since "2026-10-05 12:53:00 UTC" --until "2026-10-05 13:00:00 UTC" --no-pager -n 200 || true
+            echo "=== END OWNER REMOTE JOURNAL ==="
             echo "=== END READ-ONLY PROOF ==="
  | tail -1 || true)"
               if [ -n "$SCRIPT" ] && [ -f "$SCRIPT" ]; then
