@@ -1,0 +1,50 @@
+name: Inspect Codex owner runner 20261005
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/inspect-codex-owner-runner-20261005.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read-only Codex/VPS capability check
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            echo "=== CODEX ==="
+            if command -v codex >/dev/null 2>&1; then
+              echo "CODEX_PRESENT=True"
+              codex --version || true
+            else
+              echo "CODEX_PRESENT=False"
+            fi
+            echo "=== NODE/PYTHON/GIT ==="
+            node --version || true
+            python3 --version || true
+            git --version || true
+            echo "=== OWNER SERVICES ==="
+            systemctl is-active tlm-owner-remote.service || true
+            systemctl is-active tlm-hermes-guardian.service || true
+            systemctl is-active tlm-hourly-director.service || true
+            echo "=== OWNER MISSIONS ==="
+            test -d /opt/touslesmatchs/data/owner_missions && find /opt/touslesmatchs/data/owner_missions -maxdepth 1 -type f | wc -l || echo 0
+            echo "=== ENV FLAGS (presence only) ==="
+            grep -q '^OPENAI_API_KEY=' .env && echo OPENAI_API_KEY_PRESENT=True || echo OPENAI_API_KEY_PRESENT=False
+            grep -q '^OPENROUTER_API_KEY=' .env && echo OPENROUTER_API_KEY_PRESENT=True || echo OPENROUTER_API_KEY_PRESENT=False
+            echo "=== END ==="
