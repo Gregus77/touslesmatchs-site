@@ -38,7 +38,7 @@ class Security(unittest.TestCase):
     def test_natural_text_becomes_mission(self):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)
-            answer = handle_text('Répare le VPS sans rien supprimer', self.good, self.env, self.state, p)
+            answer = handle_text('Corrige l’affichage du site sans toucher aux règles sportives', self.good, self.env, self.state, p)
             self.assertIn('Codex', answer)
             files = list(p.iterdir())
             self.assertEqual(len(files), 1)
