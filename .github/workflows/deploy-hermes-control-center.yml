@@ -164,3 +164,27 @@ jobs:
                 raise SystemExit("owner_voice_prompt_delivery_failed")
             print("VOICE_PROMPT_MESSAGE_ID=" + str(mid))
             PY
+
+            # Read-only proof of the latest real owner voice received by the running console.
+            python3 - <<'PY'
+            import json, time
+            from pathlib import Path
+            p=Path('/opt/touslesmatchs/data/owner_remote_commands.jsonl')
+            if not p.exists():
+                raise SystemExit('OWNER_VOICE_AUDIT_MISSING')
+            rows=[]
+            for line in p.read_text().splitlines()[-100:]:
+                try:
+                    row=json.loads(line)
+                except Exception:
+                    continue
+                if row.get('source')=='voice':
+                    rows.append(row)
+            if not rows:
+                raise SystemExit('OWNER_VOICE_NOT_FOUND')
+            last=rows[-1]
+            print('OWNER_VOICE_FOUND')
+            print('VOICE_AUTHORIZED=' + str(bool(last.get('authorized'))))
+            print('VOICE_UPDATE_ID=' + str(last.get('update_id')))
+            print('VOICE_COMMAND=' + str(last.get('command')))
+            PY
