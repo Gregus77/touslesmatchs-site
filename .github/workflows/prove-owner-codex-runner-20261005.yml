@@ -1,0 +1,82 @@
+name: Prove Telegram Codex runner runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prove-owner-codex-runner-20261005.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Inject harmless owner mission and wait for Codex runner
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 7m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            ROOT=/opt/touslesmatchs
+            INBOX="$ROOT/data/owner_missions"
+            mkdir -p "$INBOX"
+            ID="runtime-test-20261005-1606"
+            FILE="$INBOX/$ID.json"
+
+            cat > "$FILE" <<'JSON'
+            {
+              "received_at": "2026-10-05T16:06:00Z",
+              "task": "TEST AUTOMATIQUE DU RUNNER. Ne modifie aucun fichier. Lis CURRENT_RULES.md puis réponds seulement : RUNNER CODEX OK.",
+              "source": "runtime_test",
+              "transcript": null,
+              "risk": "review_required",
+              "status": "pending_review",
+              "automatic_execution": true,
+              "deploy_requested": false,
+              "message_id": "runtime-test-20261005-1606",
+              "owner_user_id": "runtime-test",
+              "chat_id": "runtime-test"
+            }
+            JSON
+            chmod 600 "$FILE"
+
+            for i in $(seq 1 90); do
+              STATUS="$(python3 - "$FILE" <<'PY'
+            import json,sys
+            try:
+                print(json.load(open(sys.argv[1])).get("status",""))
+            except Exception:
+                print("")
+            PY
+            )"
+              echo "MISSION_STATUS=$STATUS"
+              if [ "$STATUS" = "completed" ]; then
+                break
+              fi
+              if [ "$STATUS" = "failed" ]; then
+                cat "$FILE"
+                exit 1
+              fi
+              sleep 4
+            done
+
+            python3 - "$FILE" <<'PY'
+            import json,sys
+            d=json.load(open(sys.argv[1]))
+            assert d.get("status")=="completed", d
+            assert d.get("main_pushed") is False
+            assert d.get("branch_pushed") is False
+            result=(d.get("codex_result") or "")
+            assert "RUNNER CODEX OK" in result, result
+            print("OWNER_CODEX_RUNTIME_OK")
+            print("CODEX_RESULT="+result[:300])
+            PY
