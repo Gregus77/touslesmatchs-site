@@ -191,7 +191,7 @@ def telegram_request(token, method, payload):
     req = urllib.request.Request(
         'https://api.telegram.org/bot' + token + '/' + method,
         data=json.dumps(payload).encode(),
-        headers={'Content-Type': 'application/json'},
+        headers={'Content-Type': 'application/json', 'x-goog-api-key': api_key},
     )
     with urllib.request.urlopen(req, timeout=35) as response:
         return json.load(response)
@@ -209,6 +209,21 @@ def telegram_file(token, file_id):
         raise RuntimeError('voice_too_large')
     suffix = pathlib.Path(path).suffix or '.ogg'
     return data, suffix
+
+
+def audio_mime_from_suffix(suffix):
+    value = str(suffix or '').lower()
+    if value in ('.ogg', '.oga'):
+        return 'audio/ogg'
+    if value == '.opus':
+        return 'audio/opus'
+    if value in ('.m4a', '.mp4'):
+        return 'audio/m4a'
+    if value == '.mp3':
+        return 'audio/mp3'
+    if value == '.wav':
+        return 'audio/wav'
+    return 'application/octet-stream'
 
 
 def multipart(fields, file_name, file_bytes, file_type='audio/ogg'):
@@ -233,7 +248,7 @@ def _transcribe_http(audio, suffix, endpoint, api_key, model):
         {'model': model, 'response_format': 'json', 'language': 'fr'},
         'telegram-voice' + suffix,
         audio,
-        'audio/ogg' if suffix.lower() == '.ogg' else 'application/octet-stream',
+        audio_mime_from_suffix(suffix),
     )
     request = urllib.request.Request(
         endpoint,
@@ -252,7 +267,7 @@ def _transcribe_http(audio, suffix, endpoint, api_key, model):
 
 
 def _transcribe_gemini(audio, suffix, api_key, model):
-    mime = 'audio/ogg' if suffix.lower() == '.ogg' else 'application/octet-stream'
+    mime = audio_mime_from_suffix(suffix)
     payload = {
         'contents': [{
             'role': 'user',
@@ -265,7 +280,7 @@ def _transcribe_gemini(audio, suffix, api_key, model):
     }
     url = (
         'https://generativelanguage.googleapis.com/v1beta/models/'
-        + model + ':generateContent?key=' + urllib.parse.quote(api_key, safe='')
+        + model + ':generateContent'
     )
     request = urllib.request.Request(
         url,
