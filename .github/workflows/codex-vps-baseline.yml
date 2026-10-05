@@ -37,4 +37,11 @@ jobs:
             echo "=== OWNER REMOTE JOURNAL ==="
             journalctl -u tlm-owner-remote.service --since "2026-10-05 12:45:00" --no-pager -n 120 2>/dev/null || true
             echo "=== END OWNER REMOTE JOURNAL ==="
+            echo "=== TELEGRAM POLLERS ==="
+            ps -eo pid,etimes,cmd | grep -E 'tlm_owner_remote|tg_poll|hermes_poll|getUpdates|owner_remote' | grep -v grep || true
+            systemctl list-units --type=service --all --no-pager | grep -Ei 'telegram|hermes|owner|poll' || true
+            systemctl list-timers --all --no-pager | grep -Ei 'telegram|hermes|owner|poll' || true
+            crontab -l 2>/dev/null | grep -Ei 'telegram|hermes|poll|tg_poll' || true
+            grep -RIlE 'tg_poll|hermes_poll|getUpdates' /etc/systemd/system /etc/cron.d /etc/cron.hourly /etc/cron.daily 2>/dev/null | head -50 || true
+            echo "=== END TELEGRAM POLLERS ==="
             echo "=== END READ-ONLY PROOF ==="
