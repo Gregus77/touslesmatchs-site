@@ -25,7 +25,7 @@ class Security(unittest.TestCase):
     def test_mission_persisted_once(self):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)
-            self.assertIn('enregistrée', handle({**self.good, 'text': '/mission audit sans modification'}, self.env, self.state, p))
+            self.assertIn('Codex', handle({**self.good, 'text': '/mission audit sans modification'}, self.env, self.state, p))
             self.assertEqual(len(list(p.iterdir())), 1)
             handle({**self.good, 'text': '/mission autre'}, self.env, self.state, p)
             self.assertEqual(len(list(p.iterdir())), 1)
@@ -62,6 +62,7 @@ class Security(unittest.TestCase):
         self.assertEqual(mission_risk('Change le mot de passe'), 'confirmation_required')
         self.assertEqual(mission_risk('Change la stratégie sportive'), 'confirmation_required')
         self.assertEqual(mission_risk('Redémarre le service API'), 'review_required')
+        self.assertEqual(mission_risk('Répare le VPS sans rien supprimer'), 'review_required')
 
 
 if __name__ == '__main__':
