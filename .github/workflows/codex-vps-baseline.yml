@@ -34,4 +34,7 @@ jobs:
             echo
             echo "=== LAST OWNER REMOTE AUDIT EVENTS ==="
             tail -n 30 /opt/touslesmatchs/data/owner_remote_commands.jsonl 2>/dev/null || true
+            echo "=== OWNER REMOTE JOURNAL ==="
+            journalctl -u tlm-owner-remote.service --since "2026-10-05 12:45:00" --no-pager -n 120 2>/dev/null || true
+            echo "=== END OWNER REMOTE JOURNAL ==="
             echo "=== END READ-ONLY PROOF ==="
