@@ -1,44 +1,327 @@
-"""Owner Telegram console: explicit sender AND chat, read-only commands, mission inbox only."""
-import json,pathlib,os,time,datetime,urllib.request,fcntl,sys
-from tlm_guardian import ROOT,DATA,config,clean,summary
-COMMANDS={'/status','/live','/analyses','/signaux','/shadow','/telegram','/budget','/disk','/audit','/mission'}
-def authorized(message,env):
- user=env.get('TELEGRAM_ADMIN_USER_ID','');chat=env.get('TELEGRAM_ADMIN_CHAT_ID','')
- return bool(user and chat and str(message.get('from',{}).get('id'))==user and str(message.get('chat',{}).get('id'))==chat and not message.get('from',{}).get('is_bot') and not message.get('forward_origin') and not message.get('sender_chat'))
-def handle(message,env,state,inbox):
- if not authorized(message,env):return None
- text=message.get('text','').strip();parts=text.split(None,1);cmd=parts[0].split('@')[0] if parts else ''
- if cmd not in COMMANDS:return 'Commande refusée. Lecture seule : /status /live /analyses /signaux /shadow /telegram /budget /disk /audit. Mission : /mission texte.'
- if cmd=='/mission':
-  if len(parts)<2:return 'Utilise /mission suivi de la demande. Aucune commande système ne sera exécutée directement.'
-  inbox.mkdir(mode=0o700,parents=True,exist_ok=True);p=inbox/(str(message.get('message_id'))+'.json')
-  if not p.exists():p.write_text(json.dumps({'received_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'task':clean(parts[1]),'status':'pending_review','automatic_execution':False},ensure_ascii=False))
-  return 'Mission enregistrée pour Codex. Aucune action système lancée ; les modifications sensibles restent soumises à validation.'
- if cmd in ['/status','/audit']:return summary(state)
- fields={'/live':('football','live_count','unexplained_pending'),'/analyses':('analyses','votes','attempts','jev'),'/signaux':('official','results'),'/shadow':('shadow',),'/telegram':('telegram','incidents'),'/budget':('budget','provider_blocks'),'/disk':('disk_percent',)}
- return clean(json.dumps({k:state.get(k) for k in fields[cmd]},ensure_ascii=False,indent=2))
-def request(token,method,payload):
- req=urllib.request.Request('https://api.telegram.org/bot'+token+'/'+method,data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'})
- with urllib.request.urlopen(req,timeout=35) as r:return json.load(r)
+#!/usr/bin/env python3
+"""Owner Telegram console.
+
+Security model:
+- explicit owner user id AND admin chat id;
+- read-only diagnostics execute immediately;
+- free-form text/voice becomes a persisted mission;
+- no arbitrary shell command is ever executed from Telegram;
+- sensitive missions are explicitly marked confirmation_required.
+"""
+import datetime
+import fcntl
+import json
+import os
+import pathlib
+import re
+import tempfile
+import time
+import unicodedata
+import urllib.request
+
+from tlm_guardian import DATA, config, clean, summary
+
+COMMANDS = {
+    '/status', '/live', '/analyses', '/signaux', '/shadow',
+    '/telegram', '/budget', '/disk', '/audit', '/mission', '/help'
+}
+READ_FIELDS = {
+    '/live': ('football', 'live_count', 'unexplained_pending', 'goal05'),
+    '/analyses': ('analyses', 'votes', 'attempts', 'jev'),
+    '/signaux': ('official', 'results'),
+    '/shadow': ('shadow',),
+    '/telegram': ('telegram', 'incidents'),
+    '/budget': ('budget', 'provider_blocks'),
+    '/disk': ('disk_percent',),
+}
+MAX_VOICE_BYTES = 10 * 1024 * 1024
+MAX_VOICE_SECONDS = 180
+
+
+def authorized(message, env):
+    user = env.get('TELEGRAM_ADMIN_USER_ID', '')
+    chat = env.get('TELEGRAM_ADMIN_CHAT_ID', '')
+    return bool(
+        user and chat
+        and str(message.get('from', {}).get('id')) == user
+        and str(message.get('chat', {}).get('id')) == chat
+        and not message.get('from', {}).get('is_bot')
+        and not message.get('forward_origin')
+        and not message.get('sender_chat')
+    )
+
+
+def normalize(value):
+    value = unicodedata.normalize('NFKD', str(value or ''))
+    value = ''.join(ch for ch in value if not unicodedata.combining(ch))
+    return re.sub(r'\s+', ' ', value.lower()).strip()
+
+
+def read_intent(text):
+    value = normalize(text)
+    intents = (
+        ('/status', ('statut', 'status', 'etat general', 'tout fonctionne', 'production')),
+        ('/live', ('live', 'direct', 'matchs en cours')),
+        ('/analyses', ('analyse', 'analyses', 'votes ia', 'vote ia', 'concile')),
+        ('/signaux', ('signal', 'signaux', 'selection envoyee', 'selections envoyees')),
+        ('/telegram', ('telegram', 'livraison telegram', 'envoi telegram')),
+        ('/budget', ('budget', 'cout ia', 'depense ia', 'openrouter')),
+        ('/disk', ('disque', 'espace disque', 'stockage vps')),
+        ('/shadow', ('shadow', 'test a blanc', 'tests a blanc')),
+    )
+    for command, phrases in intents:
+        if any(phrase in value for phrase in phrases):
+            return command
+    return None
+
+
+def mission_risk(text):
+    value = normalize(text)
+    red = (
+        'virement', 'banque', 'payer', 'paiement', 'carte bancaire',
+        'supprime', 'efface', 'rm -rf', 'mot de passe', 'password',
+        'cle api', 'token', 'secret', 'stripe', 'revoque',
+        'change la strategie', 'change les regles', 'baisse le seuil',
+        'deploy destructif', 'reset --hard', 'revert'
+    )
+    orange = (
+        'deploy', 'deploie', 'redemarre', 'restart', 'modifie',
+        'corrige', 'repare', 'envoie un email', 'envoie le mail',
+        'cree un rendez-vous', 'annule', 'archive'
+    )
+    if any(term in value for term in red):
+        return 'confirmation_required'
+    if any(term in value for term in orange):
+        return 'review_required'
+    return 'review_required'
+
+
+def persist_mission(task, message, inbox, source='text', transcript=None):
+    inbox.mkdir(mode=0o700, parents=True, exist_ok=True)
+    message_id = str(message.get('message_id', 'unknown'))
+    path = inbox / (message_id + '.json')
+    payload = {
+        'received_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'task': clean(task),
+        'source': source,
+        'transcript': clean(transcript) if transcript else None,
+        'risk': mission_risk(task),
+        'status': 'pending_review',
+        'automatic_execution': False,
+        'message_id': message.get('message_id'),
+        'owner_user_id': str(message.get('from', {}).get('id', '')),
+        'chat_id': str(message.get('chat', {}).get('id', '')),
+    }
+    if not path.exists():
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2))
+        os.chmod(path, 0o600)
+    return payload
+
+
+def read_answer(command, state):
+    if command in ('/status', '/audit'):
+        return summary(state)
+    fields = READ_FIELDS[command]
+    return clean(json.dumps({key: state.get(key) for key in fields}, ensure_ascii=False, indent=2))
+
+
+def handle_text(text, message, env, state, inbox, source='text'):
+    raw = str(text or '').strip()
+    if not raw:
+        return 'Je n’ai reçu aucune instruction exploitable.'
+
+    parts = raw.split(None, 1)
+    first = parts[0].split('@')[0] if parts else ''
+
+    if first.startswith('/'):
+        if first not in COMMANDS:
+            return 'Commande refusée. Utilise /help ou parle-moi normalement.'
+        if first == '/help':
+            return (
+                'Lecture : /status /live /analyses /signaux /shadow /telegram /budget /disk /audit.\n'
+                'Mission : /mission texte.\n'
+                'Tu peux aussi écrire ou dicter une demande en français.'
+            )
+        if first == '/mission':
+            if len(parts) < 2:
+                return 'Utilise /mission suivi de la demande.'
+            payload = persist_mission(parts[1], message, inbox, source=source, transcript=text if source == 'voice' else None)
+            return 'Mission enregistrée. Risque : ' + payload['risk'] + '. Aucune commande système arbitraire n’est exécutée depuis Telegram.'
+        return read_answer(first, state)
+
+    intent = read_intent(raw)
+    if intent:
+        return read_answer(intent, state)
+
+    payload = persist_mission(raw, message, inbox, source=source, transcript=text if source == 'voice' else None)
+    return (
+        'Mission enregistrée depuis ' + ('la voix' if source == 'voice' else 'le texte')
+        + '. Risque : ' + payload['risk']
+        + '. Elle reste traçable et soumise au garde-fou adapté.'
+    )
+
+
+def handle(message, env, state, inbox):
+    if not authorized(message, env):
+        return None
+    return handle_text(message.get('text', ''), message, env, state, inbox)
+
+
+def telegram_request(token, method, payload):
+    req = urllib.request.Request(
+        'https://api.telegram.org/bot' + token + '/' + method,
+        data=json.dumps(payload).encode(),
+        headers={'Content-Type': 'application/json'},
+    )
+    with urllib.request.urlopen(req, timeout=35) as response:
+        return json.load(response)
+
+
+def telegram_file(token, file_id):
+    meta = telegram_request(token, 'getFile', {'file_id': file_id})
+    if not meta.get('ok') or not meta.get('result', {}).get('file_path'):
+        raise RuntimeError('telegram_file_unavailable')
+    path = meta['result']['file_path']
+    url = 'https://api.telegram.org/file/bot' + token + '/' + path
+    with urllib.request.urlopen(url, timeout=35) as response:
+        data = response.read(MAX_VOICE_BYTES + 1)
+    if len(data) > MAX_VOICE_BYTES:
+        raise RuntimeError('voice_too_large')
+    suffix = pathlib.Path(path).suffix or '.ogg'
+    return data, suffix
+
+
+def multipart(fields, file_name, file_bytes, file_type='audio/ogg'):
+    boundary = '----tlm-hermes-' + str(int(time.time() * 1000))
+    chunks = []
+    for name, value in fields.items():
+        chunks.append(('--' + boundary + '\r\n').encode())
+        chunks.append(('Content-Disposition: form-data; name="' + name + '"\r\n\r\n').encode())
+        chunks.append(str(value).encode())
+        chunks.append(b'\r\n')
+    chunks.append(('--' + boundary + '\r\n').encode())
+    chunks.append(('Content-Disposition: form-data; name="file"; filename="' + file_name + '"\r\n').encode())
+    chunks.append(('Content-Type: ' + file_type + '\r\n\r\n').encode())
+    chunks.append(file_bytes)
+    chunks.append(b'\r\n')
+    chunks.append(('--' + boundary + '--\r\n').encode())
+    return boundary, b''.join(chunks)
+
+
+def transcribe_voice(message, env, token):
+    voice = message.get('voice') or message.get('audio') or {}
+    duration = int(voice.get('duration') or 0)
+    size = int(voice.get('file_size') or 0)
+    if duration and duration > MAX_VOICE_SECONDS:
+        raise RuntimeError('voice_too_long')
+    if size and size > MAX_VOICE_BYTES:
+        raise RuntimeError('voice_too_large')
+    file_id = voice.get('file_id')
+    if not file_id:
+        raise RuntimeError('voice_missing_file')
+
+    api_key = env.get('OPENAI_API_KEY', '')
+    if not api_key:
+        raise RuntimeError('transcription_not_configured')
+
+    audio, suffix = telegram_file(token, file_id)
+    model = env.get('HERMES_TRANSCRIPTION_MODEL', 'gpt-4o-mini-transcribe')
+    boundary, body = multipart(
+        {'model': model, 'response_format': 'json', 'language': 'fr'},
+        'telegram-voice' + suffix,
+        audio,
+        'audio/ogg' if suffix.lower() == '.ogg' else 'application/octet-stream',
+    )
+    request = urllib.request.Request(
+        'https://api.openai.com/v1/audio/transcriptions',
+        data=body,
+        headers={
+            'Authorization': 'Bearer ' + api_key,
+            'Content-Type': 'multipart/form-data; boundary=' + boundary,
+        },
+    )
+    with urllib.request.urlopen(request, timeout=90) as response:
+        payload = json.load(response)
+    transcript = str(payload.get('text') or '').strip()
+    if not transcript:
+        raise RuntimeError('empty_transcript')
+    return transcript
+
+
+def safe_state():
+    try:
+        return json.loads((DATA / 'hermes_guardian_state.json').read_text())
+    except Exception:
+        return {'incidents': [{'type': 'guardian_state_unavailable'}]}
+
+
 def main():
- env=config();token=env.get('HERMES_ADMIN_TLM_BOT')
- if not token or not env.get('TELEGRAM_ADMIN_USER_ID') or not env.get('TELEGRAM_ADMIN_CHAT_ID'):raise SystemExit('Activation refusée : token, utilisateur ET chat explicitement autorisés requis.')
- lock=open(DATA/'owner_remote.lock','a')
- try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
- except BlockingIOError:return
- offsetfile=DATA/'owner_remote_offset.json';offset=json.loads(offsetfile.read_text()).get('offset',0) if offsetfile.exists() else 0
- started=int(time.time());audit=DATA/'owner_remote_commands.jsonl'
- while True:
-  try:
-   result=request(token,'getUpdates',{'offset':offset,'timeout':25,'allowed_updates':['message']})
-   if not result.get('ok'):time.sleep(10);continue
-   for update in result.get('result',[]):
-    message=update.get('message',{});ok=authorized(message,env);cmd=message.get('text','').split(' ',1)[0].split('@')[0]
-    with audit.open('a') as f:f.write(json.dumps({'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'update_id':update['update_id'],'authorized':ok,'command':cmd if cmd in COMMANDS else 'unknown'})+'\n')
-    # Old queued messages cannot become new VPS missions after activation.
-    if ok and message.get('date',0)>=started:
-     state=json.loads((DATA/'hermes_guardian_state.json').read_text());answer=handle(message,env,state,DATA/'owner_missions')
-     if answer:request(token,'sendMessage',{'chat_id':env['TELEGRAM_ADMIN_CHAT_ID'],'text':answer})
-    offset=update['update_id']+1;offsetfile.write_text(json.dumps({'offset':offset}))
-  except Exception:time.sleep(10)
-if __name__=='__main__':main()
+    env = config()
+    token = env.get('HERMES_ADMIN_TLM_BOT')
+    if not token or not env.get('TELEGRAM_ADMIN_USER_ID') or not env.get('TELEGRAM_ADMIN_CHAT_ID'):
+        raise SystemExit('Activation refusée : token, utilisateur ET chat explicitement autorisés requis.')
+
+    lock = open(DATA / 'owner_remote.lock', 'a')
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        return
+
+    offsetfile = DATA / 'owner_remote_offset.json'
+    offset = json.loads(offsetfile.read_text()).get('offset', 0) if offsetfile.exists() else 0
+    started = int(time.time())
+    audit = DATA / 'owner_remote_commands.jsonl'
+    inbox = DATA / 'owner_missions'
+
+    while True:
+        try:
+            result = telegram_request(token, 'getUpdates', {
+                'offset': offset,
+                'timeout': 25,
+                'allowed_updates': ['message'],
+            })
+            if not result.get('ok'):
+                time.sleep(10)
+                continue
+
+            for update in result.get('result', []):
+                message = update.get('message', {})
+                ok = authorized(message, env)
+                source = 'voice' if (message.get('voice') or message.get('audio')) else 'text'
+                raw_command = message.get('text', '').split(' ', 1)[0].split('@')[0]
+                event = {
+                    'at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    'update_id': update.get('update_id'),
+                    'authorized': ok,
+                    'source': source,
+                    'command': raw_command if raw_command in COMMANDS else ('natural' if ok else 'unknown'),
+                }
+                with audit.open('a') as stream:
+                    stream.write(json.dumps(event, ensure_ascii=False) + '\n')
+
+                if ok and message.get('date', 0) >= started:
+                    state = safe_state()
+                    try:
+                        if source == 'voice':
+                            transcript = transcribe_voice(message, env, token)
+                            answer = '🎙️ « ' + clean(transcript) + ' »\n\n' + handle_text(
+                                transcript, message, env, state, inbox, source='voice'
+                            )
+                        else:
+                            answer = handle(message, env, state, inbox)
+                    except Exception as error:
+                        answer = 'Commande reçue mais non traitée : ' + type(error).__name__
+                    if answer:
+                        telegram_request(token, 'sendMessage', {
+                            'chat_id': env['TELEGRAM_ADMIN_CHAT_ID'],
+                            'text': clean(answer),
+                        })
+
+                offset = update.get('update_id', offset) + 1
+                offsetfile.write_text(json.dumps({'offset': offset}))
+        except Exception:
+            time.sleep(10)
+
+
+if __name__ == '__main__':
+    main()
