@@ -34,6 +34,17 @@ jobs:
             else
               echo "CODEX_PRESENT=False"
             fi
+            echo "=== CODEX EXEC HELP ==="
+            codex exec --help 2>&1 | sed -n '1,120p' || true
+            echo "=== CODEX AUTH ==="
+            codex login status 2>&1 | sed -n '1,20p' || true
+            echo "=== GIT REMOTE CAPABILITY ==="
+            git ls-remote --exit-code origin HEAD >/dev/null 2>&1 && echo GIT_READ_REMOTE=True || echo GIT_READ_REMOTE=False
+            if git push --dry-run origin HEAD:refs/heads/codex/telegram-owner-dryrun-20261005 >/dev/null 2>&1; then
+              echo GIT_PUSH_DRYRUN=True
+            else
+              echo GIT_PUSH_DRYRUN=False
+            fi
             echo "=== NODE/PYTHON/GIT ==="
             node --version || true
             python3 --version || true
