@@ -89,8 +89,32 @@ def normalize(value):
     return re.sub(r'\s+', ' ', value.lower()).strip()
 
 
+def looks_like_action_request(text):
+    value = normalize(text)
+    action_terms = (
+        'corrige', 'repare', 'modifie', 'change', 'ajoute', 'retire',
+        'supprime', 'efface', 'deploie', 'deploy', 'mets en place',
+        'met en place', 'mets en production', 'met en production',
+        'active', 'desactive', 'redemarre', 'restart', 'cree', 'envoie',
+        'archive', 'annule', 'installe', 'branche', 'raccorde',
+    )
+    return any(term in value for term in action_terms)
+
+
+def mission_deploy_requested(text):
+    value = normalize(text)
+    terms = (
+        'deploie', 'deploy', 'mets en production', 'met en production',
+        'mise en production', 'mets en place', 'met en place',
+        'active en production', 'jusqu en production',
+    )
+    return any(term in value for term in terms)
+
+
 def read_intent(text):
     value = normalize(text)
+    if looks_like_action_request(value):
+        return None
     intents = (
         ('/status', ('statut', 'status', 'etat general', 'tout fonctionne', 'production')),
         ('/live', ('live', 'direct', 'matchs en cours')),
@@ -109,6 +133,15 @@ def read_intent(text):
 
 def mission_risk(text):
     value = normalize(text)
+    # A negative instruction such as "sans rien supprimer" is a safeguard,
+    # not a request for a destructive action.
+    risk_value = value
+    for safe_phrase in (
+        'sans rien supprimer', 'sans supprimer', 'ne supprime rien',
+        'ne supprime pas', 'sans effacer', 'ne change pas les regles',
+        'sans changer les regles', 'sans changer la strategie',
+    ):
+        risk_value = risk_value.replace(safe_phrase, '')
     red = (
         'virement', 'banque', 'payer', 'paiement', 'carte bancaire',
         'supprime', 'efface', 'rm -rf', 'mot de passe', 'password',
@@ -121,9 +154,9 @@ def mission_risk(text):
         'corrige', 'repare', 'envoie un email', 'envoie le mail',
         'cree un rendez-vous', 'annule', 'archive'
     )
-    if any(term in value for term in red):
+    if any(term in risk_value for term in red):
         return 'confirmation_required'
-    if any(term in value for term in orange):
+    if any(term in risk_value for term in orange):
         return 'review_required'
     return 'review_required'
 
@@ -132,14 +165,17 @@ def persist_mission(task, message, inbox, source='text', transcript=None):
     inbox.mkdir(mode=0o700, parents=True, exist_ok=True)
     message_id = str(message.get('message_id', 'unknown'))
     path = inbox / (message_id + '.json')
+    risk = mission_risk(task)
+    automatic = risk == 'review_required'
     payload = {
         'received_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
         'task': clean(task),
         'source': source,
         'transcript': clean(transcript) if transcript else None,
-        'risk': mission_risk(task),
+        'risk': risk,
         'status': 'pending_review',
-        'automatic_execution': False,
+        'automatic_execution': automatic,
+        'deploy_requested': automatic and mission_deploy_requested(task),
         'message_id': message.get('message_id'),
         'owner_user_id': str(message.get('from', {}).get('id', '')),
         'chat_id': str(message.get('chat', {}).get('id', '')),
@@ -180,7 +216,10 @@ def handle_text(text, message, env, state, inbox, source='text'):
             if len(parts) < 2:
                 return 'Utilise /mission suivi de la demande.'
             payload = persist_mission(parts[1], message, inbox, source=source, transcript=text if source == 'voice' else None)
-            return 'Mission enregistrée. Risque : ' + payload['risk'] + '. Aucune commande système arbitraire n’est exécutée depuis Telegram.'
+            if payload['risk'] == 'confirmation_required':
+                return '🔴 Mission enregistrée mais BLOQUÉE : confirmation explicite obligatoire.'
+            suffix = ' Mise en production demandée.' if payload.get('deploy_requested') else ''
+            return '🟠 Mission envoyée au runner Codex sécurisé.' + suffix
         return read_answer(first, state)
 
     intent = read_intent(raw)
@@ -188,10 +227,16 @@ def handle_text(text, message, env, state, inbox, source='text'):
         return read_answer(intent, state)
 
     payload = persist_mission(raw, message, inbox, source=source, transcript=text if source == 'voice' else None)
+    if payload['risk'] == 'confirmation_required':
+        return (
+            '🔴 Demande reçue depuis ' + ('la voix' if source == 'voice' else 'le texte')
+            + ' mais aucune action sensible ne sera exécutée sans confirmation explicite.'
+        )
     return (
-        'Mission enregistrée depuis ' + ('la voix' if source == 'voice' else 'le texte')
-        + '. Risque : ' + payload['risk']
-        + '. Elle reste traçable et soumise au garde-fou adapté.'
+        '🟠 Demande reçue depuis ' + ('la voix' if source == 'voice' else 'le texte')
+        + ' et envoyée à Codex.'
+        + (' Mise en production demandée après tests.' if payload.get('deploy_requested') else
+           ' Codex travaillera sur une branche isolée et me renverra le résultat.')
     )
 
 

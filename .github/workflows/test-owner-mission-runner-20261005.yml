@@ -1,0 +1,40 @@
+name: Test Telegram owner Codex runner
+
+on:
+  push:
+    branches:
+      - codex/telegram-owner-mission-runner-20261005
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/tlm_owner_remote.py
+      - scripts/tlm_owner_mission_runner.py
+      - scripts/test_owner_remote_20260926.py
+      - scripts/test_owner_mission_runner_20261005.py
+      - scripts/test_hermes_control_center_20261005.py
+      - ops/systemd/tlm-owner-mission-runner.service
+      - .github/workflows/deploy-hermes-control-center.yml
+      - .github/workflows/test-owner-mission-runner-20261005.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax and safety tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/tlm_guardian.py scripts/tlm_owner_remote.py scripts/tlm_owner_mission_runner.py
+          PYTHONPATH=scripts python3 scripts/test_owner_remote_20260926.py
+          PYTHONPATH=scripts python3 scripts/test_owner_mission_runner_20261005.py
+          PYTHONPATH=scripts python3 scripts/test_hermes_control_center_20261005.py
+          ! grep -q -- '--dangerously-bypass-approvals-and-sandbox' scripts/tlm_owner_mission_runner.py
+          grep -q -- '--sandbox", "workspace-write"' scripts/tlm_owner_mission_runner.py
+          echo OWNER_CODEX_RUNNER_TESTS_OK

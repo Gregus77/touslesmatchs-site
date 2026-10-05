@@ -2,7 +2,7 @@ import pathlib
 import tempfile
 import unittest
 
-from tlm_owner_remote import authorized, handle, handle_text, mission_risk, read_intent, should_process_update
+from tlm_owner_remote import authorized, handle, handle_text, mission_deploy_requested, mission_risk, read_intent, should_process_update
 
 
 class Security(unittest.TestCase):
@@ -25,7 +25,7 @@ class Security(unittest.TestCase):
     def test_mission_persisted_once(self):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)
-            self.assertIn('enregistrée', handle({**self.good, 'text': '/mission audit sans modification'}, self.env, self.state, p))
+            self.assertIn('Codex', handle({**self.good, 'text': '/mission audit sans modification'}, self.env, self.state, p))
             self.assertEqual(len(list(p.iterdir())), 1)
             handle({**self.good, 'text': '/mission autre'}, self.env, self.state, p)
             self.assertEqual(len(list(p.iterdir())), 1)
@@ -39,12 +39,17 @@ class Security(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = pathlib.Path(d)
             answer = handle_text('Répare le VPS sans rien supprimer', self.good, self.env, self.state, p)
-            self.assertIn('Mission enregistrée', answer)
+            self.assertIn('Codex', answer)
             files = list(p.iterdir())
             self.assertEqual(len(files), 1)
             payload = __import__('json').loads(files[0].read_text())
             self.assertEqual(payload['status'], 'pending_review')
-            self.assertFalse(payload['automatic_execution'])
+            self.assertTrue(payload['automatic_execution'])
+
+    def test_action_word_production_is_not_read_only(self):
+        self.assertIsNone(read_intent('Répare la production puis déploie'))
+        self.assertTrue(mission_deploy_requested('Mets en production après les tests'))
+        self.assertFalse(mission_deploy_requested('Vérifie seulement la production'))
 
     def test_persistent_offset_makes_restart_replay_safe(self):
         self.assertTrue(should_process_update({'date': 1}, True, False, True))
@@ -57,6 +62,7 @@ class Security(unittest.TestCase):
         self.assertEqual(mission_risk('Change le mot de passe'), 'confirmation_required')
         self.assertEqual(mission_risk('Change la stratégie sportive'), 'confirmation_required')
         self.assertEqual(mission_risk('Redémarre le service API'), 'review_required')
+        self.assertEqual(mission_risk('Répare le VPS sans rien supprimer'), 'review_required')
 
 
 if __name__ == '__main__':
