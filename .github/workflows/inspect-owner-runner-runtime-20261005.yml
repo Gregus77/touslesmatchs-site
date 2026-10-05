@@ -28,7 +28,7 @@ jobs:
             echo "RUNNER=$(systemctl is-active tlm-owner-mission-runner.service || true)"
             FILE=/opt/touslesmatchs/data/owner_missions/runtime-test-20261005-1606.json
             if [ -f "$FILE" ]; then
-              python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("MISSION_STATUS="+str(d.get("status"))); print("MISSION_ERROR="+str(d.get("error"))); print("MISSION_RESULT="+str(d.get("codex_result"))[:500])' "$FILE"
+              python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("MISSION_STATUS="+str(d.get("status"))); print("MISSION_ERROR="+str(d.get("error"))); print("MISSION_RESULT="+str(d.get("codex_result"))[:500])' "$FILE" || true
             else
               echo "MISSION_FILE_MISSING"
             fi
@@ -36,3 +36,5 @@ jobs:
             journalctl -u tlm-owner-mission-runner.service --since "10 minutes ago" --no-pager -n 120 || true
             echo "=== CODEX PROCESS ==="
             pgrep -af 'codex exec|codex-cli' || true
+
+# inspect retry
