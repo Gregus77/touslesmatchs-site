@@ -1,0 +1,48 @@
+name: Cleanup stale main worktree 20261005
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cleanup-stale-main-worktree-20261005.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Remove only clean stale main worktree
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            ROOT=/opt/touslesmatchs
+            TARGET=/tmp/tlm-jev-main-integration
+            cd "$ROOT"
+            git fetch origin main
+
+            if [ ! -d "$TARGET" ]; then
+              echo "STALE_MAIN_WORKTREE_ALREADY_ABSENT"
+              git worktree prune
+              exit 0
+            fi
+
+            test "$(git -C "$TARGET" branch --show-current)" = "main"
+            test -z "$(git -C "$TARGET" status --porcelain)"
+            echo "STALE_MAIN_WORKTREE_CLEAN"
+
+            git worktree remove "$TARGET"
+            git worktree prune
+
+            ! git worktree list --porcelain | grep -F "worktree $TARGET"
+            echo "STALE_MAIN_WORKTREE_REMOVED"
