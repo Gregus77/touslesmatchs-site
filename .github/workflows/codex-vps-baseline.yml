@@ -56,4 +56,16 @@ jobs:
             echo "TIMERS_BEGIN"
             systemctl list-timers --all --no-pager | grep -E 'tlm|hermes' || true
             echo "TIMERS_END"
+            echo "VOICE_BEGIN"
+            printf 'OWNER_REMOTE_ACTIVE='
+            systemctl is-active tlm-owner-remote.service || true
+            GROQ_KEY="$(sed -n 's/^GROQ_API_KEY=//p' .env | tail -1 | tr -d '\"' | tr -d "'")"
+            OPENAI_KEY="$(sed -n 's/^OPENAI_API_KEY=//p' .env | tail -1 | tr -d '\"' | tr -d "'")"
+            [ -n "$GROQ_KEY" ] && echo "GROQ_KEY_PRESENT=True" || echo "GROQ_KEY_PRESENT=False"
+            [ -n "$OPENAI_KEY" ] && echo "OPENAI_KEY_PRESENT=True" || echo "OPENAI_KEY_PRESENT=False"
+            if [ -n "$GROQ_KEY" ]; then
+              CODE="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GROQ_KEY" https://api.groq.com/openai/v1/models/whisper-large-v3-turbo || true)"
+              echo "GROQ_TRANSCRIPTION_MODEL_HTTP=$CODE"
+            fi
+            echo "VOICE_END"
             echo "TLM_BASELINE_END"
