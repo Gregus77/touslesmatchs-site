@@ -62,15 +62,8 @@ jobs:
             chmod 600 "$backup/tlm.db"
             git rev-parse HEAD > "$backup/git-head-before.txt"
 
-            read -r BEFORE_CONC BEFORE_SNAP BEFORE_TG BEFORE_G05 < <(python3 - <<'PY'
-            import sqlite3
-            db=sqlite3.connect('/opt/touslesmatchs/data/tlm.db')
-            def n(t):
-                try: return db.execute(f'SELECT count(*) FROM {t}').fetchone()[0]
-                except Exception: return 0
-            print(n('concile_analyses'),n('official_signal_snapshots'),n('telegram_signal_deliveries'),n('goal05_signal_registry'))
-            PY
-            )
+            BEFORE_COUNTS="$(python3 -c "import sqlite3; db=sqlite3.connect('/opt/touslesmatchs/data/tlm.db'); tables=['concile_analyses','official_signal_snapshots','telegram_signal_deliveries','goal05_signal_registry']; vals=[]; [(vals.append(db.execute('SELECT count(*) FROM '+t).fetchone()[0]) if db.execute(\"SELECT 1 FROM sqlite_master WHERE type='table' AND name=?\",(t,)).fetchone() else vals.append(0)) for t in tables]; print(*vals)")"
+            read -r BEFORE_CONC BEFORE_SNAP BEFORE_TG BEFORE_G05 <<< "$BEFORE_COUNTS"
 
             while IFS= read -r file; do
               case "$file" in
@@ -109,16 +102,8 @@ jobs:
             grep -qF '4 IA sur 5' public/faq.html
             grep -qF 'ancien historique O/U 2,5 reste consultable' public/cgv.html
 
-            read -r AFTER_CONC AFTER_SNAP AFTER_TG AFTER_G05 < <(python3 - <<'PY'
-            import sqlite3
-            db=sqlite3.connect('/opt/touslesmatchs/data/tlm.db')
-            assert db.execute('PRAGMA quick_check').fetchone()[0] == 'ok'
-            def n(t):
-                try: return db.execute(f'SELECT count(*) FROM {t}').fetchone()[0]
-                except Exception: return 0
-            print(n('concile_analyses'),n('official_signal_snapshots'),n('telegram_signal_deliveries'),n('goal05_signal_registry'))
-            PY
-            )
+            AFTER_COUNTS="$(python3 -c "import sqlite3; db=sqlite3.connect('/opt/touslesmatchs/data/tlm.db'); assert db.execute('PRAGMA quick_check').fetchone()[0]=='ok'; tables=['concile_analyses','official_signal_snapshots','telegram_signal_deliveries','goal05_signal_registry']; vals=[]; [(vals.append(db.execute('SELECT count(*) FROM '+t).fetchone()[0]) if db.execute(\"SELECT 1 FROM sqlite_master WHERE type='table' AND name=?\",(t,)).fetchone() else vals.append(0)) for t in tables]; print(*vals)")"
+            read -r AFTER_CONC AFTER_SNAP AFTER_TG AFTER_G05 <<< "$AFTER_COUNTS"
             test "$AFTER_CONC" -ge "$BEFORE_CONC"
             test "$AFTER_SNAP" -ge "$BEFORE_SNAP"
             test "$AFTER_TG" -ge "$BEFORE_TG"
@@ -154,3 +139,5 @@ jobs:
             echo "BACKUP=$backup"
 
 # trigger production deployment after workflow installation
+
+# syntax fix trigger
