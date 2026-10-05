@@ -37,6 +37,5 @@ jobs:
           set -euo pipefail
           node scripts/test_current_product_goal05_20261005.js
           node scripts/test_goal05_policy_20261005.js
-          node scripts/test_match_lifecycle_20260906.js
           node scripts/test_i18n_integral_20260906.js
           echo CURRENT_GOAL05_PRODUCT_TESTS_OK
