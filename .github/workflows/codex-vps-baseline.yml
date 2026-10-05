@@ -5,8 +5,6 @@ on:
     branches: [main]
     paths:
       - .github/workflows/codex-vps-baseline.yml
-  schedule:
-    - cron: '7 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -17,91 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Derive configured SSH public key
-        shell: bash
-        env:
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-        run: |
-          set -eu
-          umask 077
-          printf '%s\n' "$VPS_SSH_KEY" > /tmp/vps_key
-          printf 'VPS_PUBLIC_KEY='
-          ssh-keygen -y -f /tmp/vps_key
-          rm -f /tmp/vps_key
-
-      - name: Read-only VPS baseline
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Read-only Hermes voice proof
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
           script_stop: true
           script: |
-            set -eu
-            cd /opt/touslesmatchs
-            echo "TLM_BASELINE_BEGIN"
-            printf 'BRANCH='
-            git branch --show-current
-            printf 'COMMIT='
-            git rev-parse HEAD
-            printf 'UPSTREAM='
-            git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo NONE
-            echo "STATUS_BEGIN"
-            git status --short --branch
-            echo "STATUS_END"
-            echo "CONTAINERS_BEGIN"
-            docker compose ps --format json 2>/dev/null || docker compose ps
-            echo "CONTAINERS_END"
-            echo "TIMERS_BEGIN"
-            systemctl list-timers --all --no-pager | grep -E 'tlm|hermes' || true
-            echo "TIMERS_END"
-            echo "VOICE_BEGIN"
-            printf 'OWNER_REMOTE_ACTIVE='
-            systemctl is-active tlm-owner-remote.service || true
-            GROQ_KEY="$(sed -n 's/^GROQ_API_KEY=//p' .env | tail -1 | tr -d '\"' | tr -d "'")"
-            OPENAI_KEY="$(sed -n 's/^OPENAI_API_KEY=//p' .env | tail -1 | tr -d '\"' | tr -d "'")"
-            [ -n "$GROQ_KEY" ] && echo "GROQ_KEY_PRESENT=True" || echo "GROQ_KEY_PRESENT=False"
-            [ -n "$OPENAI_KEY" ] && echo "OPENAI_KEY_PRESENT=True" || echo "OPENAI_KEY_PRESENT=False"
-            if [ -n "$GROQ_KEY" ]; then
-              CODE="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GROQ_KEY" https://api.groq.com/openai/v1/models/whisper-large-v3-turbo || true)"
-              echo "GROQ_TRANSCRIPTION_MODEL_HTTP=$CODE"
-            fi
-            GOOGLE_KEY="$(sed -n 's/^GOOGLE_API_KEY=//p' .env | tail -1 | tr -d '\"' | tr -d "'")"
-            [ -n "$GOOGLE_KEY" ] && echo "GOOGLE_KEY_PRESENT=True" || echo "GOOGLE_KEY_PRESENT=False"
-            if [ -n "$GOOGLE_KEY" ]; then
-              CODE="$(curl -sS -o /dev/null -w '%{http_code}' "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash?key=$GOOGLE_KEY" || true)"
-              echo "GOOGLE_AUDIO_MODEL_HTTP=$CODE"
-            fi
-            AUDIT=/opt/touslesmatchs/data/owner_remote_commands.jsonl
-            if [ -f "$AUDIT" ]; then
-              PYTHONPATH=/opt/tlm-hermes-control python3 - <<'PY'
-import json
-from pathlib import Path
-p=Path('/opt/touslesmatchs/data/owner_remote_commands.jsonl')
-rows=[]
-for line in p.read_text().splitlines()[-400:]:
-    try: row=json.loads(line)
-    except Exception: continue
-    if row.get('source')=='voice':
-        rows.append(row)
-if rows:
-    last=[r for r in rows if r.get('phase')!='result'][-1]
-    uid=last.get('update_id')
-    print('LATEST_VOICE_UPDATE_ID='+str(uid))
-    print('LATEST_VOICE_AUTHORIZED='+str(bool(last.get('authorized'))))
-    result=[r for r in rows if r.get('phase')=='result' and r.get('update_id')==uid]
-    if result:
-        x=result[-1]
-        print('LATEST_VOICE_RESULT=True')
-        print('LATEST_VOICE_TRANSCRIPTION_OK='+str(bool(x.get('transcription_ok'))))
-        print('LATEST_VOICE_TRANSCRIPTION_ERROR='+str(x.get('transcription_error')))
-        print('LATEST_VOICE_INTENT='+str(x.get('intent')))
-        print('LATEST_VOICE_OUTCOME='+str(x.get('outcome')))
-        print('LATEST_VOICE_REPLY_MESSAGE_ID='+str(x.get('reply_message_id')))
-    else:
-        print('LATEST_VOICE_RESULT=False')
-PY
-            fi
-            echo "VOICE_END"
-            echo "TLM_BASELINE_END"
+            set -euo pipefail
+            echo "=== HERMES SERVICES ==="
+            systemctl is-active tlm-owner-remote.service
+            systemctl is-active tlm-hermes-guardian.service
+            echo "=== LAST OWNER REMOTE AUDIT EVENTS ==="
+            tail -n 30 /opt/touslesmatchs/data/owner_remote_commands.jsonl 2>/dev/null || true
+            echo "=== END READ-ONLY PROOF ==="
