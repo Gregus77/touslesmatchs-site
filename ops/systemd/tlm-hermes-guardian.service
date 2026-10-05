@@ -7,9 +7,9 @@ Requires=docker.service
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/touslesmatchs
+WorkingDirectory=/opt/tlm-hermes-control
 Environment=TLM_ROOT=/opt/touslesmatchs
-ExecStart=/usr/bin/python3 /opt/touslesmatchs/scripts/tlm_guardian.py
+ExecStart=/usr/bin/python3 /opt/tlm-hermes-control/tlm_guardian.py
 Restart=always
 RestartSec=10
 UMask=0077
