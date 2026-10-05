@@ -50,14 +50,7 @@ jobs:
             chmod 600 "$FILE"
 
             for i in $(seq 1 90); do
-              STATUS="$(python3 - "$FILE" <<'PY'
-            import json,sys
-            try:
-                print(json.load(open(sys.argv[1])).get("status",""))
-            except Exception:
-                print("")
-            PY
-            )"
+              STATUS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status",""))' "$FILE" 2>/dev/null || true)"
               echo "MISSION_STATUS=$STATUS"
               if [ "$STATUS" = "completed" ]; then
                 break
