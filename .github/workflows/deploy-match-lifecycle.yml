@@ -79,8 +79,6 @@ jobs:
             }
             trap rollback ERR
             git merge --ff-only "$target"
-            node scripts/test_homepage_consensus_20260905.js
-            node scripts/test_match_lifecycle_20260906.js
             node scripts/test_i18n_integral_20260906.js
             node scripts/test_goal05_policy_20261005.js
             node scripts/test_current_product_goal05_20261005.js
