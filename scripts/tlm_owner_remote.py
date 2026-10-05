@@ -18,6 +18,7 @@ import re
 import tempfile
 import time
 import unicodedata
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -320,6 +321,8 @@ def transcribe_voice(message, env, token):
                 google_key,
                 env.get('HERMES_GEMINI_TRANSCRIPTION_MODEL', 'gemini-3.8-flash'),
             )
+        except urllib.error.HTTPError as error:
+            errors.append('google_http_' + str(error.code))
         except Exception as error:
             errors.append('google_' + type(error).__name__)
 
@@ -333,6 +336,8 @@ def transcribe_voice(message, env, token):
                 openai_key,
                 env.get('HERMES_TRANSCRIPTION_MODEL', 'gpt-4o-mini-transcribe'),
             )
+        except urllib.error.HTTPError as error:
+            errors.append('openai_http_' + str(error.code))
         except Exception as error:
             errors.append('openai_' + type(error).__name__)
 
@@ -346,6 +351,8 @@ def transcribe_voice(message, env, token):
                 groq_key,
                 env.get('HERMES_GROQ_TRANSCRIPTION_MODEL', 'whisper-large-v3-turbo'),
             )
+        except urllib.error.HTTPError as error:
+            errors.append('groq_http_' + str(error.code))
         except Exception as error:
             errors.append('groq_' + type(error).__name__)
 
@@ -428,7 +435,7 @@ def main():
                         else:
                             answer = handle(message, env, state, inbox)
                     except Exception as error:
-                        processing_error = type(error).__name__
+                        processing_error = clean(str(error)) or type(error).__name__
                         answer = 'Commande reçue mais non traitée : ' + processing_error
                     if answer:
                         sent = telegram_request(token, 'sendMessage', {
