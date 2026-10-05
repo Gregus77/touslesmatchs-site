@@ -59,3 +59,5 @@ jobs:
             grep -q '^OPENAI_API_KEY=' .env && echo OPENAI_API_KEY_PRESENT=True || echo OPENAI_API_KEY_PRESENT=False
             grep -q '^OPENROUTER_API_KEY=' .env && echo OPENROUTER_API_KEY_PRESENT=True || echo OPENROUTER_API_KEY_PRESENT=False
             echo "=== END ==="
+
+# trigger owner runner check
