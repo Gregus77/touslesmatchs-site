@@ -29,25 +29,11 @@ jobs:
             ROOT=/opt/touslesmatchs
             INBOX="$ROOT/data/owner_missions"
             mkdir -p "$INBOX"
-            ID="runtime-test-20261005-1606"
+            ID="runtime-test-20261005-1620"
             FILE="$INBOX/$ID.json"
 
-            cat > "$FILE" <<'JSON'
-            {
-              "received_at": "2026-10-05T16:06:00Z",
-              "task": "TEST AUTOMATIQUE DU RUNNER. Ne modifie aucun fichier. Lis CURRENT_RULES.md puis réponds seulement : RUNNER CODEX OK.",
-              "source": "runtime_test",
-              "transcript": null,
-              "risk": "review_required",
-              "status": "pending_review",
-              "automatic_execution": true,
-              "deploy_requested": false,
-              "message_id": "runtime-test-20261005-1606",
-              "owner_user_id": "runtime-test",
-              "chat_id": "runtime-test"
-            }
-            JSON
-            chmod 600 "$FILE"
+            python3 -c 'import json,os,sys,tempfile; p=sys.argv[1]; d={"received_at":"2026-10-05T16:20:00Z","task":"TEST AUTOMATIQUE DU RUNNER. Ne modifie aucun fichier. Lis CURRENT_RULES.md puis réponds seulement : RUNNER CODEX OK.","source":"runtime_test","transcript":None,"risk":"review_required","status":"pending_review","automatic_execution":True,"deploy_requested":False,"message_id":"runtime-test-20261005-1620","owner_user_id":"runtime-test","chat_id":"runtime-test"}; tmp=p+".tmp"; open(tmp,"w",encoding="utf-8").write(json.dumps(d,ensure_ascii=False,indent=2)); os.chmod(tmp,0o600); os.replace(tmp,p)' "$FILE"
+
 
             for i in $(seq 1 90); do
               STATUS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status",""))' "$FILE" 2>/dev/null || true)"
