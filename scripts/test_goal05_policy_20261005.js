@@ -27,6 +27,14 @@ assert(src.includes('if (targetScore>0) return rejected("equipe_cible_a_deja_mar
 assert(!src.includes('if (minute<25 || minute>80)'));
 assert(!src.includes('minute>=25 && minute<=80 && !(hs>0 && as>0)'));
 assert(src.includes('ai_consensus_non_verifie'));
-assert(src.includes('const aiVotes=0;'));
+assert(src.includes('function goal05AiConsensus(match, side)'));
+assert(src.includes('const aiConsensus=goal05AiConsensus(match,side);'));
+assert(src.includes('yesVotes>=GOAL05_POLICY_MIN_VOTES'));
+assert(src.includes('WHERE match_key=?'));
+assert(src.includes('AND agent_name IN ('));
+assert(src.includes('AND market_line IN (?,?)'));
+assert(src.includes('aiVoteDetails:aiConsensus.votes'));
+assert(!src.includes('const aiVotes=0;'));
+assert(src.includes('const goal05Tier=leagueTier(match);'));
 
 console.log('GOAL05_POLICY_LOT_A_OK');
