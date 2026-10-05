@@ -1950,7 +1950,7 @@ function renderHeroLive(m){
   var fixtureId=m.fixtureId||m.fixture_id||m.id||m.sourceId||'';
   if(analysisLink){analysisLink.href='/live-ia?fixture='+encodeURIComponent(fixtureId);analysisLink.setAttribute('aria-label','Ouvrir '+String(m.home||'ce match')+' contre '+String(m.away||'')+' dans Live IA');}
   var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed';
-  var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<35);
+  var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<30);
   var alignedCount=Number(voteState.consensusCount)||consensus.count;
   var direction=voteState.consensusDirection||consensus.direction;
   setHeroText('hero-consensus-current',votes?(voteState.locked?'CONSENSUS '+alignedCount+'/5':'ANALYSE +0,5 — '+alignedCount+'/5'):'0/5');
@@ -1975,7 +1975,7 @@ function renderHeroLive(m){
   var decisionText=deliveryProven&&voteState.official?'Envoyé sur Telegram'
     :voteState.official?'Signal validé — livraison en attente'
     :votes&&tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel'
-    :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
+    :votes&&isFinite(minute)&&minute<30?'Tendance — pas encore de signal'
     :votes?(m.diffusion_block||m.analysis_exclusion_reason||'Tendance — autres critères non remplis, aucun signal')
     :TLMMatchLifecycle.statusText(m);
   setHeroText('hero-consensus-label',decisionText+(voteState.official&&!voteState.locked&&paidExplanation?' · '+paidExplanation:''));
@@ -2830,7 +2830,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
        title:"ANALYSE EN COURS",
        detail:votes
          ? votes+"/5 IA ont répondu · décision en cours"
-         : minute>=35
+         : minute>=30
            ? "Interrogation des 5 IA en cours"
            : "Analyse disponible à partir de la 30e minute"
      };
