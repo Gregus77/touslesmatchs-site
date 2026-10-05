@@ -73,5 +73,35 @@ jobs:
               CODE="$(curl -sS -o /dev/null -w '%{http_code}' "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash?key=$GOOGLE_KEY" || true)"
               echo "GOOGLE_AUDIO_MODEL_HTTP=$CODE"
             fi
+            AUDIT=/opt/touslesmatchs/data/owner_remote_commands.jsonl
+            if [ -f "$AUDIT" ]; then
+              PYTHONPATH=/opt/tlm-hermes-control python3 - <<'PY'
+import json
+from pathlib import Path
+p=Path('/opt/touslesmatchs/data/owner_remote_commands.jsonl')
+rows=[]
+for line in p.read_text().splitlines()[-400:]:
+    try: row=json.loads(line)
+    except Exception: continue
+    if row.get('source')=='voice':
+        rows.append(row)
+if rows:
+    last=[r for r in rows if r.get('phase')!='result'][-1]
+    uid=last.get('update_id')
+    print('LATEST_VOICE_UPDATE_ID='+str(uid))
+    print('LATEST_VOICE_AUTHORIZED='+str(bool(last.get('authorized'))))
+    result=[r for r in rows if r.get('phase')=='result' and r.get('update_id')==uid]
+    if result:
+        x=result[-1]
+        print('LATEST_VOICE_RESULT=True')
+        print('LATEST_VOICE_TRANSCRIPTION_OK='+str(bool(x.get('transcription_ok'))))
+        print('LATEST_VOICE_TRANSCRIPTION_ERROR='+str(x.get('transcription_error')))
+        print('LATEST_VOICE_INTENT='+str(x.get('intent')))
+        print('LATEST_VOICE_OUTCOME='+str(x.get('outcome')))
+        print('LATEST_VOICE_REPLY_MESSAGE_ID='+str(x.get('reply_message_id')))
+    else:
+        print('LATEST_VOICE_RESULT=False')
+PY
+            fi
             echo "VOICE_END"
             echo "TLM_BASELINE_END"
