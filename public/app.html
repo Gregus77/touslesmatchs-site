@@ -56,7 +56,7 @@
 
 
   .goal05-home{position:relative;overflow:hidden;border:1px solid rgba(34,211,238,.30);border-radius:23px;padding:18px;margin:0 0 14px;background:linear-gradient(145deg,rgba(34,211,238,.13),rgba(124,58,237,.17) 62%,rgba(11,16,37,.82));box-shadow:0 18px 46px rgba(34,211,238,.12),inset 0 1px 0 rgba(255,255,255,.06)}
-  .goal05-home:after{content:"ancien système";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
+  .goal05-home:after{content:"+0,5";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
   .goal05-kicker{position:relative;font-size:10px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
   .goal05-title{position:relative;margin:7px 0 8px;font-size:30px;line-height:.98;letter-spacing:-.065em;font-weight:1000;text-shadow:0 10px 26px rgba(0,0,0,.22)}
   .goal05-copy{position:relative;margin:0;color:#dbe4ff;font-size:13px;line-height:1.55}
@@ -452,7 +452,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
 </style>
 
 <style id="TLM_GOAL05_CURRENT_PRODUCT">
-/* Produit courant : +0,5 but équipe. L'ancien ancien système reste historique uniquement. */
+/* Produit courant : +0,5 but équipe. L'ancien système reste historique uniquement. */
 .tlm-app-ai{display:none!important}
 .goal05-home:after{content:"+0,5"!important}
 </style>
@@ -1506,7 +1506,7 @@ $("perf-kpis").innerHTML =
       list.innerHTML=rows.slice(0,100).map(function(a){
         var b=a.outcome==="win"?'<span class="badge b-win">Gagné</span>':a.outcome==="loss"?'<span class="badge b-loss">Perdu</span>':'<span class="badge b-wait">En attente</span>';
         var strategy=is05(a)?'<span class="badge b-win">Actuel · +0,5</span>':'<span class="badge b-wait">Ancien système</span>';
-        var market=a.bet||a.best_bet||a.selection||"";
+        var market=is05(a)?(a.bet||a.best_bet||a.selection||""):"Ancien signal";
         return '<div class="item"><div class="mid"><div class="t">'+esc(a.home||"Analyse")+(a.away?' — '+esc(a.away):'')+'</div><div class="m">'+esc((a.analysed_at||a.date||a.created_at||"").slice(0,10))+' · '+esc(a.competition||"")+(market?' · '+esc(market):'')+'</div></div>'+strategy+b+'</div>';
       }).join("");
     });
@@ -1963,7 +1963,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
        title:"ANALYSE EN COURS",
        detail:votes
          ? votes+"/5 IA ont répondu · décision en cours"
-         : minute>=35
+         : minute>=30
            ? "Interrogation des 5 IA en cours"
            : "Analyse disponible à partir de la 30e minute"
      };
