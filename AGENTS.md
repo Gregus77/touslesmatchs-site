@@ -122,7 +122,8 @@ TikTok -> TousLesMatchs.com -> Standard -> Premium -> Elite/VIP
 ```
 
 ### Analyses sportives
-- Default : Under 2.5 (moins de 2.5 buts)
+- **Produit courant** : +0,5 but de l’équipe favorite, selon `CURRENT_RULES.md` (Top 5 vs Bottom 5, 30–85, cote réelle fraîche ≥ 1,60, quorum 4/5).
+- **O/U 2,5** : historique uniquement ; conserver les anciennes données et ne jamais le réactiver comme produit courant.
 - Coupe du Monde exclue de toutes les analyses
 - Filtrage : LOW_TRUST d'abord (bloque), puis TRUSTED (passe), default = bloque
 - Cotes : `Math.min(1.95, ((1 / (confidence / 100)) * 1.45))`, jamais > 1.95
