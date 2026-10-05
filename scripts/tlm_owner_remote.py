@@ -23,7 +23,7 @@ from tlm_guardian import DATA, config, clean, summary
 
 COMMANDS = {
     '/status', '/live', '/analyses', '/signaux', '/shadow',
-    '/telegram', '/budget', '/disk', '/audit', '/mission', '/help'
+    '/telegram', '/budget', '/disk', '/audit', '/mission', '/help', '/whoami'
 }
 READ_FIELDS = {
     '/live': ('football', 'live_count', 'unexplained_pending', 'goal05'),
@@ -45,6 +45,22 @@ def authorized(message, env):
         user and chat
         and str(message.get('from', {}).get('id')) == user
         and str(message.get('chat', {}).get('id')) == chat
+        and not message.get('from', {}).get('is_bot')
+        and not message.get('forward_origin')
+        and not message.get('sender_chat')
+    )
+
+
+def bootstrap_whoami(message, env):
+    """Allow identity discovery in the configured admin chat, never actions."""
+    if env.get('TELEGRAM_ADMIN_USER_ID'):
+        return False
+    chat = env.get('TELEGRAM_ADMIN_CHAT_ID', '')
+    text = str(message.get('text', '')).strip().split('@')[0]
+    return bool(
+        chat
+        and str(message.get('chat', {}).get('id')) == chat
+        and text == '/whoami'
         and not message.get('from', {}).get('is_bot')
         and not message.get('forward_origin')
         and not message.get('sender_chat')
@@ -136,6 +152,8 @@ def handle_text(text, message, env, state, inbox, source='text'):
     if first.startswith('/'):
         if first not in COMMANDS:
             return 'Commande refusée. Utilise /help ou parle-moi normalement.'
+        if first == '/whoami':
+            return 'ID utilisateur autorisé : ' + str(message.get('from', {}).get('id', 'inconnu'))
         if first == '/help':
             return (
                 'Lecture : /status /live /analyses /signaux /shadow /telegram /budget /disk /audit.\n'
@@ -258,8 +276,8 @@ def safe_state():
 def main():
     env = config()
     token = env.get('HERMES_ADMIN_TLM_BOT')
-    if not token or not env.get('TELEGRAM_ADMIN_USER_ID') or not env.get('TELEGRAM_ADMIN_CHAT_ID'):
-        raise SystemExit('Activation refusée : token, utilisateur ET chat explicitement autorisés requis.')
+    if not token or not env.get('TELEGRAM_ADMIN_CHAT_ID'):
+        raise SystemExit('Activation refusée : token et chat admin requis.')
 
     lock = open(DATA / 'owner_remote.lock', 'a')
     try:
@@ -287,19 +305,29 @@ def main():
             for update in result.get('result', []):
                 message = update.get('message', {})
                 ok = authorized(message, env)
+                bootstrap = bootstrap_whoami(message, env)
                 source = 'voice' if (message.get('voice') or message.get('audio')) else 'text'
                 raw_command = message.get('text', '').split(' ', 1)[0].split('@')[0]
                 event = {
                     'at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
                     'update_id': update.get('update_id'),
                     'authorized': ok,
+                    'bootstrap': bootstrap,
                     'source': source,
                     'command': raw_command if raw_command in COMMANDS else ('natural' if ok else 'unknown'),
                 }
                 with audit.open('a') as stream:
                     stream.write(json.dumps(event, ensure_ascii=False) + '\n')
 
-                if ok and message.get('date', 0) >= started:
+                if bootstrap and message.get('date', 0) >= started:
+                    telegram_request(token, 'sendMessage', {
+                        'chat_id': env['TELEGRAM_ADMIN_CHAT_ID'],
+                        'text': (
+                            'Ton Telegram user ID est ' + str(message.get('from', {}).get('id', ''))
+                            + '. Ajoute TELEGRAM_ADMIN_USER_ID avec cette valeur dans le .env puis redémarre tlm-owner-remote.'
+                        ),
+                    })
+                elif ok and message.get('date', 0) >= started:
                     state = safe_state()
                     try:
                         if source == 'voice':
