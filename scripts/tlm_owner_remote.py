@@ -70,6 +70,19 @@ def bootstrap_whoami(message, env):
     )
 
 
+def recent_after_restart(message, started, grace_seconds=600):
+    """Replay only recent authorized updates after a restart.
+
+    This lets an interrupted voice/text request resume after a service restart
+    while still refusing stale queued commands from long before activation.
+    """
+    try:
+        message_date = int(message.get('date') or 0)
+    except Exception:
+        return False
+    return message_date >= int(started) - int(grace_seconds)
+
+
 def normalize(value):
     value = unicodedata.normalize('NFKD', str(value or ''))
     value = ''.join(ch for ch in value if not unicodedata.combining(ch))
@@ -422,7 +435,7 @@ def main():
                 with audit.open('a') as stream:
                     stream.write(json.dumps(event, ensure_ascii=False) + '\n')
 
-                if bootstrap and message.get('date', 0) >= started:
+                if bootstrap and recent_after_restart(message, started):
                     telegram_request(token, 'sendMessage', {
                         'chat_id': env['TELEGRAM_ADMIN_CHAT_ID'],
                         'text': (
@@ -430,7 +443,7 @@ def main():
                             + '. Ajoute TELEGRAM_ADMIN_USER_ID avec cette valeur dans le .env puis redémarre tlm-owner-remote.'
                         ),
                     })
-                elif ok and message.get('date', 0) >= started:
+                elif ok and recent_after_restart(message, started):
                     state = safe_state()
                     transcript = None
                     processing_error = None
