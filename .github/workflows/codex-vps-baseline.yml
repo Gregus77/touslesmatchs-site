@@ -67,5 +67,11 @@ jobs:
               CODE="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $GROQ_KEY" https://api.groq.com/openai/v1/models/whisper-large-v3-turbo || true)"
               echo "GROQ_TRANSCRIPTION_MODEL_HTTP=$CODE"
             fi
+            GOOGLE_KEY="$(sed -n 's/^GOOGLE_API_KEY=//p' .env | tail -1 | tr -d '\"' | tr -d "'")"
+            [ -n "$GOOGLE_KEY" ] && echo "GOOGLE_KEY_PRESENT=True" || echo "GOOGLE_KEY_PRESENT=False"
+            if [ -n "$GOOGLE_KEY" ]; then
+              CODE="$(curl -sS -o /dev/null -w '%{http_code}' "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash?key=$GOOGLE_KEY" || true)"
+              echo "GOOGLE_AUDIO_MODEL_HTTP=$CODE"
+            fi
             echo "VOICE_END"
             echo "TLM_BASELINE_END"
