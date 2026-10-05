@@ -226,24 +226,7 @@ def multipart(fields, file_name, file_bytes, file_type='audio/ogg'):
     return boundary, b''.join(chunks)
 
 
-def transcribe_voice(message, env, token):
-    voice = message.get('voice') or message.get('audio') or {}
-    duration = int(voice.get('duration') or 0)
-    size = int(voice.get('file_size') or 0)
-    if duration and duration > MAX_VOICE_SECONDS:
-        raise RuntimeError('voice_too_long')
-    if size and size > MAX_VOICE_BYTES:
-        raise RuntimeError('voice_too_large')
-    file_id = voice.get('file_id')
-    if not file_id:
-        raise RuntimeError('voice_missing_file')
-
-    api_key = env.get('OPENAI_API_KEY', '')
-    if not api_key:
-        raise RuntimeError('transcription_not_configured')
-
-    audio, suffix = telegram_file(token, file_id)
-    model = env.get('HERMES_TRANSCRIPTION_MODEL', 'gpt-4o-mini-transcribe')
+def _transcribe_http(audio, suffix, endpoint, api_key, model):
     boundary, body = multipart(
         {'model': model, 'response_format': 'json', 'language': 'fr'},
         'telegram-voice' + suffix,
@@ -251,7 +234,7 @@ def transcribe_voice(message, env, token):
         'audio/ogg' if suffix.lower() == '.ogg' else 'application/octet-stream',
     )
     request = urllib.request.Request(
-        'https://api.openai.com/v1/audio/transcriptions',
+        endpoint,
         data=body,
         headers={
             'Authorization': 'Bearer ' + api_key,
@@ -264,6 +247,52 @@ def transcribe_voice(message, env, token):
     if not transcript:
         raise RuntimeError('empty_transcript')
     return transcript
+
+
+def transcribe_voice(message, env, token):
+    voice = message.get('voice') or message.get('audio') or {}
+    duration = int(voice.get('duration') or 0)
+    size = int(voice.get('file_size') or 0)
+    if duration and duration > MAX_VOICE_SECONDS:
+        raise RuntimeError('voice_too_long')
+    if size and size > MAX_VOICE_BYTES:
+        raise RuntimeError('voice_too_large')
+    file_id = voice.get('file_id')
+    if not file_id:
+        raise RuntimeError('voice_missing_file')
+
+    audio, suffix = telegram_file(token, file_id)
+    errors = []
+
+    openai_key = env.get('OPENAI_API_KEY', '')
+    if openai_key:
+        try:
+            return _transcribe_http(
+                audio,
+                suffix,
+                'https://api.openai.com/v1/audio/transcriptions',
+                openai_key,
+                env.get('HERMES_TRANSCRIPTION_MODEL', 'gpt-4o-mini-transcribe'),
+            )
+        except Exception as error:
+            errors.append('openai_' + type(error).__name__)
+
+    groq_key = env.get('GROQ_API_KEY', '')
+    if groq_key:
+        try:
+            return _transcribe_http(
+                audio,
+                suffix,
+                'https://api.groq.com/openai/v1/audio/transcriptions',
+                groq_key,
+                env.get('HERMES_GROQ_TRANSCRIPTION_MODEL', 'whisper-large-v3-turbo'),
+            )
+        except Exception as error:
+            errors.append('groq_' + type(error).__name__)
+
+    if not openai_key and not groq_key:
+        raise RuntimeError('transcription_not_configured')
+    raise RuntimeError('transcription_failed_' + '_'.join(errors))
 
 
 def safe_state():
