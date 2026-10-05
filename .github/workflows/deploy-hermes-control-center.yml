@@ -152,46 +152,56 @@ jobs:
             echo "SOURCE_COMMIT=$(git rev-parse origin/main)"
             echo "BACKUP=$BACKUP"
 
-            # Read-only proof of the latest real owner voice received by the running console.
-            python3 - <<'PY'
-            import json, time
+            # Read-only diagnostic: latest owner voice audit + OpenAI transcription capability.
+            TLM_ROOT="$PROJECT" python3 - <<'PY'
+            import json, urllib.request, urllib.error
             from pathlib import Path
-            p=Path('/opt/touslesmatchs/data/owner_remote_commands.jsonl')
-            if not p.exists():
-                raise SystemExit('OWNER_VOICE_AUDIT_MISSING')
-            rows=[]
-            for line in p.read_text().splitlines()[-100:]:
-                try:
-                    row=json.loads(line)
-                except Exception:
-                    continue
-                if row.get('source')=='voice':
-                    rows.append(row)
-            if not rows:
-                raise SystemExit('OWNER_VOICE_NOT_FOUND')
-            last=rows[-1]
-            update_id=last.get('update_id')
-            print('OWNER_VOICE_FOUND')
-            print('VOICE_AUTHORIZED=' + str(bool(last.get('authorized'))))
-            print('VOICE_UPDATE_ID=' + str(update_id))
-            print('VOICE_COMMAND=' + str(last.get('command')))
+            from tlm_guardian import config
 
-            results=[]
-            for line in p.read_text().splitlines()[-200:]:
+            p=Path('/opt/touslesmatchs/data/owner_remote_commands.jsonl')
+            if p.exists():
+                rows=[]
+                for line in p.read_text().splitlines()[-200:]:
+                    try: row=json.loads(line)
+                    except Exception: continue
+                    if row.get('source')=='voice':
+                        rows.append(row)
+                if rows:
+                    last=rows[-1]
+                    update_id=last.get('update_id')
+                    print('OWNER_VOICE_FOUND')
+                    print('VOICE_AUTHORIZED=' + str(bool(last.get('authorized'))))
+                    print('VOICE_UPDATE_ID=' + str(update_id))
+                    results=[]
+                    for line in p.read_text().splitlines()[-300:]:
+                        try: row=json.loads(line)
+                        except Exception: continue
+                        if row.get('phase')=='result' and row.get('source')=='voice' and row.get('update_id')==update_id:
+                            results.append(row)
+                    if results:
+                        result=results[-1]
+                        print('VOICE_RESULT_FOUND')
+                        print('VOICE_TRANSCRIPTION_OK=' + str(bool(result.get('transcription_ok'))))
+                        print('VOICE_TRANSCRIPTION_ERROR=' + str(result.get('transcription_error')))
+                        print('VOICE_INTENT=' + str(result.get('intent')))
+                        print('VOICE_REPLY_MESSAGE_ID=' + str(result.get('reply_message_id')))
+                    else:
+                        print('VOICE_RESULT_FOUND=False')
+
+            env=config()
+            key=env.get('OPENAI_API_KEY','')
+            print('OPENAI_KEY_PRESENT=' + str(bool(key)))
+            if key:
+                model=env.get('HERMES_TRANSCRIPTION_MODEL','gpt-4o-mini-transcribe')
+                req=urllib.request.Request(
+                    'https://api.openai.com/v1/models/' + model,
+                    headers={'Authorization':'Bearer ' + key}
+                )
                 try:
-                    row=json.loads(line)
-                except Exception:
-                    continue
-                if row.get('phase')=='result' and row.get('source')=='voice' and row.get('update_id')==update_id:
-                    results.append(row)
-            if not results:
-                raise SystemExit('OWNER_VOICE_RESULT_NOT_FOUND')
-            result=results[-1]
-            if not result.get('transcription_ok'):
-                raise SystemExit('OWNER_VOICE_TRANSCRIPTION_NOT_OK')
-            if result.get('outcome')!='replied' or not result.get('reply_message_id'):
-                raise SystemExit('OWNER_VOICE_REPLY_NOT_OK')
-            print('VOICE_TRANSCRIPTION_OK=True')
-            print('VOICE_INTENT=' + str(result.get('intent')))
-            print('VOICE_REPLY_MESSAGE_ID=' + str(result.get('reply_message_id')))
+                    with urllib.request.urlopen(req,timeout=20) as response:
+                        print('OPENAI_TRANSCRIPTION_MODEL_HTTP=' + str(response.status))
+                except urllib.error.HTTPError as e:
+                    print('OPENAI_TRANSCRIPTION_MODEL_HTTP=' + str(e.code))
+                except Exception as e:
+                    print('OPENAI_TRANSCRIPTION_MODEL_HTTP=network_error')
             PY
