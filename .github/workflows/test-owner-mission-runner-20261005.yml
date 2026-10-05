@@ -1,0 +1,39 @@
+name: Test Hermes owner mission runner
+
+on:
+  push:
+    branches:
+      - codex/telegram-mission-runner-20261005
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/tlm_owner_remote.py
+      - scripts/tlm_owner_mission_runner.py
+      - scripts/test_owner_remote_20260926.py
+      - scripts/test_hermes_control_center_20261005.py
+      - scripts/test_owner_mission_runner_20261005.py
+      - ops/systemd/tlm-owner-mission-runner.service
+      - .github/workflows/deploy-hermes-control-center.yml
+      - .github/workflows/test-owner-mission-runner-20261005.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax and guardrail tests
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/tlm_owner_remote.py scripts/tlm_owner_mission_runner.py scripts/tlm_guardian.py
+          PYTHONPATH=scripts python3 scripts/test_owner_remote_20260926.py
+          PYTHONPATH=scripts python3 scripts/test_hermes_control_center_20261005.py
+          PYTHONPATH=scripts python3 scripts/test_owner_mission_runner_20261005.py
+          grep -q "confirmation_required" scripts/tlm_owner_mission_runner.py
+          grep -q "workspace-write" scripts/tlm_owner_mission_runner.py
+          grep -q "approve-for-me" scripts/tlm_owner_mission_runner.py
+          grep -q "Production inchangée" scripts/tlm_owner_mission_runner.py
+          echo OWNER_MISSION_RUNNER_TESTS_OK
