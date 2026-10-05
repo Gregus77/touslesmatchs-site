@@ -53,7 +53,7 @@ class HermesControlCenterTests(unittest.TestCase):
             self.assertIn('rapport propriétaire', answer)
             self.assertEqual(list(pathlib.Path(directory).iterdir()), [])
 
-    def test_natural_mission_is_persisted_not_executed(self):
+    def test_natural_mission_is_persisted_for_codex_runner(self):
         with tempfile.TemporaryDirectory() as directory:
             inbox = pathlib.Path(directory)
             answer = handle_text(
@@ -63,12 +63,22 @@ class HermesControlCenterTests(unittest.TestCase):
                 self.state,
                 inbox,
             )
-            self.assertIn('Mission enregistrée', answer)
+            self.assertIn('Codex', answer)
             files = list(inbox.iterdir())
             self.assertEqual(len(files), 1)
             payload = __import__('json').loads(files[0].read_text())
-            self.assertFalse(payload['automatic_execution'])
+            self.assertTrue(payload['automatic_execution'])
+            self.assertFalse(payload['deploy_requested'])
             self.assertEqual(payload['status'], 'pending_review')
+
+    def test_sensitive_mission_is_never_automatic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            inbox = pathlib.Path(directory)
+            handle_text('Change le mot de passe puis déploie', self.message, self.env, self.state, inbox)
+            payload = __import__('json').loads(next(inbox.iterdir()).read_text())
+            self.assertEqual(payload['risk'], 'confirmation_required')
+            self.assertFalse(payload['automatic_execution'])
+            self.assertFalse(payload['deploy_requested'])
 
     def test_sensitive_mission_requires_confirmation(self):
         self.assertEqual(mission_risk('Fais un virement bancaire'), 'confirmation_required')
