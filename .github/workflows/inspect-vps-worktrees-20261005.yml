@@ -42,4 +42,4 @@ jobs:
               echo "JEV_WORKTREE_ABSENT"
             fi
 
-# trigger 2
+# trigger 3 - inspect before Goal05 UI rollout
