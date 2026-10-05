@@ -1,0 +1,33 @@
+name: Test Goal05 policy repair
+
+on:
+  push:
+    branches:
+      - codex/goal05-policy-fix-20261005
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/api_server.js
+      - scripts/telegram_client.js
+      - scripts/test_goal05_policy_20261005.js
+      - .github/workflows/test-goal05-policy-20261005.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax and Goal05 policy tests
+        run: |
+          set -euo pipefail
+          node --check scripts/api_server.js
+          node --check scripts/telegram_client.js
+          node scripts/test_goal05_policy_20261005.js
+          echo GOAL05_BRANCH_TESTS_OK
