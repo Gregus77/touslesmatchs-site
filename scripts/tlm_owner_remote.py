@@ -511,3 +511,5 @@ if __name__ == '__main__':
 # voice-proof-refresh 2026-10-05 14:55 CEST
 
 # final-voice-proof-trigger 2026-10-05T14:54+02:00
+
+# voice-proof 2026-10-05T15:08+02:00
