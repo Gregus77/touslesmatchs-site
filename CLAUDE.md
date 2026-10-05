@@ -190,7 +190,8 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse a 1 euro -> Pro (9.90
 - Ne jamais falsifier de statistiques
 
 ### Analyses sportives
-- **Default** : Moins de 2.5 buts (Under 2.5) comme type d'analyse par defaut
+- **Produit courant** : +0,5 but de l’équipe favorite, selon `CURRENT_RULES.md` (Top 5 vs Bottom 5, 30–85, cote réelle fraîche ≥ 1,60, quorum 4/5).
+- **O/U 2,5** : ancien système conservé uniquement pour l’historique, les audits et les résultats passés.
 - **Coupe du Monde exclue** de toutes les analyses
 - **Ligues fiables uniquement** : whitelist TRUSTED_COMPETITIONS + blacklist LOW_TRUST_COMPETITION_KEYWORDS
 - **Ordre de filtrage** : LOW_TRUST verifie en premier (bloque), puis TRUSTED (passe), puis default = bloque
