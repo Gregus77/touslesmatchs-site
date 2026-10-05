@@ -152,19 +152,6 @@ jobs:
             echo "SOURCE_COMMIT=$(git rev-parse origin/main)"
             echo "BACKUP=$BACKUP"
 
-            # Real outbound proof + owner voice-test prompt. Token stays on VPS and is never printed.
-            cd "$DEPLOY_ROOT"
-            TLM_ROOT="$PROJECT" python3 - <<'PY'
-            from tlm_guardian import config, send_owner
-            mid = send_owner(
-                "✅ Hermès console active. Test vocal : envoie-moi maintenant un message vocal disant : « Quel est le statut de la production ? »",
-                config(),
-            )
-            if not mid:
-                raise SystemExit("owner_voice_prompt_delivery_failed")
-            print("VOICE_PROMPT_MESSAGE_ID=" + str(mid))
-            PY
-
             # Read-only proof of the latest real owner voice received by the running console.
             python3 - <<'PY'
             import json, time
@@ -183,8 +170,28 @@ jobs:
             if not rows:
                 raise SystemExit('OWNER_VOICE_NOT_FOUND')
             last=rows[-1]
+            update_id=last.get('update_id')
             print('OWNER_VOICE_FOUND')
             print('VOICE_AUTHORIZED=' + str(bool(last.get('authorized'))))
-            print('VOICE_UPDATE_ID=' + str(last.get('update_id')))
+            print('VOICE_UPDATE_ID=' + str(update_id))
             print('VOICE_COMMAND=' + str(last.get('command')))
+
+            results=[]
+            for line in p.read_text().splitlines()[-200:]:
+                try:
+                    row=json.loads(line)
+                except Exception:
+                    continue
+                if row.get('phase')=='result' and row.get('source')=='voice' and row.get('update_id')==update_id:
+                    results.append(row)
+            if not results:
+                raise SystemExit('OWNER_VOICE_RESULT_NOT_FOUND')
+            result=results[-1]
+            if not result.get('transcription_ok'):
+                raise SystemExit('OWNER_VOICE_TRANSCRIPTION_NOT_OK')
+            if result.get('outcome')!='replied' or not result.get('reply_message_id'):
+                raise SystemExit('OWNER_VOICE_REPLY_NOT_OK')
+            print('VOICE_TRANSCRIPTION_OK=True')
+            print('VOICE_INTENT=' + str(result.get('intent')))
+            print('VOICE_REPLY_MESSAGE_ID=' + str(result.get('reply_message_id')))
             PY
