@@ -1,0 +1,123 @@
+name: Deploy Hermes control center
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "CURRENT_RULES.md"
+      - "CLAUDE.md"
+      - "PROJECT_STATE.md"
+      - "docs/HERMES_COUNCIL.md"
+      - "docs/HERMES_OWNER_CONTROL.md"
+      - ".env.example"
+      - "scripts/tlm_guardian.py"
+      - "scripts/tlm_owner_remote.py"
+      - "scripts/test_hermes_control_center_20261005.py"
+      - "ops/systemd/tlm-hermes-guardian.service"
+      - "ops/systemd/tlm-owner-remote.service"
+      - ".github/workflows/deploy-hermes-control-center.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy Hermes Guardian and owner remote
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+
+            OLD_HEAD="$(git rev-parse HEAD)"
+            BRANCH="$(git branch --show-current)"
+            UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')"
+            test "$BRANCH" = "main"
+            test "$UPSTREAM" = "origin/main"
+            test -z "$(git status --porcelain --untracked-files=no)"
+
+            git fetch origin main
+            COUNTS="$(git rev-list --left-right --count HEAD...origin/main)"
+            test "$(printf '%s' "$COUNTS" | awk '{print $1}')" = "0"
+
+            BACKUP="/opt/backups/hermes-control-$(date -u +%Y%m%dT%H%M%SZ)"
+            install -d -m 700 "$BACKUP"
+            cp -a scripts/tlm_guardian.py scripts/tlm_owner_remote.py "$BACKUP/" 2>/dev/null || true
+            cp -a /etc/systemd/system/tlm-hermes-guardian.service "$BACKUP/" 2>/dev/null || true
+            cp -a /etc/systemd/system/tlm-owner-remote.service "$BACKUP/" 2>/dev/null || true
+
+            git pull --ff-only origin main
+
+            python3 -m py_compile scripts/tlm_guardian.py scripts/tlm_owner_remote.py
+            (
+              cd scripts
+              python3 test_owner_remote_20260926.py
+              python3 test_hermes_control_center_20261005.py
+            )
+
+            grep -q "CURRENT_RULES.md" CLAUDE.md
+            grep -q "min_votes': 4" scripts/tlm_guardian.py
+            ! grep -q "rules.get('min_votes')!=3" scripts/tlm_guardian.py
+            grep -q "automatic_execution.*False" scripts/tlm_owner_remote.py
+            grep -q "gpt-4o-mini-transcribe" scripts/tlm_owner_remote.py
+
+            install -m 0644 ops/systemd/tlm-hermes-guardian.service /etc/systemd/system/tlm-hermes-guardian.service
+            install -m 0644 ops/systemd/tlm-owner-remote.service /etc/systemd/system/tlm-owner-remote.service
+            systemctl daemon-reload
+            systemctl enable --now tlm-hermes-guardian.service
+
+            if python3 - <<'PY'
+            from pathlib import Path
+            values={}
+            for line in Path('/opt/touslesmatchs/.env').read_text().splitlines():
+                if '=' in line and not line.lstrip().startswith('#'):
+                    k,v=line.split('=',1);values[k.strip()]=v.strip().strip('"').strip("'")
+            raise SystemExit(0 if values.get('HERMES_ADMIN_TLM_BOT') and values.get('TELEGRAM_ADMIN_CHAT_ID') else 1)
+            PY
+            then
+              systemctl enable --now tlm-owner-remote.service
+              REMOTE="active"
+            else
+              systemctl disable --now tlm-owner-remote.service 2>/dev/null || true
+              REMOTE="waiting_for_bot_or_chat"
+            fi
+
+            systemctl is-active --quiet tlm-hermes-guardian.service
+
+            for i in $(seq 1 20); do
+              test -s data/hermes_guardian_state.json && break
+              sleep 3
+            done
+            test -s data/hermes_guardian_state.json
+
+            python3 - <<'PY'
+            import json
+            from pathlib import Path
+            state=json.loads(Path('data/hermes_guardian_state.json').read_text())
+            goal=state.get('goal05') or {}
+            assert goal.get('min_votes') == 4
+            assert goal.get('from_minute') == 30
+            assert goal.get('to_minute') == 85
+            assert float(goal.get('min_real_fresh_odd')) == 1.60
+            print('HERMES_GOAL05_STATE_OK')
+            print('GOAL05_ENABLED=' + str(goal.get('enabled')))
+            print('GOAL05_PUSH_ENABLED=' + str(goal.get('push_enabled')))
+            print('INCIDENTS=' + json.dumps(state.get('incidents',[]), ensure_ascii=False))
+            PY
+
+            echo "REMOTE=$REMOTE"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
+            echo "BACKUP=$BACKUP"
