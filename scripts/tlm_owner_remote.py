@@ -340,10 +340,25 @@ def main():
                     except Exception as error:
                         answer = 'Commande reçue mais non traitée : ' + type(error).__name__
                     if answer:
-                        telegram_request(token, 'sendMessage', {
+                        sent = telegram_request(token, 'sendMessage', {
                             'chat_id': env['TELEGRAM_ADMIN_CHAT_ID'],
                             'text': clean(answer),
                         })
+                        reply_id = sent.get('result', {}).get('message_id') if sent.get('ok') else None
+                        result_event = {
+                            'at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                            'update_id': update.get('update_id'),
+                            'phase': 'result',
+                            'authorized': True,
+                            'source': source,
+                            'outcome': 'replied' if reply_id else 'reply_failed',
+                            'reply_message_id': reply_id,
+                        }
+                        if source == 'voice':
+                            result_event['transcription_ok'] = True
+                            result_event['intent'] = read_intent(transcript) or 'mission'
+                        with audit.open('a') as stream:
+                            stream.write(json.dumps(result_event, ensure_ascii=False) + '\n')
 
                 offset = update.get('update_id', offset) + 1
                 offsetfile.write_text(json.dumps({'offset': offset}))
