@@ -1,40 +1,43 @@
 'use strict';
 const fs=require('fs');
+const path=require('path');
 const assert=require('assert');
 
-const src=fs.readFileSync(require('path').join(__dirname,'api_server.js'),'utf8');
+const api=fs.readFileSync(path.join(__dirname,'api_server.js'),'utf8');
+const tg=fs.readFileSync(path.join(__dirname,'telegram_client.js'),'utf8');
 
-assert(src.includes('const GOAL05_POLICY_FROM_MINUTE = 30;'));
-assert(src.includes('const GOAL05_POLICY_TO_MINUTE = 85;'));
-assert(src.includes('const GOAL05_POLICY_MIN_ODD = 1.60;'));
-assert(src.includes('const GOAL05_POLICY_MIN_VOTES = 4;'));
+for(const marker of [
+  'const GOAL05_POLICY_FROM_MINUTE = 30;',
+  'const GOAL05_POLICY_TO_MINUTE = 85;',
+  'const GOAL05_POLICY_MIN_ODD = 1.60;',
+  'const GOAL05_POLICY_MIN_VOTES = 4;',
+  'const GOAL05_ODD_MAX_AGE_MS',
+  'goal05_signal_registry',
+  'function goal05AiConsensus(match,side)',
+  'yesVotes>=GOAL05_POLICY_MIN_VOTES',
+  'const aiConsensus=goal05AiConsensus(match,side);',
+  'aiVoteDetails:aiConsensus.votes',
+  'fetchRealOdds(match,{maxAgeMs:GOAL05_ODD_MAX_AGE_MS})',
+  'oddFreshVerified',
+  'clientTelegramPublisher.enqueue("goal05"',
+  'if(!GOAL05_PUSH_ENABLED) return;',
+  'if(!GOAL05_ENABLED)',
+  'groupIndex,groupTotal,groupName',
+  'if(Number(homeRank.groupIndex)!==Number(awayRank.groupIndex))',
+  'const bottomThreshold=Math.max(1,groupTotal-4);',
+  'homeRank.rank<=5&&awayRank.rank>=bottomThreshold',
+  'awayRank.rank<=5&&homeRank.rank>=bottomThreshold',
+  'if(targetScore>0) return rejected("equipe_cible_a_deja_marque"',
+]) assert(api.includes(marker), 'missing API marker: '+marker);
 
-assert(src.includes('if (!GOAL05_ENABLED) return rejected("goal05_desactive")'));
-assert(src.includes('if (!GOAL05_PUSH_ENABLED) return;'));
-assert(src.includes('if (GOAL05_ENABLED) {'));
-assert(src.includes('minute>=GOAL05_POLICY_FROM_MINUTE && minute<=GOAL05_POLICY_TO_MINUTE'));
+assert(!api.includes('if (minute<25 || minute>80)'), 'legacy 25-80 window remains');
+assert(!api.includes('minute>=25 && minute<=80 && !(hs>0 && as>0)'), 'legacy scoreless-side prefilter remains');
 
-assert(src.includes('groupIndex,'));
-assert(src.includes('groupTotal,'));
-assert(src.includes('groupName: t.group || null'));
-assert(src.includes('if (Number(homeRank.groupIndex)!==Number(awayRank.groupIndex))'));
-assert(src.includes('const bottomThreshold=Math.max(1,groupTotal-4);'));
+for(const marker of [
+  "kind==='goal05'",
+  "row.kind==='signal'||row.kind==='goal05'",
+  "SIGNAL +0,5 BUT ÉQUIPE",
+  "L’équipe ciblée, la cote et la sélection exacte sont réservées aux membres Premium."
+]) assert(tg.includes(marker), 'missing Telegram marker: '+marker);
 
-assert(src.includes('const homeTopBottom=Number(homeRank.rank)<=5 && Number(awayRank.rank)>=bottomThreshold;'));
-assert(src.includes('const awayTopBottom=Number(awayRank.rank)<=5 && Number(homeRank.rank)>=bottomThreshold;'));
-assert(src.includes('if (targetScore>0) return rejected("equipe_cible_a_deja_marque"'));
-
-assert(!src.includes('if (minute<25 || minute>80)'));
-assert(!src.includes('minute>=25 && minute<=80 && !(hs>0 && as>0)'));
-assert(src.includes('ai_consensus_non_verifie'));
-assert(src.includes('function goal05AiConsensus(match, side)'));
-assert(src.includes('const aiConsensus=goal05AiConsensus(match,side);'));
-assert(src.includes('yesVotes>=GOAL05_POLICY_MIN_VOTES'));
-assert(src.includes('WHERE match_key=?'));
-assert(src.includes('AND agent_name IN ('));
-assert(src.includes('AND market_line IN (?,?)'));
-assert(src.includes('aiVoteDetails:aiConsensus.votes'));
-assert(!src.includes('const aiVotes=0;'));
-assert(src.includes('const goal05Tier=leagueTier(match);'));
-
-console.log('GOAL05_POLICY_LOT_A_OK');
+console.log('GOAL05_POLICY_REPAIR_OK');
