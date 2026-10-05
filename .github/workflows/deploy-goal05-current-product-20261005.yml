@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/deploy-goal05-current-product-20261005.yml"
+      - "scripts/deploy_goal05_current_product_20261005.sh"
 
 permissions:
   contents: read
@@ -43,3 +44,5 @@ jobs:
             bash /tmp/deploy_goal05_current_product_20261005.sh "$target"
 
 # robust script runner trigger
+
+# validated-gap trigger
