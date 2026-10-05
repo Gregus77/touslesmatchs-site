@@ -8,6 +8,7 @@ Security model:
 - no arbitrary shell command is ever executed from Telegram;
 - sensitive missions are explicitly marked confirmation_required.
 """
+import base64
 import datetime
 import fcntl
 import json
@@ -17,6 +18,7 @@ import re
 import tempfile
 import time
 import unicodedata
+import urllib.parse
 import urllib.request
 
 from tlm_guardian import DATA, config, clean, summary
@@ -249,6 +251,36 @@ def _transcribe_http(audio, suffix, endpoint, api_key, model):
     return transcript
 
 
+def _transcribe_gemini(audio, suffix, api_key, model):
+    mime = 'audio/ogg' if suffix.lower() == '.ogg' else 'application/octet-stream'
+    payload = {
+        'contents': [{
+            'role': 'user',
+            'parts': [
+                {'text': 'Transcris fidèlement ce message vocal en français. Réponds uniquement avec la transcription, sans commentaire.'},
+                {'inlineData': {'mimeType': mime, 'data': base64.b64encode(audio).decode('ascii')}},
+            ],
+        }],
+        'generationConfig': {'temperature': 0},
+    }
+    url = (
+        'https://generativelanguage.googleapis.com/v1beta/models/'
+        + model + ':generateContent?key=' + urllib.parse.quote(api_key, safe='')
+    )
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={'Content-Type': 'application/json'},
+    )
+    with urllib.request.urlopen(request, timeout=90) as response:
+        data = json.load(response)
+    parts = (((data.get('candidates') or [{}])[0].get('content') or {}).get('parts') or [])
+    transcript = ' '.join(str(part.get('text') or '').strip() for part in parts if part.get('text')).strip()
+    if not transcript:
+        raise RuntimeError('empty_transcript')
+    return transcript
+
+
 def transcribe_voice(message, env, token):
     voice = message.get('voice') or message.get('audio') or {}
     duration = int(voice.get('duration') or 0)
@@ -263,6 +295,18 @@ def transcribe_voice(message, env, token):
 
     audio, suffix = telegram_file(token, file_id)
     errors = []
+
+    google_key = env.get('GOOGLE_API_KEY', '')
+    if google_key:
+        try:
+            return _transcribe_gemini(
+                audio,
+                suffix,
+                google_key,
+                env.get('HERMES_GEMINI_TRANSCRIPTION_MODEL', 'gemini-3.8-flash'),
+            )
+        except Exception as error:
+            errors.append('google_' + type(error).__name__)
 
     openai_key = env.get('OPENAI_API_KEY', '')
     if openai_key:
@@ -290,7 +334,7 @@ def transcribe_voice(message, env, token):
         except Exception as error:
             errors.append('groq_' + type(error).__name__)
 
-    if not openai_key and not groq_key:
+    if not google_key and not openai_key and not groq_key:
         raise RuntimeError('transcription_not_configured')
     raise RuntimeError('transcription_failed_' + '_'.join(errors))
 
