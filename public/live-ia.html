@@ -1165,7 +1165,7 @@ function renderLiveOu25Details(m) {
   var responseCount=state.slots.filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;
   var minute=Number(m&&m.minute),directionText=consensusDirection?'Analyse +0,5 — '+consensusCount+'/5':'Consensus '+consensusCount+'/5';
   var verdict=state.official?(m&&m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
-    :state.voteCount&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
+    :state.voteCount&&isFinite(minute)&&minute<30?'Tendance — pas encore de signal'
 
     :state.voteCount?(m&&(m.diffusion_block||m.analysis_exclusion_reason)||'Tendance — autres critères non remplis, aucun signal')
     :(m&&(m.analysis_exclusion_reason||m.block_reason)||'Aucun vote enregistré pour le moment');
