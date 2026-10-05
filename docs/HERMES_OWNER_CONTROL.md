@@ -50,6 +50,8 @@ Les messages vocaux Telegram sont téléchargés par le bot puis transcrits avec
 
 La transcription ne contourne jamais les règles d'autorisation ou de confirmation. Une demande vocale suit exactement le même routage qu'une demande texte : lecture immédiate ou mission Codex.
 
+Validation terrain du 5 octobre 2026 : la commande vocale naturelle via Telegram est validée. Le bot a correctement transcrit et interprété une demande propriétaire en français puis l'a transmise au flux Hermès/Codex.
+
 ## Rapport quotidien
 
 Le Guardian en lecture seule produit un rapport propriétaire à 20 h (Europe/Paris) s'il est actif et si le bot/chat admin sont configurés.
