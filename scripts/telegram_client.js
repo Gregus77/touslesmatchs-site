@@ -38,6 +38,28 @@ function render(kind,data,dest) {
       // Résumé RU déterministe fondé uniquement sur les votes observés ; aucune justification FR copiée.
       lines.push(ru?`Обоснование: ${esc(data.votes)} из 5 ИИ поддержали этот прогноз; уровень доверия — ${esc(data.confidence)}/100.`:esc(data.reason || `${data.votes} IA sur 5 soutiennent cette sélection.`));
     }
+  } else if(kind==='goal05') {
+    const target=esc(data.targetTeam || '');
+    lines=[
+      `🚨 <b>${ru?'СИГНАЛ +0,5 ГОЛА КОМАНДЫ':'SIGNAL +0,5 BUT ÉQUIPE'}${free?(ru?' ОБНАРУЖЕН':' DÉTECTÉ'):''}</b>`,
+      match(),
+      `🏆 ${esc(data.competition)}`,
+      `⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,
+      `🧠 ${ru?'Голосование ИИ':'Vote IA'} : ${esc(data.votes)}/5`
+    ];
+    if (free) {
+      lines.push(ru
+        ? '🔒 Команда, коэффициент и точный прогноз доступны участникам Premium.'
+        : '🔒 L’équipe ciblée, la cote et la sélection exacte sont réservées aux membres Premium.');
+    } else {
+      lines.push(
+        `🎯 ${ru?'Команда должна забить минимум 1 гол':'Équipe ciblée — marque au moins 1 but'} : <b>${target}</b>`,
+        `💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`
+      );
+      if (data.reason) lines.push(ru
+        ? `Условия подтверждены: Top 5 против Bottom 5, реальные live-данные и ${esc(data.votes)}/5 голосов ИИ.`
+        : esc(data.reason));
+    }
   } else if(kind==='result') {
     lines=[`${data.outcome==='win'?'✅':'❌'} <b>${ru?(data.outcome==='win'?'ВЫИГРЫШ':'ПРОИГРЫШ'):(data.outcome==='win'?'SIGNAL GAGNÉ':'SIGNAL PERDU')}</b>`,match(),`⚽ ${ru?'Итоговый счёт':'Score final'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`];
     lines.push(
@@ -207,7 +229,7 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
       for(const row of rows) {
         if(!targets.some(t=>t.channel===row.channel&&t.id===row.chat_id))continue;
         if(row.expires_at<=now()){db.prepare("UPDATE client_telegram_outbox SET state='expired' WHERE delivery_key=?").run(row.delivery_key);continue;}
-        if(row.kind==='signal') {
+        if(row.kind==='signal'||row.kind==='goal05') {
           let gate;try {gate=await validateSignal(row);} catch {gate={ok:false};}
           if(!gate?.ok) {
             db.prepare("UPDATE client_telegram_outbox SET state=?,next_at=? WHERE delivery_key=? AND state='pending'")
@@ -224,9 +246,10 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
         if(result.ok && Number.isInteger(result.messageId) && result.messageId>0) {
           db.transaction(()=>{
             db.prepare("UPDATE client_telegram_outbox SET state='delivered',message_id=?,delivered_at=? WHERE delivery_key=?").run(result.messageId,now(),row.delivery_key);
-            if(row.kind==='signal') {
+            if(row.kind==='signal'||row.kind==='goal05') {
               db.prepare(`INSERT INTO telegram_signal_deliveries(match_key,channel,telegram_message_id,market,vote_count,ok,official_signal_snapshot_id) VALUES(?,?,?,?,?,1,?)`).run(row.match_key,row.channel,result.messageId,row.market,row.votes,row.official_signal_snapshot_id);
-              if(row.channel==='premium'||row.channel==='free') db.prepare(`UPDATE concile_analyses SET sig_sent_${row.channel}=1 WHERE match_key=?`).run(row.match_key);
+              if(row.kind==='signal' && (row.channel==='premium'||row.channel==='free'))
+                db.prepare(`UPDATE concile_analyses SET sig_sent_${row.channel}=1 WHERE match_key=?`).run(row.match_key);
             }
           })();
           try { onDelivered(row); } catch { /* proof already committed */ }
