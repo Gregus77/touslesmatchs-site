@@ -24,9 +24,11 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "20"
-      - run: npm install --no-save better-sqlite3
+      - name: Install isolated SQLite test dependency
+        run: npm install --prefix /tmp/halftime-test-deps --no-package-lock --no-save better-sqlite3
       - run: node --check scripts/api_server.js
-      - run: node scripts/test_halftime_entry_shadow.js
+      - name: Run legacy shadow unit test
+        run: NODE_PATH=/tmp/halftime-test-deps/node_modules node scripts/test_halftime_entry_shadow.js
 
   deploy:
     needs: test
