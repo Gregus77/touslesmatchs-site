@@ -1,4 +1,4 @@
-name: One-shot sports night Telegram 20261005
+name: One-shot sports Goal05 Telegram 20261006
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Send sports night report to owner Telegram
+      - name: Send Goal05 watchlist to owner Telegram
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -26,6 +26,74 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd /opt/touslesmatchs
-            docker exec touslesmatchs-api node -e "$(printf '%s' 'CmNvbnN0IGh0dHBzPXJlcXVpcmUoImh0dHBzIik7CmNvbnN0IHRva2VuPShwcm9jZXNzLmVudi5IRVJNRVNfQURNSU5fVExNX0JPVHx8cHJvY2Vzcy5lbnYuVEVMRUdSQU1fQk9UX1RPS0VOfHwiIikudHJpbSgpOwpjb25zdCBjaGF0SWQ9KHByb2Nlc3MuZW52LlRFTEVHUkFNX0FETUlOX0NIQVRfSUR8fHByb2Nlc3MuZW52LlRFTEVHUkFNX0hFUk1FU19DSEFUX0lEfHwiIikudHJpbSgpOwppZighdG9rZW58fCFjaGF0SWQpIHRocm93IG5ldyBFcnJvcigidGVsZWdyYW0gYWRtaW4gY29uZmlnIG1pc3NpbmciKTsKY29uc3QgdGV4dD1bCiLwn4yZIFNDQU5ORVIgU1BPUlRTIE5VSVQg4oCUIDA1LzEwLzIwMjYiLAoiIiwKIk3DqXRob2RlIDogcHJpb3JpdMOpIFRvcCA1IHZzIEJvdHRvbSA1LiBEw6lidXQgZGUgc2Fpc29uIC8gcGxheW9mZnMgPSBwcnVkZW5jZSwgcGFzIGRlIGZhdXggc2lnbmFsIHZlcnQuIiwKIiIsCiLimr0gRk9PVEJBTEwiLAoiQXVjdW4gY2FuZGlkYXQgVG9wIDUgdnMgQm90dG9tIDUgZGUgY2hhbXBpb25uYXQgc3VmZmlzYW1tZW50IHbDqXJpZmnDqSBwb3VyIMOqdHJlIGNsYXNzw6kg8J+foiBjZSBzb2lyLiIsCiIiLAoi8J+PgCBOQkEg4oCUIHByw6ktc2Fpc29uIiwKIjAxOjAwIE1lbXBoaXMgQCBBdGxhbnRhIiwKIjAxOjAwIFBob2VuaXggQCBEZXRyb2l0IiwKIjAxOjAwIE5ldyBZb3JrIEtuaWNrcyBAIFBoaWxhZGVscGhpYSIsCiIwMjowMCBNaW5uZXNvdGEgQCBNaWx3YXVrZWUiLAoiMDQ6MDAgTEEgTGFrZXJzIEAgU2FjcmFtZW50byIsCiLimqDvuI8gQ2xhc3NlbWVudCAyMDI2LTI3IG5vbiBzaWduaWZpY2F0aWYgOiBwYXMgZGUgc2lnbmFsIHN0cmljdC4iLAoiIiwKIvCfj5IgTkhMIOKAlCBkw6lidXQgZGUgc2Fpc29uIiwKIjAxOjAwIFBoaWxhZGVscGhpYSBAIFRhbXBhIEJheSIsCiIwMTozMCBPdHRhd2EgQCBCb3N0b24iLAoiMDE6MzAgV2lubmlwZWcgQCBQaXR0c2J1cmdoIiwKIjAyOjAwIFNhbiBKb3NlIEAgRGFsbGFzIiwKIuKaoO+4jyBTYWlzb24gdHJvcCBqZXVuZSBwb3VyIHV0aWxpc2VyIGxlIGNsYXNzZW1lbnQgYWN0dWVsIGNvbW1lIGZpbHRyZSBzdHJpY3QuIiwKIiIsCiLimr4gTUxCIOKAlCBwbGF5b2ZmcyIsCiIyMzowMCBDaGljYWdvIFdoaXRlIFNveCBAIENsZXZlbGFuZCIsCiIwMjowMCBOZXcgWW9yayBZYW5rZWVzIEAgVGFtcGEgQmF5IiwKIuKaoO+4jyBBbmFseXNlIHBhciBzZWVkL3PDqXJpZSwgcGFzIHBhciBUb3A1L0JvdHRvbTUuIiwKIiIsCiJWRVJESUNUIiwKIvCfn6AgUGx1c2lldXJzIG1hdGNocyDDoCBzdXJ2ZWlsbGVyLCBtYWlzIGF1Y3VuIPCfn6Igc3RyaWN0IGNlIHNvaXIgYXZlYyBsYSBtw6l0aG9kZSBUb3A1L0JvdHRvbTUgc2FucyBmb3JjZXIgbGVzIGRvbm7DqWVzLiIsCiIiLAoiUHJvY2hhaW4gc2Nhbm5lciA6IGRlbWFpbiB2ZXJzIDEwaDMwLCBwcmlvcml0w6kgQXNpZSArIG1hdGNocyBkZSBqb3VybsOpZS4iCl0uam9pbigiXG4iKTsKY29uc3QgYm9keT1KU09OLnN0cmluZ2lmeSh7Y2hhdF9pZDpjaGF0SWQsdGV4dCxkaXNhYmxlX3dlYl9wYWdlX3ByZXZpZXc6dHJ1ZX0pOwpjb25zdCByZXE9aHR0cHMucmVxdWVzdCh7aG9zdG5hbWU6ImFwaS50ZWxlZ3JhbS5vcmciLHBhdGg6Ii9ib3QiK3Rva2VuKyIvc2VuZE1lc3NhZ2UiLG1ldGhvZDoiUE9TVCIsaGVhZGVyczp7IkNvbnRlbnQtVHlwZSI6ImFwcGxpY2F0aW9uL2pzb24iLCJDb250ZW50LUxlbmd0aCI6QnVmZmVyLmJ5dGVMZW5ndGgoYm9keSl9LHRpbWVvdXQ6MTUwMDB9LHJlcz0+ewogbGV0IHJhdz0iIjsKIHJlcy5vbigiZGF0YSIsZD0+cmF3Kz1kKTsKIHJlcy5vbigiZW5kIiwoKT0+ewogIGxldCBwPXt9OyB0cnl7cD1KU09OLnBhcnNlKHJhdyl9Y2F0Y2h7fQogIGNvbnN0IG9rPXJlcy5zdGF0dXNDb2RlPT09MjAwJiZwLm9rPT09dHJ1ZSYmTnVtYmVyLmlzSW50ZWdlcihwLnJlc3VsdD8ubWVzc2FnZV9pZCkmJnAucmVzdWx0Lm1lc3NhZ2VfaWQ+MDsKICBpZighb2spe2NvbnNvbGUuZXJyb3IoIlRFTEVHUkFNX1NFTkRfT0s9ZmFsc2UgSFRUUD0iK3Jlcy5zdGF0dXNDb2RlKTtwcm9jZXNzLmV4aXQoMSk7fQogIGNvbnNvbGUubG9nKCJURUxFR1JBTV9TRU5EX09LPXRydWUiKTsKICBjb25zb2xlLmxvZygiVEVMRUdSQU1fTUVTU0FHRV9JRD0iK3AucmVzdWx0Lm1lc3NhZ2VfaWQpOwogfSk7Cn0pOwpyZXEub24oImVycm9yIixlPT57Y29uc29sZS5lcnJvcigiVEVMRUdSQU1fU0VORF9PSz1mYWxzZSIpO2NvbnNvbGUuZXJyb3IoZS5tZXNzYWdlKTtwcm9jZXNzLmV4aXQoMSk7fSk7CnJlcS5vbigidGltZW91dCIsKCk9PnJlcS5kZXN0cm95KG5ldyBFcnJvcigidGltZW91dCIpKSk7CnJlcS53cml0ZShib2R5KTsgcmVxLmVuZCgpOwo=' | base64 -d)"
+            docker exec -i touslesmatchs-api node <<'NODE'
+            const https=require("https");
+            const token=(process.env.HERMES_ADMIN_TLM_BOT||process.env.TELEGRAM_BOT_TOKEN||"").trim();
+            const chatId=(process.env.TELEGRAM_ADMIN_CHAT_ID||process.env.TELEGRAM_HERMES_CHAT_ID||"").trim();
+            if(!token||!chatId) throw new Error("telegram admin config missing");
+            const text=`⚽ SCANNER +0,5 BUT — 06/10/2026 — PRÉ-SCAN PROPRIÉTAIRE
 
-# trigger: 2026-10-05T21:16 Europe/Paris
+Règle active : Goal +0,5 but ÉQUIPE favorite V2.
+⚠️ Nations League = groupes de 4 : adaptation propriétaire du critère Top5/Bottom5. Ce message n’est PAS un signal officiel.
+Entrée possible uniquement en live 30’–85’, si la cible n’a pas marqué, cote réelle ≥ 1,60, 4/5 IA et score V2 vert confirmé.
+
+1) 🟢 9,6/10 — ALBANIE vs SAINT-MARIN — 20:45
+🎯 Cible : Albanie marque +0,5 but
+Albanie : 2e du groupe, 6 pts, a marqué dans 3/3.
+Saint-Marin : 4e, 0 pt, 14 buts encaissés en 3 matchs.
+➡️ PRIORITÉ MAXIMALE À SURVEILLER.
+
+2) 🟢 9,4/10 — SUISSE vs MACÉDOINE DU NORD — 20:45
+🎯 Cible : Suisse marque +0,5 but
+Suisse : 1re, 9 pts, 8 buts en 3 matchs.
+Macédoine du Nord : 4e, 0 pt, 7 buts encaissés.
+➡️ TRÈS FORTE SURVEILLANCE.
+
+3) 🟢 9,3/10 — ANGLETERRE vs TCHÉQUIE — 20:45
+🎯 Cible : Angleterre marque +0,5 but
+Angleterre : 2e, 6 pts, 11 buts en 3 matchs.
+Tchéquie : 4e, 0 pt, 7 buts encaissés en 3 matchs.
+➡️ TRÈS FORTE SURVEILLANCE.
+
+4) 🟢 9,0/10 — CROATIE vs ESPAGNE — 20:45
+🎯 Cible : Espagne marque +0,5 but
+Espagne : 1re, 9 pts, 10 buts en 3 matchs.
+Croatie : 3e, 12 buts encaissés en 3 matchs, dont 0-7 contre l’Angleterre.
+➡️ FORTE SURVEILLANCE, mais déplacement extérieur.
+
+5) 🟠 7,8/10 — MOLDAVIE vs SLOVAQUIE — 20:45
+🎯 Cible : Slovaquie marque +0,5 but
+Slovaquie : 1re, 7 pts, a marqué dans 3/3.
+➡️ Intéressant, mais dossier moins net que les 4 premiers.
+
+🔴 ÉCARTÉS / PAS PRIORITAIRES :
+• Kazakhstan – Îles Féroé : Kazakhstan déjà dans notre zone prudence.
+• Écosse – Slovénie : rapport de force trop serré.
+• Biélorussie – Finlande : faiblesse défensive adverse insuffisamment nette.
+• Estonie – Islande : écart trop faible.
+• Luxembourg – Bulgarie : attaque cible pas assez régulière.
+• Amicaux internationaux : exclus du scanner principal.
+
+✅ ORDRE DE SURVEILLANCE LIVE :
+Albanie > Suisse > Angleterre > Espagne > Slovaquie
+
+⚠️ Aucune entrée pré-match. Hermès doit attendre la fenêtre live et les conditions officielles.`;
+            const body=JSON.stringify({chat_id:chatId,text,disable_web_page_preview:true});
+            const req=https.request({hostname:"api.telegram.org",path:"/bot"+token+"/sendMessage",method:"POST",headers:{"Content-Type":"application/json","Content-Length":Buffer.byteLength(body)},timeout:15000},res=>{
+              let raw="";
+              res.on("data",d=>raw+=d);
+              res.on("end",()=>{
+                let p={}; try{p=JSON.parse(raw)}catch{}
+                const ok=res.statusCode===200&&p.ok===true&&Number.isInteger(p.result?.message_id)&&p.result.message_id>0;
+                if(!ok){console.error("TELEGRAM_SEND_OK=false HTTP="+res.statusCode);process.exit(1);}
+                console.log("TELEGRAM_SEND_OK=true");
+                console.log("TELEGRAM_MESSAGE_ID="+p.result.message_id);
+              });
+            });
+            req.on("error",e=>{console.error("TELEGRAM_SEND_OK=false");console.error(e.message);process.exit(1);});
+            req.on("timeout",()=>req.destroy(new Error("timeout")));
+            req.write(body);
+            req.end();
+            NODE
+
+# trigger: 2026-10-06T07:06 Europe/Paris
