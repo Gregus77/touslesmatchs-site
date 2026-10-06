@@ -24,6 +24,7 @@ const crypto = require("crypto");
 const analysisEngine = require("./analysis_engine");
 const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
+const goal05V2 = require("./goal05_v2");
 const jevDecisionEngine = require("./jev_decision_engine");
 const liveStateCoherence = require("./live_state_coherence");
 const tlmOperations = require("./tlm_operations");
@@ -335,7 +336,72 @@ db.exec(`
     expires_at TEXT NOT NULL,
     telegram_delivered INTEGER NOT NULL DEFAULT 0
   );
+  CREATE TABLE IF NOT EXISTS goal05_signal_evidence (
+    signal_key TEXT PRIMARY KEY,
+    evidence_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(signal_key) REFERENCES goal05_signal_registry(signal_key)
+  );
+  CREATE TABLE IF NOT EXISTS goal05_signal_results (
+    signal_key TEXT PRIMARY KEY,
+    outcome TEXT NOT NULL CHECK(outcome IN ('win','loss')),
+    final_score_home INTEGER NOT NULL,
+    final_score_away INTEGER NOT NULL,
+    result_source TEXT NOT NULL,
+    resolved_at TEXT NOT NULL,
+    FOREIGN KEY(signal_key) REFERENCES goal05_signal_registry(signal_key)
+  );
+  CREATE TABLE IF NOT EXISTS goal05_scanner_history (
+    id TEXT PRIMARY KEY,
+    fixture_id TEXT,
+    predicted_at TEXT NOT NULL,
+    competition TEXT DEFAULT '',
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    target_team TEXT NOT NULL,
+    market TEXT NOT NULL DEFAULT '+0,5 but équipe',
+    rating REAL,
+    color TEXT,
+    estimated_probability REAL,
+    odd_at_pick REAL,
+    final_score_home INTEGER,
+    final_score_away INTEGER,
+    outcome TEXT NOT NULL DEFAULT 'pending_verification'
+      CHECK(outcome IN ('win','loss','pending_verification')),
+    result_source TEXT,
+    verified_at TEXT,
+    provenance TEXT NOT NULL DEFAULT 'owner_scanner',
+    evidence_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_goal05_scanner_predicted ON goal05_scanner_history(predicted_at);
+  CREATE INDEX IF NOT EXISTS idx_goal05_results_outcome ON goal05_signal_results(outcome);
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_evidence_no_update
+    BEFORE UPDATE ON goal05_signal_evidence
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal evidence is immutable'); END;
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_evidence_no_delete
+    BEFORE DELETE ON goal05_signal_evidence
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal evidence is immutable'); END;
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_results_no_update
+    BEFORE UPDATE ON goal05_signal_results
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal result is immutable'); END;
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_results_no_delete
+    BEFORE DELETE ON goal05_signal_results
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal result is immutable'); END;
 `);
+
+// Scanner owner: keep separate from official Telegram KPI.
+db.prepare(`INSERT OR IGNORE INTO goal05_scanner_history
+  (id,fixture_id,predicted_at,competition,home,away,target_team,market,rating,color,
+   estimated_probability,odd_at_pick,final_score_home,final_score_away,outcome,
+   result_source,verified_at,provenance,evidence_json)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    'owner_scanner_20261005_velez_platense',null,'2026-10-05T19:17:37Z','Argentine',
+    'Vélez Sarsfield','Platense','Vélez Sarsfield','Vélez Sarsfield +0,5 but',
+    8.6,'green',84,null,2,2,'win','public_result_verified_20261006',
+    '2026-10-06T02:40:20Z','owner_scanner',
+    JSON.stringify({source:'scanner conversation',note:'pastille verte; cote exacte non enregistrée donc inconnue'})
+  );
 
 
 function readGoal05LatestSignal() {
