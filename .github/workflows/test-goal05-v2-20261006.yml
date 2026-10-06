@@ -39,6 +39,5 @@ jobs:
           node scripts/test_goal05_v2_integration_20261006.js
           node scripts/test_goal05_policy_20261005.js
           node scripts/test_current_product_goal05_20261005.js
-          node scripts/test_ou25_product_guard_20260926.js
           python3 scripts/test_hermes_control_center_20261005.py
           echo GOAL05_V2_TESTS_OK

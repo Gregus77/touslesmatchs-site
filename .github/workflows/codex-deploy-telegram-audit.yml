@@ -1,145 +1,44 @@
-name: Codex deploy Telegram audit correction
+name: Telegram and Goal05 production health audit
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - scripts/api_server.js
-      - scripts/ai_budget_guard.js
-      - scripts/test_ai_budget_guard.js
-      - scripts/test_telegram_active_channels_20260912.js
-      - scripts/test_result_integrity_20260912.js
-      - scripts/test_quality_shadow_features_20260912.js
-      - scripts/test_targeted_ou25_retry_20260912.js
-      - scripts/verify_telegram_channels_20260912.js
-      - scripts/test_ou25_post_analysis_odds_20260905.js
-      - scripts/test_ou25_consensus_3of5_20260905.js
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: tlm-production-deploy
-  cancel-in-progress: false
-
 jobs:
-  deploy:
+  audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     steps:
-      - name: Deploy API and prove Telegram access
+      - name: Verify current Goal05 and Telegram production health
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 10m
+          command_timeout: 6m
           script_stop: true
           script: |
             set -euo pipefail
             cd /opt/touslesmatchs
 
-            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-            BACKUP="/opt/backups/tlm-telegram-audit-$STAMP"
-            mkdir -p "$BACKUP"
-            chmod 700 "$BACKUP"
-
-            git fetch origin main
-            git status --porcelain --untracked-files=no > "$BACKUP/tracked-status.txt"
-            git diff > "$BACKUP/tracked-working.patch"
-            git diff --cached > "$BACKUP/tracked-staged.patch"
-            if test -s "$BACKUP/tracked-status.txt"; then
-              git stash push -m "codex-preserved-before-telegram-deploy-$STAMP"
-              echo "VPS_TRACKED_CHANGES_PRESERVED_IN_STASH"
-            fi
-
-            if test "$(git branch --show-current)" != "main"; then
-              git switch main
-            fi
-            git branch --set-upstream-to=origin/main main
-            test -z "$(git status --porcelain --untracked-files=no)"
-
-            mkdir -p "$BACKUP/untracked-overlays"
-            git ls-tree -r --name-only origin/main > "$BACKUP/origin-main-files.txt"
-            git ls-files --others --exclude-standard > "$BACKUP/untracked-files.txt"
-            while IFS= read -r path; do
-              test -n "$path" || continue
-              if grep -Fxq "$path" "$BACKUP/origin-main-files.txt"; then
-                mkdir -p "$BACKUP/untracked-overlays/$(dirname "$path")"
-                mv "$path" "$BACKUP/untracked-overlays/$path"
-                echo "PRESERVED_UNTRACKED_CONFLICT $path"
-              fi
-            done < "$BACKUP/untracked-files.txt"
-
-            cp scripts/api_server.js "$BACKUP/api_server.js"
-            cp scripts/ai_budget_guard.js "$BACKUP/ai_budget_guard.js"
-            cp .env "$BACKUP/.env"
-            cp data/tlm.db "$BACKUP/tlm.db"
-            chmod 600 "$BACKUP/.env" "$BACKUP/tlm.db"
-
-            git pull --ff-only origin main
-            trap 'cp "$BACKUP/api_server.js" scripts/api_server.js; cp "$BACKUP/ai_budget_guard.js" scripts/ai_budget_guard.js; docker compose up -d --build api >/dev/null 2>&1 || true; git stash push -m "codex-preserved-failed-telegram-audit-$STAMP" -- scripts/api_server.js scripts/ai_budget_guard.js >/dev/null 2>&1 || true' ERR
-
             node --check scripts/api_server.js
-            node --check scripts/ai_budget_guard.js
-            node scripts/test_telegram_active_channels_20260912.js
-            node scripts/test_result_integrity_20260912.js
-            node scripts/test_quality_shadow_features_20260912.js
-            node scripts/test_targeted_ou25_retry_20260912.js
-            node scripts/test_ou25_post_analysis_odds_20260905.js
-            node scripts/test_ou25_consensus_3of5_20260905.js
-            node scripts/test_public_quorum_copy_3of5_20260906.js
-            grep -q 'TELEGRAM_AUDIT_FALSE_FAILURES_V1' scripts/api_server.js
-            grep -q 'await test("Volume de signaux"' scripts/api_server.js
-            ! grep -q 'await test("Diffusion Telegram"' scripts/api_server.js
-            echo "TELEGRAM_AUDIT_CODE_OK"
+            node --check scripts/goal05_v2.js
+            node --check scripts/telegram_client.js
+            node scripts/test_goal05_policy_20261005.js
+            node scripts/test_current_product_goal05_20261005.js
 
-            API_STARTED_BEFORE="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api 2>/dev/null || true)"
-            docker compose up -d --build --force-recreate api
-            sleep 15
             test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
-            API_STARTED_AFTER="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api)"
-            test -n "$API_STARTED_AFTER"
-            test "$API_STARTED_AFTER" != "$API_STARTED_BEFORE"
-            echo "API_CONTAINER_RESTART_PROVED $API_STARTED_AFTER"
-            curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" | node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);const t=x.integrations?.telegram;if(!x.ok||!t?.ok)process.exit(1);const expected=["gratuit","premium","ru gratuit","ru premium","admin"];if(expected.some(k=>t.channels?.[k]!==true))process.exit(1);if("standard" in (t.channels||{})||"ru standard" in (t.channels||{}))process.exit(1);console.log("PUBLIC_TELEGRAM_HEALTH_OK")})'
-            docker exec touslesmatchs-api grep -q 'TELEGRAM_AUDIT_FALSE_FAILURES_V1' /app/server.js
-            docker exec touslesmatchs-api grep -q 'CLIENT_OU25_MIN_VOTES = 3;' /app/server.js
-            docker exec touslesmatchs-api grep -q 'spikeMaxCallsPerMatch' /app/ai_budget_guard.js
-            docker cp scripts/test_ai_budget_guard.js touslesmatchs-api:/app/test_ai_budget_guard.js
-            docker exec touslesmatchs-api node /app/test_ai_budget_guard.js
-            curl -fsSL "https://www.touslesmatchs.com/api/public-signal-rules?t=$STAMP" | node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);if(!x.ok||x.min_votes!==3||x.min_confidence!==77||x.min_odd!==1.3||x.max_odd!==2.1||x.from_minute!==15||x.to_minute!==45)process.exit(1);console.log("PUBLIC_RULES_3_OF_5_OK")})'
-            curl -fsSL "https://www.touslesmatchs.com/api/analysis-history?limit=1&t=$STAMP" | node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);if(!x.ok||x.verification?.rule!=="football_ou25_5_seats_min_3_votes_minute_15_45")process.exit(1);console.log("PUBLIC_HISTORY_RULE_3_OF_5_OK")})'
-            curl -fsSL "https://www.touslesmatchs.com/?t=$STAMP" -o "$BACKUP/homepage.html"
-            curl -fsSL "https://www.touslesmatchs.com/faq.html?t=$STAMP" -o "$BACKUP/faq.html"
-            curl -fsSL "https://www.touslesmatchs.com/cgv.html?t=$STAMP" -o "$BACKUP/cgv.html"
-            grep -qF '3 IA / 5 minimum' "$BACKUP/homepage.html"
-            grep -qF 'au moins 3' "$BACKUP/faq.html"
-            grep -qF 'accord minimum 3 IA' "$BACKUP/cgv.html"
-            docker cp scripts/verify_telegram_channels_20260912.js touslesmatchs-api:/app/verify_telegram_channels_20260912.js
-            docker exec touslesmatchs-api node /app/verify_telegram_channels_20260912.js
-            echo "API_AND_TELEGRAM_OK"
+            docker exec touslesmatchs-api grep -q 'goal05_v2_20261006' /app/server.js
+            docker exec touslesmatchs-api sh -lc 'test -n "$TELEGRAM_BOT_TOKEN"'
+            docker exec touslesmatchs-api sh -lc 'test -n "$TELEGRAM_GOAL05_CHANNEL_ID" || test -n "$TELEGRAM_PREMIUM_CHANNEL_ID"'
 
-            # Le serveur arme l'observateur 30 secondes apres son demarrage.
-            # Prouver un cycle reel evite un faux deploiement vert avec un
-            # moteur Concile reste bloque dans l'ancien conteneur.
-            OBSERVER_PROVED=0
-            for attempt in $(seq 1 12); do
-              docker logs touslesmatchs-api --since "$API_STARTED_AFTER" 2>&1 > "$BACKUP/api-startup.log"
-              if grep -q '\[auto-concile\] enabled:' "$BACKUP/api-startup.log" && \
-                 grep -q '\[auto-concile\] live=' "$BACKUP/api-startup.log"; then
-                OBSERVER_PROVED=1
-                break
-              fi
-              sleep 10
-            done
-            test "$OBSERVER_PROVED" = 1
-            grep -E '\[auto-concile\] (enabled:|live=|analyse snapshot:)' "$BACKUP/api-startup.log" | tail -n 30
-            echo "AUTO_CONCILE_CYCLE_OK"
+            curl -fsSL "https://www.touslesmatchs.com/api/health?t=$(date +%s)" |
+              node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);if(!x.ok)process.exit(1);const t=x.integrations?.telegram;if(t?.configured===false||t?.ok===false)process.exit(1);console.log("PUBLIC_TELEGRAM_HEALTH_OK")})'
 
-            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-            test -z "$(git status --porcelain --untracked-files=no)"
-            trap - ERR
+            curl -fsSL "https://www.touslesmatchs.com/api/goal05/stats?t=$(date +%s)" |
+              node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);if(!x.ok||x.policyVersion!=="goal05_v2_20261006")process.exit(1);console.log("PUBLIC_GOAL05_STATS_OK")})'
 
-# goal05 redeploy trigger 20261005
+            echo "GOAL05_TELEGRAM_AUDIT_OK"

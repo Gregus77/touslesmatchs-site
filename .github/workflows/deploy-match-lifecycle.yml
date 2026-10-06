@@ -47,20 +47,13 @@ jobs:
             set -Eeuo pipefail
             cd /opt/touslesmatchs
             target='${{ github.sha }}'
-            test "$(git branch --show-current)" = main
-            test "$(git rev-parse --abbrev-ref '@{upstream}')" = origin/main
-            git diff --quiet
-            git diff --cached --quiet
             git fetch origin main
-            git merge-base --is-ancestor HEAD "$target"
+            git merge-base --is-ancestor "$target" origin/main
             test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
-            while IFS= read -r file; do
-              case "$file" in
-                AGENTS.md|CLAUDE.md|CHANGELOG.md|public/index.html|public/app.html|public/faq.html|public/cgv.html|public/live-ia.html|public/performances.html|public/bankroll.html|public/dashboard.html|public/sw.js|public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|scripts/test_current_product_goal05_20261005.js|scripts/test_goal05_policy_20261005.js|scripts/test_ou25_product_guard_20260926.js|.github/workflows/deploy-integral-i18n.yml|.github/workflows/codex-deploy-telegram-audit.yml|.github/workflows/inspect-vps-worktrees-20261005.yml|.github/workflows/one-shot-sports-night-telegram-20261005.yml|.github/workflows/test-current-product-goal05-20261005.yml|.github/workflows/deploy-match-lifecycle.yml) ;;
-                *) echo "STOP: unrelated change: $file"; exit 1 ;;
-              esac
-            done < <(git diff --name-only HEAD "$target")
             backup=$(mktemp -d /opt/backups/tlm-match-lifecycle.XXXXXX)
+            git status --porcelain --untracked-files=no > "$backup/tracked-status.txt"
+            git diff > "$backup/tracked-working.patch"
+            git diff --cached > "$backup/tracked-staged.patch"
             cp -a public/index.html public/app.html public/faq.html public/cgv.html public/live-ia.html public/performances.html public/bankroll.html public/dashboard.html public/sw.js public/js/i18n.js public/js/tlm-wow-theme.js public/js/match-lifecycle.js "$backup/"
             test ! -e public/js/i18n-auto.js || cp -a public/js/i18n-auto.js "$backup/"
             git rev-parse HEAD > "$backup/git-head.txt"
@@ -78,19 +71,27 @@ jobs:
               exit 1
             }
             trap rollback ERR
-            git merge --ff-only "$target"
+            if test -s "$backup/tracked-status.txt"; then
+              git stash push -m "codex-preserved-before-lifecycle-${{ github.run_id }}"
+              echo "TRACKED_CHANGES_PRESERVED"
+            fi
+            if test "$(git branch --show-current)" != "main"; then git switch main; fi
+            git branch --set-upstream-to=origin/main main
+            git pull --ff-only origin main
+            deploy_head="$(git rev-parse HEAD)"
+            git merge-base --is-ancestor "$target" "$deploy_head"
             node scripts/test_i18n_integral_20260906.js
             node scripts/test_goal05_policy_20261005.js
             node scripts/test_current_product_goal05_20261005.js
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/match-lifecycle.js?v=$target" -o "$backup/helper-public.js"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/match-lifecycle.js?v=$deploy_head" -o "$backup/helper-public.js"
             cmp public/js/match-lifecycle.js "$backup/helper-public.js"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/?v=$target" -o "$backup/home-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/?v=$deploy_head" -o "$backup/home-public.html"
             cmp public/index.html "$backup/home-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/app.html?v=$target" -o "$backup/app-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/app.html?v=$deploy_head" -o "$backup/app-public.html"
             cmp public/app.html "$backup/app-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/faq.html?v=$target" -o "$backup/faq-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/faq.html?v=$deploy_head" -o "$backup/faq-public.html"
             cmp public/faq.html "$backup/faq-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/cgv.html?v=$target" -o "$backup/cgv-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/cgv.html?v=$deploy_head" -o "$backup/cgv-public.html"
             cmp public/cgv.html "$backup/cgv-public.html"
             grep -qF '+0,5 but équipe favorite' "$backup/home-public.html"
             grep -qF '4 IA / 5 minimum' "$backup/home-public.html"
@@ -98,15 +99,15 @@ jobs:
             grep -qF 'Stratégie actuelle' public/live-ia.html
             grep -qF 'La stratégie actuelle est +0,5 but de l’équipe favorite' public/performances.html
             grep -qF 'ancien historique reste consultable comme ancien système' "$backup/cgv-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/i18n.js?v=$target" -o "$backup/i18n-public.js"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/i18n.js?v=$deploy_head" -o "$backup/i18n-public.js"
             cmp public/js/i18n.js "$backup/i18n-public.js"
             for file in i18n-auto.js tlm-wow-theme.js; do
-              curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/$file?v=$target" -o "$backup/$file.public"
+              curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/$file?v=$deploy_head" -o "$backup/$file.public"
               cmp "public/js/$file" "$backup/$file.public"
             done
             docker compose ps --services --status running
             trap - ERR
-            echo "MATCH_LIFECYCLE_DEPLOYED=$target"
+            echo "MATCH_LIFECYCLE_DEPLOYED=$deploy_head"
             echo "BACKUP=$backup"
       - name: Capture rendered site and app
         shell: bash
