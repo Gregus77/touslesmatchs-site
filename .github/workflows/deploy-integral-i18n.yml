@@ -97,6 +97,13 @@ jobs:
               echo "AUDIT page=$name lang=$lang"
               google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$url" > "$out"
               grep -Eq "<html lang=\"$lang(-[A-Z]{2})?\"" "$out" || { echo "BAD_HTML_LANG page=$name lang=$lang"; exit 1; }
+              if [[ "$page" == "app.html" ]] && [[ "$lang" != "fr" ]]; then
+                app_untranslated='(Votre signal \\+0,5 but équipe favorite|Suivi de la 30e à la 85e minute|Me connecter|Recevoir mon code par email|Nouveau sur TousLesMatchs|Je confirme avoir au moins 18 ans|Les signaux \\+0,5 but équipe favorite|Historique des analyses\. Les envois Telegram)'
+                if grep -Eiq "$app_untranslated" "$out"; then
+                  echo "UNTRANSLATED_APP_COPY page=app lang=$lang"
+                  exit 1
+                fi
+              fi
               if grep -En "$untranslated" "$out"; then
                 echo "UNTRANSLATED_COPY page=$name lang=$lang"
                 exit 1
