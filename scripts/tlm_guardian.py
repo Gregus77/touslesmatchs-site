@@ -403,7 +403,12 @@ def main():
 
             now = datetime.datetime.now(ZoneInfo('Europe/Paris'))
             receipt = DATA / ('hermes-owner-report-' + now.strftime('%Y-%m-%d') + '.json')
-            if '--once' not in sys.argv and now.hour == 20 and not receipt.exists():
+            if (
+                '--once' not in sys.argv
+                and truthy(env.get('HERMES_TECH_TELEGRAM_ENABLED'))
+                and now.hour == 20
+                and not receipt.exists()
+            ):
                 message_id = send_owner(summary(state), env)
                 if message_id:
                     receipt.write_text(json.dumps({
