@@ -15,6 +15,7 @@ const perf=read('public/performances.html');
 const faq=read('public/faq.html');
 const cgv=read('public/cgv.html');
 const i18n=read('public/js/i18n.js');
+const lifecycle=read('public/js/match-lifecycle.js');
 
 assert.match(rules,/\+0,5 but équipe favorite/);
 assert.match(rules,/30 et 85/);
@@ -60,6 +61,12 @@ assert.match(cgv,/ancien historique reste consultable comme ancien système/);
 
 assert.match(i18n,/\+0,5 but · minimum 4 IA sur 5/);
 assert.match(i18n,/legacy system preserved/);
+
+// Goal05 30–85 presentation helper: no legacy market wording can leak dynamically.
+assert.match(lifecycle,/if\(minute>85\)return 'closed'/);
+assert.match(lifecycle,/if\(minute<30\)return 'waiting'/);
+assert.match(lifecycle,/Analyse en cours — décision à partir de la 30e minute/);
+assert.doesNotMatch(lifecycle,/(?:O\/U 2,5|Over\/Under 2,5|Over 2,5|Under 2,5|35e minute)/);
 
 const LEGACY_UI_WORDING_RE=/(?:O\/U 2,5|Over \/ Under 2,5|Over\/Under 2,5|Over ou Under 2,5|Over 2,5|Under 2,5|35e minute)/;
 for(const file of ['public/index.html','public/app.html','public/live-ia.html','public/performances.html','public/faq.html','public/cgv.html']){
