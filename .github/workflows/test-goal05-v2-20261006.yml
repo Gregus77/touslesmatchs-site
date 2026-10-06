@@ -1,0 +1,44 @@
+name: Test Goal05 V2 20261006
+
+on:
+  push:
+    branches:
+      - codex/goal05-v2-20261006
+  pull_request:
+    branches: [main]
+    paths:
+      - CURRENT_RULES.md
+      - scripts/api_server.js
+      - scripts/goal05_v2.js
+      - scripts/telegram_client.js
+      - scripts/tlm_guardian.py
+      - scripts/test_goal05_v2_20261006.js
+      - scripts/test_goal05_v2_integration_20261006.js
+      - public/performances.html
+      - .github/workflows/test-goal05-v2-20261006.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax and Goal05 V2 guards
+        run: |
+          set -euo pipefail
+          node --check scripts/goal05_v2.js
+          node --check scripts/api_server.js
+          node --check scripts/telegram_client.js
+          node scripts/test_goal05_v2_20261006.js
+          node scripts/test_goal05_v2_integration_20261006.js
+          node scripts/test_goal05_policy_20261005.js
+          node scripts/test_current_product_goal05_20261005.js
+          node scripts/test_ou25_product_guard_20260926.js
+          python3 scripts/test_hermes_control_center_20261005.py
+          echo GOAL05_V2_TESTS_OK
