@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tlm-production-deploy
+  group: tlm-production-deploy-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
@@ -34,6 +34,9 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd /opt/touslesmatchs
+            exec 9>/tmp/tlm-production-deploy.lock
+            flock -w 900 9
+            echo "PRODUCTION_DEPLOY_LOCK_ACQUIRED"
             TLM_OLD_HEAD="$(git rev-parse HEAD)"
             TLM_BACKUP="/opt/backups/openrouter-budget-split-$(date +%Y%m%d-%H%M%S)"
             install -d -m 700 "$TLM_BACKUP"

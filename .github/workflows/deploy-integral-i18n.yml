@@ -14,7 +14,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: tlm-production-deploy
+  group: tlm-production-deploy-${{ github.workflow }}
   cancel-in-progress: false
 jobs:
   deploy:
@@ -32,6 +32,9 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd /opt/touslesmatchs
+            exec 9>/tmp/tlm-production-deploy.lock
+            flock -w 900 9
+            echo "PRODUCTION_DEPLOY_LOCK_ACQUIRED"
             target='${{ github.sha }}'
             git fetch origin main
             git merge-base --is-ancestor "$target" origin/main

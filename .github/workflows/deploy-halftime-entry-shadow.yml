@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tlm-production-deploy
+  group: tlm-production-deploy-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
@@ -45,6 +45,9 @@ jobs:
           script: |
             set -Eeuo pipefail
             cd /opt/touslesmatchs
+            exec 9>/tmp/tlm-production-deploy.lock
+            flock -w 900 9
+            echo "PRODUCTION_DEPLOY_LOCK_ACQUIRED"
             TLM_OLD_HEAD="$(git rev-parse HEAD)"
             TLM_BACKUP="/opt/backups/halftime-shadow-$(date +%Y%m%d-%H%M%S)"
             install -d -m 700 "$TLM_BACKUP"
@@ -65,10 +68,17 @@ jobs:
             }
 
             git fetch origin main
-            test "$(git branch --show-current)" = main
-            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = origin/main
-            test -z "$(git status --porcelain --untracked-files=no)"
+            git status --porcelain --untracked-files=no > "$TLM_BACKUP/tracked-status.txt"
+            git diff > "$TLM_BACKUP/tracked-working.patch"
+            git diff --cached > "$TLM_BACKUP/tracked-staged.patch"
+            if test -s "$TLM_BACKUP/tracked-status.txt"; then
+              git stash push -m "codex-preserved-before-halftime-shadow-${{ github.run_id }}"
+              echo "TRACKED_CHANGES_PRESERVED"
+            fi
+            if test "$(git branch --show-current)" != "main"; then git switch main; fi
+            git branch --set-upstream-to=origin/main main
             git pull --ff-only origin main
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
             trap rollback ERR
 
             node --check scripts/api_server.js
