@@ -63,6 +63,10 @@ def detect_log_alerts(output, error_output):
     return detected
 
 
+def technical_telegram_enabled():
+    return str(os.environ.get("HERMES_TECH_TELEGRAM_ENABLED", "")).strip().lower() in {"1","true","yes","on","enabled"}
+
+
 def now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -388,11 +392,14 @@ def main():
     report = "\n".join(lines)
     print(report, flush=True)
 
-    sent, delivery = telegram_admin(report)
-    print(
-        f"RAPPORT_HERMES={'OK' if sent else 'ECHEC'} {delivery}",
-        flush=True,
-    )
+    if technical_telegram_enabled():
+        sent, delivery = telegram_admin(report)
+        print(
+            f"RAPPORT_HERMES={'OK' if sent else 'ECHEC'} {delivery}",
+            flush=True,
+        )
+    else:
+        print("RAPPORT_HERMES=SUPPRIME — mode technique silencieux", flush=True)
 
 
 if __name__ == "__main__":
