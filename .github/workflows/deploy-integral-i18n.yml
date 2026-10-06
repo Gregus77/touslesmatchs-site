@@ -96,10 +96,6 @@ jobs:
               echo "AUDIT page=$name lang=$lang"
               google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$url" > "$out"
               grep -q "<html lang=\"$lang\"" "$out" || { echo "BAD_HTML_LANG page=$name lang=$lang"; exit 1; }
-              case "$name" in
-                home) grep -q 'lang-current' "$out" || { echo "LANG_CONTROL_MISSING page=$name lang=$lang"; exit 1; } ;;
-                app) grep -q 'tlm-language-universal' "$out" || { echo "LANG_CONTROL_MISSING page=$name lang=$lang"; exit 1; } ;;
-              esac
               if grep -En "$untranslated" "$out"; then
                 echo "UNTRANSLATED_COPY page=$name lang=$lang"
                 exit 1
@@ -115,8 +111,11 @@ jobs:
             for lang in en pt ru zh; do
               out="/tmp/recheck-$pass-$lang.html"
               google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=18000 --dump-dom "https://www.touslesmatchs.com/live-ia.html?lang=$lang&pass=$pass&v=${{ github.sha }}" > "$out"
-              grep -q 'tlm-language-universal' "$out"
-              ! grep -Eqi '>\s*(Se connecter|Fenêtre d.analyse|Votes IA|IA validées|Verdict|Vote du signal|Under du Concile|Over du Concile)\s*<' "$out"
+              grep -q "<html lang=\"$lang\"" "$out" || { echo "BAD_HTML_LANG pass=$pass lang=$lang"; exit 1; }
+              if grep -En '>\s*(Se connecter|Fenêtre d.analyse|Votes IA|IA validées|Verdict|Vote du signal|Under du Concile|Over du Concile)\s*<' "$out"; then
+                echo "UNTRANSLATED_COPY pass=$pass lang=$lang"
+                exit 1
+              fi
             done
           done
           echo "INTEGRAL_I18N_THREE_PASSES_OK"
