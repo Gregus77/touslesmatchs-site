@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: tlm-production-deploy
+  group: tlm-production-deploy-${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
@@ -45,6 +45,9 @@ jobs:
             mkdir -p "$BACKUP"
             chmod 700 "$BACKUP"
             cd "$ROOT"
+            exec 9>/tmp/tlm-production-deploy.lock
+            flock -w 900 9
+            echo "PRODUCTION_DEPLOY_LOCK_ACQUIRED"
 
             git fetch origin main
             git status --porcelain --untracked-files=no > "$BACKUP/tracked-status.txt"
