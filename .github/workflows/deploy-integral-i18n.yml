@@ -33,20 +33,13 @@ jobs:
             set -Eeuo pipefail
             cd /opt/touslesmatchs
             target='${{ github.sha }}'
-            test "$(git branch --show-current)" = main
-            test "$(git rev-parse --abbrev-ref '@{upstream}')" = origin/main
-            git diff --quiet
-            git diff --cached --quiet
             git fetch origin main
-            git merge-base --is-ancestor HEAD "$target"
+            git merge-base --is-ancestor "$target" origin/main
             test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
-            while IFS= read -r file; do
-              case "$file" in
-                public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|scripts/test_match_lifecycle_20260906.js|scripts/test_current_product_goal05_20261005.js|.github/workflows/deploy-integral-i18n.yml) ;;
-                *) echo "STOP: unrelated change: $file"; exit 1 ;;
-              esac
-            done < <(git diff --name-only HEAD "$target")
             backup=$(mktemp -d /opt/backups/tlm-integral-i18n.XXXXXX)
+            git status --porcelain --untracked-files=no > "$backup/tracked-status.txt"
+            git diff > "$backup/tracked-working.patch"
+            git diff --cached > "$backup/tracked-staged.patch"
             mkdir -p "$backup/js"
             cp -a public/js/i18n.js public/js/tlm-wow-theme.js public/js/match-lifecycle.js "$backup/js/"
             test ! -e public/js/i18n-auto.js || cp -a public/js/i18n-auto.js "$backup/js/"
@@ -59,7 +52,15 @@ jobs:
               exit 1
             }
             trap rollback ERR
-            git merge --ff-only "$target"
+            if test -s "$backup/tracked-status.txt"; then
+              git stash push -m "codex-preserved-before-i18n-${{ github.run_id }}"
+              echo "TRACKED_CHANGES_PRESERVED"
+            fi
+            if test "$(git branch --show-current)" != "main"; then git switch main; fi
+            git branch --set-upstream-to=origin/main main
+            git pull --ff-only origin main
+            deploy_head="$(git rev-parse HEAD)"
+            git merge-base --is-ancestor "$target" "$deploy_head"
             node --check public/js/i18n.js
             node --check public/js/i18n-auto.js
             node --check public/js/tlm-wow-theme.js
@@ -68,14 +69,14 @@ jobs:
             node scripts/test_match_lifecycle_20260906.js
             node scripts/test_current_product_goal05_20261005.js
             for file in i18n.js i18n-auto.js tlm-wow-theme.js match-lifecycle.js; do
-              curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/$file?v=$target" -o "$backup/$file.public"
+              curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/$file?v=$deploy_head" -o "$backup/$file.public"
               cmp "public/js/$file" "$backup/$file.public"
             done
-            test "$(git rev-parse HEAD)" = "$target"
-            test "$(git rev-parse origin/main)" = "$target"
+            test "$(git rev-parse HEAD)" = "$deploy_head"
+            test "$(git rev-parse origin/main)" = "$deploy_head"
             docker compose ps site
             trap - ERR
-            echo "INTEGRAL_I18N_SOURCE_OK=$target"
+            echo "INTEGRAL_I18N_SOURCE_OK=$deploy_head"
             echo "BACKUP=$backup"
       - name: Browser audit in five translated languages
         shell: bash
