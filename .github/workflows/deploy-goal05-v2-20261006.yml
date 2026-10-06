@@ -108,16 +108,7 @@ jobs:
             test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_ENABLED"')" = "1"
             test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_PUSH_ENABLED"')" = "1"
 
-            docker exec touslesmatchs-api node - <<'NODE'
-            const Database=require('better-sqlite3');
-            const db=new Database('/data/tlm.db',{readonly:true});
-            for(const table of ['goal05_signal_registry','goal05_signal_evidence','goal05_signal_results','goal05_scanner_history']){
-              if(!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table)) throw new Error('missing '+table);
-            }
-            const v=db.prepare("SELECT outcome,final_score_home h,final_score_away a,color,odd_at_pick FROM goal05_scanner_history WHERE id='owner_scanner_20261005_velez_platense'").get();
-            if(!v||v.outcome!=='win'||v.h!==2||v.a!==2||v.color!=='green'||v.odd_at_pick!==null) throw new Error('Velez scanner proof invalid');
-            console.log('GOAL05_V2_DB_OK');
-            NODE
+            docker exec touslesmatchs-api node -e "const Database=require('better-sqlite3');const db=new Database('/data/tlm.db',{readonly:true});for(const table of ['goal05_signal_registry','goal05_signal_evidence','goal05_signal_results','goal05_scanner_history']){if(!db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\' AND name=?').get(table))throw new Error('missing '+table)}const v=db.prepare(\"SELECT outcome,final_score_home h,final_score_away a,color,odd_at_pick FROM goal05_scanner_history WHERE id='owner_scanner_20261005_velez_platense'\").get();if(!v||v.outcome!=='win'||v.h!==2||v.a!==2||v.color!=='green'||v.odd_at_pick!==null)throw new Error('Velez scanner proof invalid');console.log('GOAL05_V2_DB_OK')"
 
             curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" > /tmp/g05-health.json
             node -e 'const x=require("/tmp/g05-health.json");if(!x.ok)process.exit(1);console.log("PUBLIC_HEALTH_OK")'
