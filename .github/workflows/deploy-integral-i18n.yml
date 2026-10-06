@@ -8,6 +8,8 @@ on:
       - public/js/tlm-wow-theme.js
       - public/js/match-lifecycle.js
       - scripts/test_i18n_integral_20260906.js
+      - scripts/test_match_lifecycle_20260906.js
+      - scripts/test_current_product_goal05_20261005.js
       - .github/workflows/deploy-integral-i18n.yml
 permissions:
   contents: read
