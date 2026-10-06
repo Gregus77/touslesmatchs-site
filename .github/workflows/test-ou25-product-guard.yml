@@ -1,4 +1,4 @@
-name: Protected OVER-UNDER product
+name: Protected current Goal05 product and legacy history
 on: [push, pull_request]
 permissions:
   contents: read
@@ -10,7 +10,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Owner rule, real votes and all three surfaces (no network calls)
-        run: node scripts/test_ou25_product_guard_20260926.js
-      - name: Statistics coverage never invents data (mocked transport)
+      - name: Current +0.5 product rules and public surfaces
+        run: |
+          node scripts/test_goal05_policy_20261005.js
+          node scripts/test_current_product_goal05_20261005.js
+      - name: Statistics coverage never invents data
         run: node scripts/test_stats_coverage_20260926.js
