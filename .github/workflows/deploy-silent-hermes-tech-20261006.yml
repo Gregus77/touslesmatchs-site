@@ -1,0 +1,64 @@
+name: Deploy silent Hermes technical mode 20261006
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-silent-hermes-tech-20261006.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Install silent hourly director override
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 4m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            ROOT=/opt/touslesmatchs
+            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            BACKUP="/opt/backups/hermes-silent-$STAMP"
+            install -d -m 700 "$BACKUP"
+
+            cp -a /etc/systemd/system/tlm-hourly-director.service "$BACKUP/" 2>/dev/null || true
+            cp -a /usr/local/sbin/tlm-hourly-director.py "$BACKUP/" 2>/dev/null || true
+
+            cd "$ROOT"
+            git fetch origin main
+            git show origin/main:scripts/tlm_hourly_director.py > /usr/local/sbin/tlm-hourly-director.py
+            chmod 0700 /usr/local/sbin/tlm-hourly-director.py
+            python3 -m py_compile /usr/local/sbin/tlm-hourly-director.py
+
+            install -d -m 755 /etc/systemd/system/tlm-hourly-director.service.d
+            cat > /etc/systemd/system/tlm-hourly-director.service.d/50-silent-telegram.conf <<'EOF'
+            [Service]
+            ExecStart=
+            ExecStart=/usr/bin/python3 /usr/local/sbin/tlm-hourly-director.py
+            Environment=HERMES_TECH_TELEGRAM_ENABLED=0
+            EOF
+
+            systemctl daemon-reload
+            systemctl restart tlm-hourly-director.timer
+            systemctl start tlm-hourly-director.service
+            test "$(systemctl show -p Result --value tlm-hourly-director.service)" = "success"
+
+            JOURNAL="$(journalctl -u tlm-hourly-director.service -n 80 --no-pager)"
+            echo "$JOURNAL" | grep -q 'RAPPORT_HERMES=SUPPRIME'
+            echo "HOURLY_DIRECTOR_SILENT_OK"
+
+            printf 'AUTODIRECTOR_TIMER='
+            systemctl is-active tlm-autodirector.timer || true
+            printf 'GUARDIAN='
+            systemctl is-active tlm-hermes-guardian.service || true
+            echo "BACKUP=$BACKUP"
