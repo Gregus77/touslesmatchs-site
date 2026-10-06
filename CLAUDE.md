@@ -1,6 +1,6 @@
 # CLAUDE.md — TousLesMatchs
 
-> **RÈGLE PRIORITAIRE — 5 octobre 2026** : lire `CURRENT_RULES.md` AVANT tout autre document. En cas de contradiction avec une règle historique de ce fichier ou d'un handoff ancien, `CURRENT_RULES.md` prévaut. La stratégie sportive principale active est Goal +0,5 équipe favorite ; les anciennes règles O/U 2,5 sont historiques.
+> **RÈGLE PRIORITAIRE — 6 octobre 2026** : lire `CURRENT_RULES.md` AVANT tout autre document. En cas de contradiction avec une règle historique de ce fichier ou d'un handoff ancien, `CURRENT_RULES.md` prévaut. La stratégie sportive principale active est Goal +0,5 équipe favorite V2 (historique structurel 4 saisons, forme récente, défense adverse, live, note verte >=8/10, cote >=1,60, 4/5 IA) ; les anciennes règles O/U 2,5 sont historiques.
 
 ## 📖 ORDRE DE LECTURE OBLIGATOIRE À CHAQUE SESSION
 
