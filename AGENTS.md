@@ -406,7 +406,7 @@ Lire `docs/HISTORY_REQUIREMENT.md` avant toute modification des données utilis�
 
 ## GARDE-FOU PRODUIT PERMANENT — décision propriétaire du 06/10/2026
 
-La stratégie client actuelle est **+0,5 but de l’équipe favorite — V2**, telle que définie dans `CURRENT_RULES.md` : Top 5 vs Bottom 5, saison actuelle + 3 précédentes pondérées 40/25/20/15, forme des 5 derniers matchs, faiblesse défensive adverse, confirmation live 30–85, équipe ciblée encore à 0 but, note verte >= 8,0/10 avec >=75 % de couverture factuelle, cote réelle fraîche >= 1,60 et consensus minimum 4 IA sur 5.
+La stratégie client actuelle est **+0,5 but de l’équipe favorite** — V2, telle que définie dans `CURRENT_RULES.md` : Top 5 vs Bottom 5, saison actuelle + 3 précédentes pondérées 40/25/20/15, forme des 5 derniers matchs, faiblesse défensive adverse, confirmation live 30–85, équipe ciblée encore à 0 but, note verte >= 8,0/10 avec >=75 % de couverture factuelle, cote réelle fraîche >= 1,60 et consensus minimum 4 IA sur 5.
 
 - **O/U 2,5 est un ancien système.** Ses analyses, résultats, votes et preuves historiques doivent être conservés intégralement et rester consultables dans l’historique, mais ils ne doivent plus être présentés comme la stratégie actuelle.
 - Aucun déploiement, branche ou ancien test ne doit réactiver O/U 2,5 comme produit courant ni masquer/supprimer son historique.
