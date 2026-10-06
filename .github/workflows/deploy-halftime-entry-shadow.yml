@@ -1,14 +1,7 @@
-name: Deploy halftime entry shadow
+name: Legacy halftime O/U shadow (manual only)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "Dockerfile.api"
-      - "scripts/api_server.js"
-      - "scripts/halftime_entry_shadow.js"
-      - "scripts/test_halftime_entry_shadow.js"
-      - ".github/workflows/deploy-halftime-entry-shadow.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
