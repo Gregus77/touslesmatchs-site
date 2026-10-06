@@ -1,6 +1,6 @@
 # CURRENT_RULES.md — Règles actives TousLesMatchs
 
-**Dernière mise à jour : 5 octobre 2026**
+**Dernière mise à jour : 6 octobre 2026**
 **Priorité absolue : ce fichier prévaut sur toute règle historique contradictoire présente ailleurs dans le dépôt.**
 **Principe : la décision la plus récente du fondateur remplace l'ancienne.**
 
@@ -8,9 +8,9 @@
 
 TousLesMatchs se concentre sur le **football** et la stratégie principale est :
 
-### +0,5 but équipe favorite
+### +0,5 but équipe favorite — V2
 
-Un candidat n'est valable que si toutes les conditions suivantes sont réunies :
+Un candidat n'est valable que si toutes les conditions obligatoires suivantes sont réunies :
 
 1. compétition autorisée par la whitelist de production ;
 2. une équipe classée **Top 5** affronte une équipe des **5 dernières** de son championnat/groupe ;
@@ -20,9 +20,66 @@ Un candidat n'est valable que si toutes les conditions suivantes sont réunies :
 6. l'équipe favorite/ciblée **n'a pas encore marqué** ;
 7. marché réel **équipe +0,5 but / équipe marque au moins un but** disponible ;
 8. cote réelle, exploitable et fraîche **>= 1,60** ;
-9. contrôles historiques, forme offensive et attaquants jugés valides ;
-10. consensus d'au moins **4 IA sur 5** ;
-11. aucune diffusion client si une condition obligatoire manque.
+9. consensus d'au moins **4 IA sur 5** ;
+10. aucune diffusion client si une condition obligatoire manque ;
+11. le score qualité V2 doit être **vert (>= 8,0/10)** avec au moins 75 % de couverture factuelle.
+
+### Force historique structurelle — 4 saisons
+
+Le classement courant ne suffit plus. Le moteur analyse **la saison actuelle + les 3 saisons précédentes** avec la pondération suivante :
+
+- saison actuelle : **40 %** ;
+- saison N-1 : **25 %** ;
+- saison N-2 : **20 %** ;
+- saison N-3 : **15 %**.
+
+Le moteur conserve le nombre de saisons disponibles, la position de l'équipe ciblée et de l'adversaire, la force relative au nombre d'équipes et le nombre de saisons où la cible termine Top 5/Top 6. Une équipe promue ou avec historique incomplet est marquée `historique insuffisant` ; aucune valeur manquante n'est remplacée par zéro.
+
+### Forme offensive récente
+
+Sur les **5 derniers matchs de championnat** de l'équipe ciblée :
+
+- au moins **4/5** avec un but marqué ;
+- moyenne de buts marqués **>= 1,5** ;
+- tirs cadrés, xG et grosses occasions utilisés lorsqu'ils sont réellement disponibles ;
+- une statistique avancée absente reste `unknown` et n'est jamais inventée.
+
+### Faiblesse défensive adverse
+
+Sur les **5 derniers matchs de championnat** de l'adversaire :
+
+- au moins **4/5** avec un but encaissé ;
+- moyenne encaissée **>= 1,5** ;
+- maximum **2 clean sheets** ;
+- xGA et données avancées utilisés lorsqu'ils sont réellement disponibles.
+
+### Confirmation live
+
+De la 30e à la 85e minute, la décision réévalue la pression réelle : tirs, tirs cadrés, possession utile, xG live, corners/pression si disponibles, cartons rouges et score. Une excellente équipe historiquement mais inexistante dans le match peut être rejetée.
+
+### Score V2
+
+La note /100 utilise :
+
+- historique structurel : **30 %** ;
+- forme offensive récente : **25 %** ;
+- faiblesse défensive adverse : **20 %** ;
+- données live : **15 %** ;
+- contexte/effectif : **10 %**.
+
+Affichage :
+
+- 🟢 **8,0/10 ou plus** : excellent dossier, seul niveau pouvant devenir signal client ;
+- 🟠 **6,5 à 7,9/10** : surveillance propriétaire uniquement ;
+- 🔴 **moins de 6,5/10** : rejet.
+
+La couleur ne remplace jamais la cote réelle, la fenêtre live ni le consensus 4/5.
+
+### Statistiques et apprentissage
+
+Les signaux officiels et les observations du scanner propriétaire sont séparés. Un ancien conseil manuel/scanner ne doit jamais être transformé en faux signal Telegram officiel. Les statistiques conservent la provenance, la cote réellement observée lorsqu'elle existe, la note/couleur, les données disponibles au moment de la décision et le résultat vérifié.
+
+La règle historique proposant **30 % de bankroll** est interdite dans le produit actuel.
 
 ## Publication
 

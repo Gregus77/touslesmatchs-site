@@ -25,7 +25,12 @@ DATA = ROOT / 'data'
 
 CURRENT_GOAL05_POLICY = {
     'strategy': 'favorite_team_over_0_5',
-    'structure': 'top5_vs_bottom5',
+    'version': 'v2_20261006',
+    'structure': 'top5_vs_bottom5_structural_4_seasons',
+    'history_seasons': 4,
+    'history_weights': [40, 25, 20, 15],
+    'min_rating': 8.0,
+    'min_fact_coverage_pct': 75,
     'from_minute': 30,
     'to_minute': 85,
     'favorite_must_not_have_scored': True,

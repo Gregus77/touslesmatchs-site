@@ -24,6 +24,7 @@ const crypto = require("crypto");
 const analysisEngine = require("./analysis_engine");
 const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
+const goal05V2 = require("./goal05_v2");
 const jevDecisionEngine = require("./jev_decision_engine");
 const liveStateCoherence = require("./live_state_coherence");
 const tlmOperations = require("./tlm_operations");
@@ -335,7 +336,72 @@ db.exec(`
     expires_at TEXT NOT NULL,
     telegram_delivered INTEGER NOT NULL DEFAULT 0
   );
+  CREATE TABLE IF NOT EXISTS goal05_signal_evidence (
+    signal_key TEXT PRIMARY KEY,
+    evidence_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(signal_key) REFERENCES goal05_signal_registry(signal_key)
+  );
+  CREATE TABLE IF NOT EXISTS goal05_signal_results (
+    signal_key TEXT PRIMARY KEY,
+    outcome TEXT NOT NULL CHECK(outcome IN ('win','loss')),
+    final_score_home INTEGER NOT NULL,
+    final_score_away INTEGER NOT NULL,
+    result_source TEXT NOT NULL,
+    resolved_at TEXT NOT NULL,
+    FOREIGN KEY(signal_key) REFERENCES goal05_signal_registry(signal_key)
+  );
+  CREATE TABLE IF NOT EXISTS goal05_scanner_history (
+    id TEXT PRIMARY KEY,
+    fixture_id TEXT,
+    predicted_at TEXT NOT NULL,
+    competition TEXT DEFAULT '',
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    target_team TEXT NOT NULL,
+    market TEXT NOT NULL DEFAULT '+0,5 but équipe',
+    rating REAL,
+    color TEXT,
+    estimated_probability REAL,
+    odd_at_pick REAL,
+    final_score_home INTEGER,
+    final_score_away INTEGER,
+    outcome TEXT NOT NULL DEFAULT 'pending_verification'
+      CHECK(outcome IN ('win','loss','pending_verification')),
+    result_source TEXT,
+    verified_at TEXT,
+    provenance TEXT NOT NULL DEFAULT 'owner_scanner',
+    evidence_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_goal05_scanner_predicted ON goal05_scanner_history(predicted_at);
+  CREATE INDEX IF NOT EXISTS idx_goal05_results_outcome ON goal05_signal_results(outcome);
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_evidence_no_update
+    BEFORE UPDATE ON goal05_signal_evidence
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal evidence is immutable'); END;
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_evidence_no_delete
+    BEFORE DELETE ON goal05_signal_evidence
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal evidence is immutable'); END;
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_results_no_update
+    BEFORE UPDATE ON goal05_signal_results
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal result is immutable'); END;
+  CREATE TRIGGER IF NOT EXISTS goal05_signal_results_no_delete
+    BEFORE DELETE ON goal05_signal_results
+    BEGIN SELECT RAISE(ABORT,'Goal05 signal result is immutable'); END;
 `);
+
+// Scanner owner: keep separate from official Telegram KPI.
+db.prepare(`INSERT OR IGNORE INTO goal05_scanner_history
+  (id,fixture_id,predicted_at,competition,home,away,target_team,market,rating,color,
+   estimated_probability,odd_at_pick,final_score_home,final_score_away,outcome,
+   result_source,verified_at,provenance,evidence_json)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    'owner_scanner_20261005_velez_platense',null,'2026-10-05T19:17:37Z','Argentine',
+    'Vélez Sarsfield','Platense','Vélez Sarsfield','Vélez Sarsfield +0,5 but',
+    8.6,'green',84,null,2,2,'win','public_result_verified_20261006',
+    '2026-10-06T02:40:20Z','owner_scanner',
+    JSON.stringify({source:'scanner conversation',note:'pastille verte; cote exacte non enregistrée donc inconnue'})
+  );
 
 
 function readGoal05LatestSignal() {
@@ -3123,37 +3189,52 @@ function goal05TeamOdd(oddsData, side, teamName) {
   return Math.round(odds[Math.floor(odds.length/2)]*100)/100;
 }
 
-async function goal05History(match,targetId,opponentId) {
-  const season=Number(match.season);
-  if (!season) return {verified:false,seasons:0};
-
-  const tables=await Promise.all(
-    [1,2,3,4].map(offset=>fetchStandings(match.leagueId,season-offset))
-  );
-
-  const pairs=[];
-  for (const table of tables) {
-    const target=table?.rows?.find(r=>Number(r.teamId)===Number(targetId));
-    const opponent=table?.rows?.find(r=>Number(r.teamId)===Number(opponentId));
-    if (target && opponent) pairs.push({
-      targetRank:Number(target.rank),
-      opponentRank:Number(opponent.rank)
-    });
+async function fetchGoal05RecentProfile(match,teamId) {
+  if(!API_SPORTS_KEY||!match?.leagueId||!match?.season||!teamId) return null;
+  const key=`goal05_recent_${match.leagueId}_${match.season}_${teamId}`;
+  const cached=goal05RecentCache.get(key);
+  if(cached&&Date.now()-cached.ts<30*60*1000) return cached.data;
+  if(!apiSportsBudgetOk()) return null;
+  try {
+    const raw=await httpGet(
+      `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=${match.leagueId}&season=${match.season}&last=5&status=FT`,
+      {"x-apisports-key":API_SPORTS_KEY}
+    );
+    const fixtures=Array.isArray(raw?.response)?raw.response:[];
+    const data=goal05V2.recentGoalProfile(fixtures,teamId);
+    goal05RecentCache.set(key,{data,ts:Date.now()});
+    return data;
+  } catch(error) {
+    console.error("[goal05-recent]",error.message);
+    goal05RecentCache.set(key,{data:null,ts:Date.now()});
+    return null;
   }
-
-  if (pairs.length<3) return {verified:false,seasons:pairs.length};
-
-  const targetAverage=pairs.reduce((n,r)=>n+r.targetRank,0)/pairs.length;
-  const opponentAverage=pairs.reduce((n,r)=>n+r.opponentRank,0)/pairs.length;
-
-  return {
-    verified:targetAverage+3<=opponentAverage,
-    seasons:pairs.length,
-    targetAverage:Math.round(targetAverage*10)/10,
-    opponentAverage:Math.round(opponentAverage*10)/10
-  };
 }
 
+async function goal05History(match,targetId,opponentId) {
+  const season=Number(match.season);
+  if(!season) return goal05V2.buildHistoryProfile([]);
+  const definitions=[
+    {offset:0,season,weight:0.40},
+    {offset:1,season:season-1,weight:0.25},
+    {offset:2,season:season-2,weight:0.20},
+    {offset:3,season:season-3,weight:0.15}
+  ];
+  const tables=await Promise.all(definitions.map(item=>fetchStandings(match.leagueId,item.season)));
+  const records=[];
+  for(let i=0;i<definitions.length;i++) {
+    const def=definitions[i],table=tables[i];
+    const target=table?.rows?.find(r=>Number(r.teamId)===Number(targetId));
+    const opponent=table?.rows?.find(r=>Number(r.teamId)===Number(opponentId));
+    if(!target||!opponent) continue;
+    if(Number(target.groupIndex)!==Number(opponent.groupIndex)) continue;
+    const groupTotal=Number(target.groupTotal||opponent.groupTotal||table?.total||0);
+    if(!Number.isFinite(groupTotal)||groupTotal<10) continue;
+    records.push({offset:def.offset,season:def.season,weight:def.weight,
+      targetRank:Number(target.rank),opponentRank:Number(opponent.rank),groupTotal});
+  }
+  return goal05V2.buildHistoryProfile(records);
+}
 function goal05PositiveTeamBet(bet) {
   const value=String(bet||"").toLowerCase();
   return value.includes("marque") && !value.includes("ne marque pas");
@@ -3202,11 +3283,13 @@ function goal05AiConsensus(match,side) {
 async function buildStrictGoal05Criteria(match) {
   const minute=Number(match.minute||0),homeScore=Number(match.score_home||0),awayScore=Number(match.score_away||0);
   const rejected=(reason,extra={})=>({
-    eligible:false,play:false,reason,historicalVerified:false,formVerified:false,
-    opponentConcedes:false,attackersAvailable:false,liveStatsVerified:false,
-    motivationVerified:false,rankGap:null,liveOdd:null,oddFreshVerified:false,
-    aiConsensusVerified:false,aiVotes:0,...extra
+    eligible:false,play:false,reason,policyVersion:"goal05_v2_20261006",
+    historicalVerified:false,formVerified:false,opponentConcedes:false,
+    attackersAvailable:null,liveStatsVerified:false,motivationVerified:false,
+    qualityVerified:false,qualityScore:null,rating:null,color:"gray",coveragePct:0,
+    rankGap:null,liveOdd:null,oddFreshVerified:false,aiConsensusVerified:false,aiVotes:0,...extra
   });
+
   if(!GOAL05_ENABLED) return rejected("goal05_desactive");
   if(match.sport!=="Football"||match.source!=="api-sports") return rejected("source_non_eligible");
   if(isWomenMatch(match)||isCategoryBanned(match)||isUsaOrCanadaMatch(match)||isLowTrustCompetition(match)||isBlacklistedForLiveDisplay(match))
@@ -3225,80 +3308,112 @@ async function buildStrictGoal05Criteria(match) {
     const groupTotal=Number(homeRank.groupTotal||awayRank.groupTotal||standings?.total||0);
     if(!Number.isFinite(groupTotal)||groupTotal<10) return rejected("taille_classement_non_verifiee");
     const bottomThreshold=Math.max(1,groupTotal-4);
-    const homeEligible=homeRank.rank<=5&&awayRank.rank>=bottomThreshold;
-    const awayEligible=awayRank.rank<=5&&homeRank.rank>=bottomThreshold;
+    const homeEligible=Number(homeRank.rank)<=5&&Number(awayRank.rank)>=bottomThreshold;
+    const awayEligible=Number(awayRank.rank)<=5&&Number(homeRank.rank)>=bottomThreshold;
 
     let side,targetId,opponentId,targetName,opponentName,targetRank,opponentRank,targetScore;
     if(homeEligible) {
       side="home";targetId=match.homeId;opponentId=match.awayId;targetName=match.home;opponentName=match.away;
-      targetRank=homeRank.rank;opponentRank=awayRank.rank;targetScore=homeScore;
+      targetRank=Number(homeRank.rank);opponentRank=Number(awayRank.rank);targetScore=homeScore;
     } else if(awayEligible) {
       side="away";targetId=match.awayId;opponentId=match.homeId;targetName=match.away;opponentName=match.home;
-      targetRank=awayRank.rank;opponentRank=homeRank.rank;targetScore=awayScore;
-    } else return rejected("pas_top5_bottom5",{homeRank:homeRank.rank,awayRank:awayRank.rank,groupTotal});
+      targetRank=Number(awayRank.rank);opponentRank=Number(homeRank.rank);targetScore=awayScore;
+    } else {
+      return rejected("pas_top5_bottom5",{homeRank:Number(homeRank.rank),awayRank:Number(awayRank.rank),groupTotal});
+    }
 
     if(targetScore>0) return rejected("equipe_cible_a_deja_marque",{team:targetName,side,targetRank,opponentRank,groupTotal});
     const rankGap=opponentRank-targetRank;
 
-    const [targetStats,opponentStats,injuries,liveStats,odds,lineups,discipline,history]=await Promise.all([
+    const [targetStats,opponentStats,targetRecent,opponentRecent,injuries,liveStats,odds,lineups,discipline,history]=await Promise.all([
       fetchTeamStatistics(match.leagueId,match.season,targetId),
       fetchTeamStatistics(match.leagueId,match.season,opponentId),
+      fetchGoal05RecentProfile(match,targetId),
+      fetchGoal05RecentProfile(match,opponentId),
       fetchInjuries(match),fetchMatchStats(match.fixtureId),
       fetchRealOdds(match,{maxAgeMs:GOAL05_ODD_MAX_AGE_MS}),
       fetchGoal05Lineups(match),fetchGoal05Discipline(match),goal05History(match,targetId,opponentId)
     ]);
 
-    const targetForm=String(targetStats?.form||"").toUpperCase();
-    const wins=(targetForm.match(/W/g)||[]).length,draws=(targetForm.match(/D/g)||[]).length,formPoints=wins*3+draws;
     const targetInjuries=side==="home"?injuries?.home:injuries?.away;
     const targetLineup=(lineups||[]).find(l=>Number(l?.team?.id)===Number(targetId));
     const forwards=(targetLineup?.startXI||[]).filter(p=>String(p?.player?.pos||"").toUpperCase()==="F");
+    const attackersAvailable=targetLineup?forwards.length>=1:null;
+
     const shotsOnTarget=goal05Metric(liveStats,side,["shots_on_goal","shotsOnGoal"]);
     const totalShots=goal05Metric(liveStats,side,["shots","total_shots","shotsTotal"]);
     const possession=goal05Metric(liveStats,side,["possession","ball_possession"]);
+    const liveXg=goal05Metric(liveStats,side,["xg","expected_goals"]);
     const liveOdd=goal05TeamOdd(odds,side,targetName);
     const oddFetchedAt=odds?.fetchedAt||null;
     const oddAgeMs=oddFetchedAt?Date.now()-Date.parse(oddFetchedAt):Infinity;
     const oddFreshVerified=Number.isFinite(oddAgeMs)&&oddAgeMs>=0&&oddAgeMs<=GOAL05_ODD_MAX_AGE_MS;
 
-    const historicalVerified=history.verified===true;
-    const formVerified=targetForm.length>=4&&wins>=2&&formPoints>=8&&Number(targetStats?.gfAvg||0)>=1;
-    const opponentConcedes=Number(opponentStats?.gaAvg||0)>=1.1;
-    const attackersAvailable=Array.isArray(targetInjuries)&&targetInjuries.length===0&&forwards.length>=1;
+    const recentChecks=goal05V2.strictRecentChecks(targetRecent,opponentRecent);
+    const historicalVerified=history?.verified===true;
+    const formVerified=recentChecks.formVerified===true;
+    const opponentConcedes=recentChecks.opponentConcedes===true;
     const disciplineVerified=discipline?.redCards===0;
-    const liveStatsVerified=shotsOnTarget!==null&&totalShots!==null&&possession!==null&&shotsOnTarget>=3&&totalShots>=8&&possession>=52&&disciplineVerified;
+    const liveStatsVerified=disciplineVerified&&(
+      (shotsOnTarget!==null&&totalShots!==null&&Number(shotsOnTarget)>=2&&Number(totalShots)>=6) ||
+      (liveXg!==null&&Number(liveXg)>=0.65) ||
+      (shotsOnTarget!==null&&Number(shotsOnTarget)>=3)
+    );
     const motivationVerified=targetRank<=5&&opponentRank>=bottomThreshold;
     const aiConsensus=goal05AiConsensus(match,side);
     const aiVotes=aiConsensus.yesVotes,aiConsensusVerified=aiConsensus.verified===true;
 
+    const quality=goal05V2.scoreCandidate({
+      history,targetRecent,opponentRecent,
+      seasonGfAvg:targetStats?.gfAvg??null,
+      shotsOnTarget,totalShots,possession,liveXg,
+      homeAdvantage:side==="home",
+      attackersAvailable,
+      noRedCard:discipline?.redCards==null?null:disciplineVerified,
+      motivationVerified
+    });
+    const qualityVerified=quality.qualityVerified===true;
+
     const checks={
       minuteVerified:minute>=GOAL05_POLICY_FROM_MINUTE&&minute<=GOAL05_POLICY_TO_MINUTE,
-      rankVerified:motivationVerified,historicalVerified,formVerified,opponentConcedes,
-      attackersAvailable,liveStatsVerified,motivationVerified,
+      rankVerified:motivationVerified,
+      historicalVerified,formVerified,opponentConcedes,
+      liveStatsVerified,motivationVerified,qualityVerified,
       oddVerified:liveOdd!==null&&liveOdd>=GOAL05_POLICY_MIN_ODD,
       oddFreshVerified,aiConsensusVerified
     };
+    if(attackersAvailable===false) checks.attackersAvailable=false;
     const missing=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
     const eligible=missing.length===0;
     return {
       eligible,play:eligible,team:targetName,opponent:opponentName,side,
-      reason:eligible?"tous_les_criteres_stricts_valides":missing.join(","),
+      policyVersion:"goal05_v2_20261006",
+      reason:eligible?"tous_les_criteres_v2_valides":missing.join(","),
       rankGap,targetRank,opponentRank,groupTotal,bottomThreshold,
-      historicalVerified,history,formVerified,targetForm,formPoints,
-      opponentConcedes,opponentGaAvg:opponentStats?.gaAvg??null,
-      attackersAvailable,forwards:forwards.map(p=>p?.player?.name).filter(Boolean),
-      liveStatsVerified,disciplineVerified,shotsOnTarget,totalShots,possession,
+      historicalVerified,history,
+      structuralTop:history?.structuralTop===true,
+      historicalStrengthScore:history?.historicalStrengthScore??null,
+      topHistoricalSeasons:history?.topSixSeasons??0,
+      historySeasonsAvailable:history?.seasonsAvailable??0,
+      formVerified,targetRecent:targetRecent||null,
+      opponentConcedes,opponentRecent:opponentRecent||null,
+      seasonGfAvg:targetStats?.gfAvg??null,seasonGaAvg:opponentStats?.gaAvg??null,
+      attackersAvailable,attackersCoverage:targetLineup?"verified":"unknown",
+      targetInjuriesKnown:Array.isArray(targetInjuries),targetInjuriesCount:Array.isArray(targetInjuries)?targetInjuries.length:null,
+      forwards:forwards.map(p=>p?.player?.name).filter(Boolean),
+      liveStatsVerified,disciplineVerified,shotsOnTarget,totalShots,possession,liveXg,
       motivationVerified,liveOdd,oddFetchedAt,oddAgeMs,oddFreshVerified,
+      qualityVerified,qualityScore:quality.score,rating:quality.rating,color:quality.color,
+      coveragePct:quality.coveragePct,scoreComponents:quality.components,
       aiConsensusVerified,aiVotes,aiActiveVotes:aiConsensus.activeVotes,aiTotalSeats:5,
       aiConfidence:aiConsensus.avgYesConfidence,aiSnapshotKey:aiConsensus.snapshotKey,aiVoteDetails:aiConsensus.votes,
       checkedAt:new Date().toISOString()
     };
   } catch(error) {
-    console.error("[goal05-strict]",match.home,match.away,error.message);
+    console.error("[goal05-strict-v2]",match.home,match.away,error.message);
     return rejected("erreur_verification_stricte");
   }
 }
-
 async function enrichStrictGoal05(matches) {
   if(!GOAL05_ENABLED) return (matches||[]).map(m=>({...m,goal05Criteria:{eligible:false,play:false,reason:"goal05_desactive"}}));
   const candidates=(matches||[]).filter(m=>{
@@ -5772,6 +5887,7 @@ app.get('/historical-coverage', (_,res)=>res.set('Cache-Control','no-store').jso
 const teamStatsCache = new Map();
 const standingsCache = new Map();
 const injuriesCache = new Map();
+const goal05RecentCache = new Map();
 
 const DEEP_CONTEXT_ENABLED = process.env.DEEP_CONTEXT !== "0";
 
@@ -11069,6 +11185,7 @@ function sendGoal05Latest(req, res) {
 
 app.get("/goal05/latest", sendGoal05Latest);
 app.get("/api/goal05/latest", sendGoal05Latest);
+app.get("/api/goal05/stats", (req,res)=>res.set("Cache-Control","no-store").json(goal05StatsPayload()));
 app.get("/beta-plus05/status", (req, res) => {
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
   res.json({ ok:true, enabled:FOUNDER_BETA_ENABLED, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:0 });
@@ -11988,7 +12105,7 @@ async function publishStrictGoal05Signals(matches) {
       team,opponent:criteria.opponent,competition:match.competition||"",minute:Number(match.minute||0),
       score_home:Number(match.score_home||0),score_away:Number(match.score_away||0),
       odd:Number(criteria.liveOdd||0),bet:team+" +0,5 but",
-      reason:"Top 5 vs Bottom 5 · cote réelle fraîche · contrôles live/historiques valides · "+Number(criteria.aiVotes||0)+"/5 IA",
+      reason:"Top 5 vs Bottom 5 · historique 4 saisons · forme 5 matchs · pression live · note "+String(criteria.rating??"?")+"/10 · "+Number(criteria.aiVotes||0)+"/5 IA",
       checks:criteria
     };
 
@@ -11999,6 +12116,19 @@ async function publishStrictGoal05Signals(matches) {
         signal.score_home,signal.score_away,signal.odd,Number(criteria.aiVotes||0),
         JSON.stringify(criteria),signal.sentAt,expiresAt
       );
+    db.prepare(`INSERT OR IGNORE INTO goal05_signal_evidence(signal_key,evidence_json,created_at)
+      VALUES (?,?,?)`).run(signalKey,JSON.stringify({
+        policyVersion:criteria.policyVersion,fixtureId,competition:match.competition||"",
+        home:match.home,away:match.away,targetTeam:team,minute:signal.minute,
+        scoreHome:signal.score_home,scoreAway:signal.score_away,
+        targetRank:criteria.targetRank,opponentRank:criteria.opponentRank,rankGap:criteria.rankGap,
+        history:criteria.history,targetRecent:criteria.targetRecent,opponentRecent:criteria.opponentRecent,
+        historicalStrengthScore:criteria.historicalStrengthScore,topHistoricalSeasons:criteria.topHistoricalSeasons,
+        shotsOnTarget:criteria.shotsOnTarget,totalShots:criteria.totalShots,possession:criteria.possession,liveXg:criteria.liveXg,
+        rating:criteria.rating,color:criteria.color,qualityScore:criteria.qualityScore,coveragePct:criteria.coveragePct,
+        aiVotes:criteria.aiVotes,aiConfidence:criteria.aiConfidence,aiVoteDetails:criteria.aiVoteDetails,
+        odd:signal.odd,oddFetchedAt:criteria.oddFetchedAt
+      }),signal.sentAt);
 
     fs.mkdirSync(require("path").dirname(GOAL05_LATEST_SIGNAL_FILE),{recursive:true});
     fs.writeFileSync(GOAL05_LATEST_SIGNAL_FILE,JSON.stringify(signal,null,2));
@@ -12007,7 +12137,10 @@ async function publishStrictGoal05Signals(matches) {
       matchKey:signalKey,home:match.home,away:match.away,competition:match.competition||"",
       minute:signal.minute,scoreHome:signal.score_home,scoreAway:signal.score_away,
       targetTeam:team,market:signal.bet,votes:Number(criteria.aiVotes||0),
-      confidence:Number(criteria.aiConfidence||0),odd:signal.odd,reason:signal.reason
+      confidence:Number(criteria.aiConfidence||0),odd:signal.odd,reason:signal.reason,
+      rating:criteria.rating,color:criteria.color,historicalTop:criteria.topHistoricalSeasons,
+      historicalSeasons:criteria.historySeasonsAvailable,historyScore:criteria.historicalStrengthScore,
+      qualityScore:criteria.qualityScore
     };
     for(const dest of clientTelegramPublisher.targets) {
       clientTelegramPublisher.enqueue("goal05",telegramData,dest,signalKey,Date.parse(expiresAt));
@@ -12050,6 +12183,111 @@ async function publishStrictGoal05Signals(matches) {
 }
 
 
+async function resolveGoal05SignalResults() {
+  if(!API_SPORTS_KEY||!apiSportsBudgetOk()) return;
+  const rows=db.prepare(`
+    SELECT g.* FROM goal05_signal_registry g
+    LEFT JOIN goal05_signal_results r ON r.signal_key=g.signal_key
+    WHERE r.signal_key IS NULL AND datetime(g.created_at)>=datetime('now','-7 days')
+    ORDER BY datetime(g.created_at) ASC LIMIT 12
+  `).all();
+  for(const row of rows) {
+    try {
+      if(!apiSportsBudgetOk()) break;
+      const raw=await httpGet(
+        "https://v3.football.api-sports.io/fixtures?id="+encodeURIComponent(row.fixture_id),
+        {"x-apisports-key":API_SPORTS_KEY}
+      );
+      const fixture=(raw?.response||[]).find(f=>String(f?.fixture?.id||"")===String(row.fixture_id));
+      const short=String(fixture?.fixture?.status?.short||"").toUpperCase();
+      if(!["FT","AET","PEN"].includes(short)) continue;
+      const homeGoals=goal05Number(fixture?.goals?.home),awayGoals=goal05Number(fixture?.goals?.away);
+      if(homeGoals===null||awayGoals===null) continue;
+      const targetIsHome=String(row.team||"").trim().toLowerCase()===String(row.home||"").trim().toLowerCase();
+      const targetGoals=targetIsHome?homeGoals:awayGoals;
+      const outcome=targetGoals>=1?"win":"loss";
+      const resolvedAt=new Date().toISOString();
+      const inserted=db.prepare(`INSERT OR IGNORE INTO goal05_signal_results
+        (signal_key,outcome,final_score_home,final_score_away,result_source,resolved_at)
+        VALUES (?,?,?,?,?,?)`).run(row.signal_key,outcome,homeGoals,awayGoals,"api-sports",resolvedAt);
+      if(!inserted.changes) continue;
+      if(Number(row.telegram_delivered)===1) {
+        let criteria={};try{criteria=JSON.parse(row.criteria_json||'{}');}catch(_){criteria={};}
+        const payload={
+          matchKey:row.signal_key,home:row.home,away:row.away,scoreHome:homeGoals,scoreAway:awayGoals,outcome,
+          market:row.team+" +0,5 but",odd:row.odd,signalMinute:row.minute,
+          signalScoreHome:row.score_home,signalScoreAway:row.score_away,votes:row.votes,
+          confidence:criteria.aiConfidence??null
+        };
+        for(const dest of clientTelegramPublisher.targets) {
+          clientTelegramPublisher.enqueue("result",payload,dest,"goal05:"+row.signal_key);
+        }
+        clientTelegramPublisher.flush().catch(error=>console.error("[goal05-result-telegram]",error.message));
+      }
+      console.log("[goal05-result]",row.signal_key,outcome,homeGoals+"-"+awayGoals);
+    } catch(error) {
+      console.error("[goal05-result]",row.signal_key,error.message);
+    }
+  }
+}
+setTimeout(()=>resolveGoal05SignalResults().catch(()=>{}),90*1000);
+setInterval(()=>resolveGoal05SignalResults().catch(()=>{}),5*60*1000);
+
+function goal05Aggregate(rows,{scanner=false}={}) {
+  const resolved=rows.filter(r=>r.outcome==="win"||r.outcome==="loss");
+  const wins=resolved.filter(r=>r.outcome==="win").length;
+  const losses=resolved.filter(r=>r.outcome==="loss").length;
+  const pending=rows.length-resolved.length;
+  const priced=resolved.filter(r=>Number(scanner?r.odd_at_pick:r.odd)>1);
+  let profit=0;
+  for(const r of priced) {
+    const odd=Number(scanner?r.odd_at_pick:r.odd);
+    profit+=r.outcome==="win"?10*(odd-1):-10;
+  }
+  return {
+    total:rows.length,resolved:resolved.length,wins,losses,pending,
+    winrate:resolved.length?Math.round(1000*wins/resolved.length)/10:null,
+    priced:priced.length,
+    averageOdd:priced.length?Math.round(100*priced.reduce((s,r)=>s+Number(scanner?r.odd_at_pick:r.odd),0)/priced.length)/100:null,
+    profit10:priced.length?Math.round(profit*100)/100:null,
+    roi:priced.length?Math.round(1000*profit/(priced.length*10))/10:null
+  };
+}
+
+function goal05StatsPayload() {
+  const official=db.prepare(`
+    SELECT g.signal_key,g.team,g.home,g.away,g.minute,g.odd,g.votes,g.criteria_json,g.created_at,
+           r.outcome,r.final_score_home,r.final_score_away,r.resolved_at
+    FROM goal05_signal_registry g
+    LEFT JOIN goal05_signal_results r ON r.signal_key=g.signal_key
+    ORDER BY datetime(g.created_at) DESC
+  `).all();
+  const scanner=db.prepare("SELECT * FROM goal05_scanner_history ORDER BY datetime(predicted_at) DESC").all();
+  const colors={green:{total:0,wins:0,losses:0,pending:0},orange:{total:0,wins:0,losses:0,pending:0},red:{total:0,wins:0,losses:0,pending:0},gray:{total:0,wins:0,losses:0,pending:0}};
+  for(const row of scanner) {
+    const color=["green","orange","red"].includes(String(row.color))?String(row.color):"gray";
+    colors[color].total++;
+    if(row.outcome==="win") colors[color].wins++;
+    else if(row.outcome==="loss") colors[color].losses++;
+    else colors[color].pending++;
+  }
+  for(const value of Object.values(colors)) {
+    const resolved=value.wins+value.losses;
+    value.winrate=resolved?Math.round(1000*value.wins/resolved)/10:null;
+  }
+  return {
+    ok:true,policyVersion:"goal05_v2_20261006",
+    official:goal05Aggregate(official),
+    scanner:goal05Aggregate(scanner,{scanner:true}),
+    scannerByColor:colors,
+    officialRecent:official.slice(0,30).map(row=>{
+      let criteria={};try{criteria=JSON.parse(row.criteria_json||'{}');}catch(_){criteria={};}
+      return {...row,rating:criteria.rating??null,color:criteria.color??null,
+        historicalStrengthScore:criteria.historicalStrengthScore??null,topHistoricalSeasons:criteria.topHistoricalSeasons??null};
+    }),
+    scannerRecent:scanner.slice(0,30)
+  };
+}
 // Auto-create codes table if it doesn't exist
 try {
   const _cdb = new Database(CODES_DB_PATH);

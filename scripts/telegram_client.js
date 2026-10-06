@@ -45,8 +45,9 @@ function render(kind,data,dest) {
       match(),
       `🏆 ${esc(data.competition)}`,
       `⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,
-      `🧠 ${ru?'Голосование ИИ':'Vote IA'} : ${esc(data.votes)}/5`
-    ];
+      `🧠 ${ru?'Голосование ИИ':'Vote IA'} : ${esc(data.votes)}/5`,
+      data.rating ? `📊 ${ru?'Оценка V2':'Note V2'} : ${esc(data.rating)}/10 ${data.color==='green'?'🟢':data.color==='orange'?'🟠':data.color==='red'?'🔴':'⚪'}` : null
+    ].filter(Boolean);
     if (free) {
       lines.push(ru
         ? '🔒 Команда, коэффициент и точный прогноз доступны участникам Premium.'
@@ -54,8 +55,11 @@ function render(kind,data,dest) {
     } else {
       lines.push(
         `🎯 ${ru?'Команда должна забить минимум 1 гол':'Équipe ciblée — marque au moins 1 but'} : <b>${target}</b>`,
-        `💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`
+        `💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`,
+        data.historicalSeasons ? `📚 ${ru?'История':'Historique'} : Top ${esc(data.historicalTop||0)}/${esc(data.historicalSeasons)} ${ru?'сезонов':'saisons'}` : null,
+        data.historyScore ? `📈 ${ru?'Историческая сила':'Force historique'} : ${esc(data.historyScore)}/100` : null
       );
+      lines=lines.filter(Boolean);
       if (data.reason) lines.push(ru
         ? `Условия подтверждены: Top 5 против Bottom 5, реальные live-данные и ${esc(data.votes)}/5 голосов ИИ.`
         : esc(data.reason));

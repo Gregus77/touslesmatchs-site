@@ -25,8 +25,8 @@ for(const marker of [
   'groupIndex,groupTotal,groupName',
   'if(Number(homeRank.groupIndex)!==Number(awayRank.groupIndex))',
   'const bottomThreshold=Math.max(1,groupTotal-4);',
-  'homeRank.rank<=5&&awayRank.rank>=bottomThreshold',
-  'awayRank.rank<=5&&homeRank.rank>=bottomThreshold',
+  'Number(homeRank.rank)<=5&&Number(awayRank.rank)>=bottomThreshold',
+  'Number(awayRank.rank)<=5&&Number(homeRank.rank)>=bottomThreshold',
   'if(targetScore>0) return rejected("equipe_cible_a_deja_marque"',
 ]) assert(api.includes(marker), 'missing API marker: '+marker);
 

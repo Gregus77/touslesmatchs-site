@@ -1,0 +1,156 @@
+name: Deploy Goal05 V2 20261006
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "CURRENT_RULES.md"
+      - "Dockerfile.api"
+      - "scripts/api_server.js"
+      - "scripts/goal05_v2.js"
+      - "scripts/telegram_client.js"
+      - "scripts/tlm_guardian.py"
+      - "scripts/test_goal05_v2_20261006.js"
+      - "scripts/test_goal05_v2_integration_20261006.js"
+      - "public/performances.html"
+      - ".github/workflows/deploy-goal05-v2-20261006.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Deploy Goal05 V2 to production
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 12m
+          script_stop: false
+          script: |
+            set -euo pipefail
+            ROOT=/opt/touslesmatchs
+            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            BACKUP="/opt/backups/goal05-v2-$STAMP"
+            mkdir -p "$BACKUP"
+            chmod 700 "$BACKUP"
+            cd "$ROOT"
+
+            git fetch origin main
+            git status --porcelain --untracked-files=no > "$BACKUP/tracked-status.txt"
+            git diff > "$BACKUP/tracked-working.patch"
+            git diff --cached > "$BACKUP/tracked-staged.patch"
+            cp .env "$BACKUP/.env"
+            cp data/tlm.db "$BACKUP/tlm.db"
+            chmod 600 "$BACKUP/.env" "$BACKUP/tlm.db"
+
+            if test -s "$BACKUP/tracked-status.txt"; then
+              git stash push -m "codex-preserved-before-goal05-v2-$STAMP"
+              echo TRACKED_CHANGES_PRESERVED
+            fi
+            if test "$(git branch --show-current)" != "main"; then git switch main; fi
+            git branch --set-upstream-to=origin/main main
+            git pull --ff-only origin main
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+            set_env() {
+              key="$1"; value="$2"
+              if grep -q "^$key=" .env; then sed -i "s/^$key=.*/$key=$value/" .env
+              else printf '\n%s=%s\n' "$key" "$value" >> .env
+              fi
+            }
+            set_env GOAL05_ENABLED 1
+            set_env GOAL05_PUSH_ENABLED 1
+            set_env GOAL05_PUSH_INTERVAL_MIN 5
+            set_env GOAL05_MAX_DEEP_CANDIDATES 3
+
+            node --check scripts/goal05_v2.js
+            node --check scripts/api_server.js
+            node --check scripts/telegram_client.js
+            node scripts/test_goal05_v2_20261006.js
+            node scripts/test_goal05_v2_integration_20261006.js
+            node scripts/test_goal05_policy_20261005.js
+            node scripts/test_current_product_goal05_20261005.js
+            node scripts/test_ou25_product_guard_20260926.js
+            echo GOAL05_V2_SOURCE_TESTS_OK
+
+            grep -q 'COPY scripts/goal05_v2.js ./goal05_v2.js' Dockerfile.api
+            grep -q 'goal05_v2_20261006' scripts/api_server.js
+            grep -q 'goal05_signal_evidence' scripts/api_server.js
+            grep -q 'goal05_signal_results' scripts/api_server.js
+            grep -q 'goal05_scanner_history' scripts/api_server.js
+            grep -q '/api/goal05/stats' scripts/api_server.js
+            grep -q 'Stratégie +0,5 V2 · statistiques séparées' public/performances.html
+
+            BEFORE="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api 2>/dev/null || true)"
+            docker compose up -d --build --force-recreate api
+            sleep 15
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
+            AFTER="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api)"
+            test -n "$AFTER"
+            test "$AFTER" != "$BEFORE"
+            echo API_RESTARTED="$AFTER"
+
+            docker exec touslesmatchs-api node --check /app/server.js
+            docker exec touslesmatchs-api node --check /app/goal05_v2.js
+            docker exec touslesmatchs-api node --check /app/telegram_client.js
+            docker exec touslesmatchs-api grep -q 'goal05_v2_20261006' /app/server.js
+            test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_ENABLED"')" = "1"
+            test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_PUSH_ENABLED"')" = "1"
+
+            docker exec touslesmatchs-api node - <<'NODE'
+            const Database=require('better-sqlite3');
+            const db=new Database('/data/tlm.db',{readonly:true});
+            for(const table of ['goal05_signal_registry','goal05_signal_evidence','goal05_signal_results','goal05_scanner_history']){
+              if(!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(table)) throw new Error('missing '+table);
+            }
+            const v=db.prepare("SELECT outcome,final_score_home h,final_score_away a,color,odd_at_pick FROM goal05_scanner_history WHERE id='owner_scanner_20261005_velez_platense'").get();
+            if(!v||v.outcome!=='win'||v.h!==2||v.a!==2||v.color!=='green'||v.odd_at_pick!==null) throw new Error('Velez scanner proof invalid');
+            console.log('GOAL05_V2_DB_OK');
+            NODE
+
+            curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" > /tmp/g05-health.json
+            node -e 'const x=require("/tmp/g05-health.json");if(!x.ok)process.exit(1);console.log("PUBLIC_HEALTH_OK")'
+            curl -fsSL "https://www.touslesmatchs.com/api/goal05/stats?t=$STAMP" > /tmp/g05-stats.json
+            node - <<'NODE'
+            const x=require('/tmp/g05-stats.json');
+            if(!x.ok||x.policyVersion!=='goal05_v2_20261006') process.exit(1);
+            if(!x.scanner||x.scanner.wins<1) process.exit(1);
+            if(!x.scannerRecent.some(r=>r.id==='owner_scanner_20261005_velez_platense'&&r.outcome==='win')) process.exit(1);
+            console.log('PUBLIC_GOAL05_V2_STATS_OK');
+            NODE
+            curl -fsSL "https://www.touslesmatchs.com/performances.html?t=$STAMP" | grep -q 'Stratégie +0,5 V2 · statistiques séparées'
+            echo PUBLIC_PERFORMANCE_V2_OK
+
+            docker exec touslesmatchs-api sh -lc 'test -n "$TELEGRAM_BOT_TOKEN"'
+            docker exec touslesmatchs-api sh -lc 'test -n "$TELEGRAM_GOAL05_CHANNEL_ID" || test -n "$TELEGRAM_PREMIUM_CHANNEL_ID"'
+            echo TELEGRAM_GOAL05_CONFIG_OK
+
+            OBSERVER_OK=0
+            for attempt in $(seq 1 12); do
+              docker logs touslesmatchs-api --since "$AFTER" 2>&1 > "$BACKUP/api-startup.log"
+              if grep -q '\[goal05\] Observateur actif:' "$BACKUP/api-startup.log" && grep -q 'push=true' "$BACKUP/api-startup.log"; then
+                OBSERVER_OK=1
+                break
+              fi
+              sleep 5
+            done
+            test "$OBSERVER_OK" = "1"
+            if grep -Eqi 'Cannot find module.*goal05_v2|SyntaxError|SQLITE_ERROR.*goal05' "$BACKUP/api-startup.log"; then
+              cat "$BACKUP/api-startup.log"
+              exit 1
+            fi
+            echo GOAL05_V2_OBSERVER_ACTIVE
+
+            test -z "$(git status --porcelain --untracked-files=no)"
+            echo GOAL05_V2_PRODUCTION_DEPLOYED

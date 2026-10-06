@@ -404,13 +404,13 @@ rend l'argument multi-sport honnête. Prévoir aussi des marchés adaptés : « 
 Lire `docs/HISTORY_REQUIREMENT.md` avant toute modification des données utilisées par les pronostics. Ne jamais déclarer cinq saisons couvertes sans vérifier `/api/historical-coverage`.
 
 
-## GARDE-FOU PRODUIT PERMANENT — décision propriétaire du 05/10/2026
+## GARDE-FOU PRODUIT PERMANENT — décision propriétaire du 06/10/2026
 
-La stratégie client actuelle est **+0,5 but de l’équipe favorite**, telle que définie dans `CURRENT_RULES.md` : Top 5 vs Bottom 5, fenêtre live 30–85, équipe ciblée encore à 0 but, cote réelle fraîche >= 1,60 et consensus minimum 4 IA sur 5.
+La stratégie client actuelle est **+0,5 but de l’équipe favorite** — V2, telle que définie dans `CURRENT_RULES.md` : Top 5 vs Bottom 5, saison actuelle + 3 précédentes pondérées 40/25/20/15, forme des 5 derniers matchs, faiblesse défensive adverse, confirmation live 30–85, équipe ciblée encore à 0 but, note verte >= 8,0/10 avec >=75 % de couverture factuelle, cote réelle fraîche >= 1,60 et consensus minimum 4 IA sur 5.
 
 - **O/U 2,5 est un ancien système.** Ses analyses, résultats, votes et preuves historiques doivent être conservés intégralement et rester consultables dans l’historique, mais ils ne doivent plus être présentés comme la stratégie actuelle.
 - Aucun déploiement, branche ou ancien test ne doit réactiver O/U 2,5 comme produit courant ni masquer/supprimer son historique.
 - Les nouvelles surfaces actives (Accueil, Live IA, application, Telegram et textes commerciaux) doivent présenter +0,5 but comme produit actuel.
 - Les lignes historiques doivent distinguer clairement `Ancien système — O/U 2,5` et `Stratégie actuelle — +0,5 but` lorsqu’elles coexistent.
 - Aucune donnée statistique ni aucun vote ne doit être inventé. Une couverture fournisseur absente est un blocage de collecte, jamais un accord IA.
-- Exécuter `scripts/test_goal05_policy_20261005.js` et `scripts/test_current_product_goal05_20261005.js` avant toute livraison affectant le produit ou les surfaces publiques.
+- Exécuter `scripts/test_goal05_v2_20261006.js`, `scripts/test_goal05_v2_integration_20261006.js`, `scripts/test_goal05_policy_20261005.js` et `scripts/test_current_product_goal05_20261005.js` avant toute livraison affectant le produit ou les surfaces publiques.
