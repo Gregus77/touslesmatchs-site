@@ -11,7 +11,7 @@ assert.equal(shadow.observe(db,{...base,minute:14}).action,"ignored");
 assert.equal(shadow.observe(db,{...base,minute:25}).action,"candidate");
 assert.equal(shadow.observe(db,{...base,minute:41,odd:1.30,oddSource:"Betclic"}).action,"waiting_odds");
 assert.equal(shadow.observe(db,{...base,minute:44,odd:1.52,oddSource:"Betclic"}).action,"qualified");
-assert.equal(shadow.resolve(db,{home:"Lyon",away:"Auxerre",scoreHome:3,scoreAway:1,resolutionDay:"2026-09-12"}),1);
+assert.equal(shadow.resolve(db,{home:"Lyon",away:"Auxerre",scoreHome:3,scoreAway:1}),1);
 const report = shadow.report(db);
 assert.equal(report.telegram_delivery,false);
 assert.equal(report.totals.wins,1);
