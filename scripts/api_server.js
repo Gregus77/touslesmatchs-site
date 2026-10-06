@@ -3189,37 +3189,52 @@ function goal05TeamOdd(oddsData, side, teamName) {
   return Math.round(odds[Math.floor(odds.length/2)]*100)/100;
 }
 
-async function goal05History(match,targetId,opponentId) {
-  const season=Number(match.season);
-  if (!season) return {verified:false,seasons:0};
-
-  const tables=await Promise.all(
-    [1,2,3,4].map(offset=>fetchStandings(match.leagueId,season-offset))
-  );
-
-  const pairs=[];
-  for (const table of tables) {
-    const target=table?.rows?.find(r=>Number(r.teamId)===Number(targetId));
-    const opponent=table?.rows?.find(r=>Number(r.teamId)===Number(opponentId));
-    if (target && opponent) pairs.push({
-      targetRank:Number(target.rank),
-      opponentRank:Number(opponent.rank)
-    });
+async function fetchGoal05RecentProfile(match,teamId) {
+  if(!API_SPORTS_KEY||!match?.leagueId||!match?.season||!teamId) return null;
+  const key=`goal05_recent_${match.leagueId}_${match.season}_${teamId}`;
+  const cached=goal05RecentCache.get(key);
+  if(cached&&Date.now()-cached.ts<30*60*1000) return cached.data;
+  if(!apiSportsBudgetOk()) return null;
+  try {
+    const raw=await httpGet(
+      `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=${match.leagueId}&season=${match.season}&last=5&status=FT`,
+      {"x-apisports-key":API_SPORTS_KEY}
+    );
+    const fixtures=Array.isArray(raw?.response)?raw.response:[];
+    const data=goal05V2.recentGoalProfile(fixtures,teamId);
+    goal05RecentCache.set(key,{data,ts:Date.now()});
+    return data;
+  } catch(error) {
+    console.error("[goal05-recent]",error.message);
+    goal05RecentCache.set(key,{data:null,ts:Date.now()});
+    return null;
   }
-
-  if (pairs.length<3) return {verified:false,seasons:pairs.length};
-
-  const targetAverage=pairs.reduce((n,r)=>n+r.targetRank,0)/pairs.length;
-  const opponentAverage=pairs.reduce((n,r)=>n+r.opponentRank,0)/pairs.length;
-
-  return {
-    verified:targetAverage+3<=opponentAverage,
-    seasons:pairs.length,
-    targetAverage:Math.round(targetAverage*10)/10,
-    opponentAverage:Math.round(opponentAverage*10)/10
-  };
 }
 
+async function goal05History(match,targetId,opponentId) {
+  const season=Number(match.season);
+  if(!season) return goal05V2.buildHistoryProfile([]);
+  const definitions=[
+    {offset:0,season,weight:0.40},
+    {offset:1,season:season-1,weight:0.25},
+    {offset:2,season:season-2,weight:0.20},
+    {offset:3,season:season-3,weight:0.15}
+  ];
+  const tables=await Promise.all(definitions.map(item=>fetchStandings(match.leagueId,item.season)));
+  const records=[];
+  for(let i=0;i<definitions.length;i++) {
+    const def=definitions[i],table=tables[i];
+    const target=table?.rows?.find(r=>Number(r.teamId)===Number(targetId));
+    const opponent=table?.rows?.find(r=>Number(r.teamId)===Number(opponentId));
+    if(!target||!opponent) continue;
+    if(Number(target.groupIndex)!==Number(opponent.groupIndex)) continue;
+    const groupTotal=Number(target.groupTotal||opponent.groupTotal||table?.total||0);
+    if(!Number.isFinite(groupTotal)||groupTotal<10) continue;
+    records.push({offset:def.offset,season:def.season,weight:def.weight,
+      targetRank:Number(target.rank),opponentRank:Number(opponent.rank),groupTotal});
+  }
+  return goal05V2.buildHistoryProfile(records);
+}
 function goal05PositiveTeamBet(bet) {
   const value=String(bet||"").toLowerCase();
   return value.includes("marque") && !value.includes("ne marque pas");
@@ -5838,6 +5853,7 @@ app.get('/historical-coverage', (_,res)=>res.set('Cache-Control','no-store').jso
 const teamStatsCache = new Map();
 const standingsCache = new Map();
 const injuriesCache = new Map();
+const goal05RecentCache = new Map();
 
 const DEEP_CONTEXT_ENABLED = process.env.DEEP_CONTEXT !== "0";
 
