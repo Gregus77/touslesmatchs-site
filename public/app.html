@@ -10,6 +10,7 @@
     var requested=new URLSearchParams(window.location.search).get("lang");
     if(["fr","en","es","pt","ru","zh"].indexOf(requested)!==-1){
       document.documentElement.lang=requested;
+      try{localStorage.setItem("tlm_lang",requested);}catch(e){}
     }
   }catch(e){}
 })();
@@ -820,7 +821,11 @@ body{overflow-x:hidden}
     Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (b) {
       b.classList.toggle("on", b.getAttribute("data-tab") === tab);
     });
-    try { history.replaceState(null, "", "?tab=" + tab); } catch (e) {}
+    try {
+      var params = new URLSearchParams(location.search);
+      params.set("tab", tab);
+      history.replaceState(null, "", "?" + params.toString());
+    } catch (e) {}
     if (!loaded[tab]) { loaded[tab] = true; load(tab); }
   }
   Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (b) {
