@@ -11185,6 +11185,7 @@ function sendGoal05Latest(req, res) {
 
 app.get("/goal05/latest", sendGoal05Latest);
 app.get("/api/goal05/latest", sendGoal05Latest);
+app.get("/api/goal05/stats", (req,res)=>res.set("Cache-Control","no-store").json(goal05StatsPayload()));
 app.get("/beta-plus05/status", (req, res) => {
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
   res.json({ ok:true, enabled:FOUNDER_BETA_ENABLED, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:0 });
@@ -12182,6 +12183,111 @@ async function publishStrictGoal05Signals(matches) {
 }
 
 
+async function resolveGoal05SignalResults() {
+  if(!API_SPORTS_KEY||!apiSportsBudgetOk()) return;
+  const rows=db.prepare(`
+    SELECT g.* FROM goal05_signal_registry g
+    LEFT JOIN goal05_signal_results r ON r.signal_key=g.signal_key
+    WHERE r.signal_key IS NULL AND datetime(g.created_at)>=datetime('now','-7 days')
+    ORDER BY datetime(g.created_at) ASC LIMIT 12
+  `).all();
+  for(const row of rows) {
+    try {
+      if(!apiSportsBudgetOk()) break;
+      const raw=await httpGet(
+        "https://v3.football.api-sports.io/fixtures?id="+encodeURIComponent(row.fixture_id),
+        {"x-apisports-key":API_SPORTS_KEY}
+      );
+      const fixture=(raw?.response||[]).find(f=>String(f?.fixture?.id||"")===String(row.fixture_id));
+      const short=String(fixture?.fixture?.status?.short||"").toUpperCase();
+      if(!["FT","AET","PEN"].includes(short)) continue;
+      const homeGoals=goal05Number(fixture?.goals?.home),awayGoals=goal05Number(fixture?.goals?.away);
+      if(homeGoals===null||awayGoals===null) continue;
+      const targetIsHome=String(row.team||"").trim().toLowerCase()===String(row.home||"").trim().toLowerCase();
+      const targetGoals=targetIsHome?homeGoals:awayGoals;
+      const outcome=targetGoals>=1?"win":"loss";
+      const resolvedAt=new Date().toISOString();
+      const inserted=db.prepare(`INSERT OR IGNORE INTO goal05_signal_results
+        (signal_key,outcome,final_score_home,final_score_away,result_source,resolved_at)
+        VALUES (?,?,?,?,?,?)`).run(row.signal_key,outcome,homeGoals,awayGoals,"api-sports",resolvedAt);
+      if(!inserted.changes) continue;
+      if(Number(row.telegram_delivered)===1) {
+        let criteria={};try{criteria=JSON.parse(row.criteria_json||'{}');}catch(_){criteria={};}
+        const payload={
+          matchKey:row.signal_key,home:row.home,away:row.away,scoreHome:homeGoals,scoreAway:awayGoals,outcome,
+          market:row.team+" +0,5 but",odd:row.odd,signalMinute:row.minute,
+          signalScoreHome:row.score_home,signalScoreAway:row.score_away,votes:row.votes,
+          confidence:criteria.aiConfidence??null
+        };
+        for(const dest of clientTelegramPublisher.targets) {
+          clientTelegramPublisher.enqueue("result",payload,dest,"goal05:"+row.signal_key);
+        }
+        clientTelegramPublisher.flush().catch(error=>console.error("[goal05-result-telegram]",error.message));
+      }
+      console.log("[goal05-result]",row.signal_key,outcome,homeGoals+"-"+awayGoals);
+    } catch(error) {
+      console.error("[goal05-result]",row.signal_key,error.message);
+    }
+  }
+}
+setTimeout(()=>resolveGoal05SignalResults().catch(()=>{}),90*1000);
+setInterval(()=>resolveGoal05SignalResults().catch(()=>{}),5*60*1000);
+
+function goal05Aggregate(rows,{scanner=false}={}) {
+  const resolved=rows.filter(r=>r.outcome==="win"||r.outcome==="loss");
+  const wins=resolved.filter(r=>r.outcome==="win").length;
+  const losses=resolved.filter(r=>r.outcome==="loss").length;
+  const pending=rows.length-resolved.length;
+  const priced=resolved.filter(r=>Number(scanner?r.odd_at_pick:r.odd)>1);
+  let profit=0;
+  for(const r of priced) {
+    const odd=Number(scanner?r.odd_at_pick:r.odd);
+    profit+=r.outcome==="win"?10*(odd-1):-10;
+  }
+  return {
+    total:rows.length,resolved:resolved.length,wins,losses,pending,
+    winrate:resolved.length?Math.round(1000*wins/resolved.length)/10:null,
+    priced:priced.length,
+    averageOdd:priced.length?Math.round(100*priced.reduce((s,r)=>s+Number(scanner?r.odd_at_pick:r.odd),0)/priced.length)/100:null,
+    profit10:priced.length?Math.round(profit*100)/100:null,
+    roi:priced.length?Math.round(1000*profit/(priced.length*10))/10:null
+  };
+}
+
+function goal05StatsPayload() {
+  const official=db.prepare(`
+    SELECT g.signal_key,g.team,g.home,g.away,g.minute,g.odd,g.votes,g.criteria_json,g.created_at,
+           r.outcome,r.final_score_home,r.final_score_away,r.resolved_at
+    FROM goal05_signal_registry g
+    LEFT JOIN goal05_signal_results r ON r.signal_key=g.signal_key
+    ORDER BY datetime(g.created_at) DESC
+  `).all();
+  const scanner=db.prepare("SELECT * FROM goal05_scanner_history ORDER BY datetime(predicted_at) DESC").all();
+  const colors={green:{total:0,wins:0,losses:0,pending:0},orange:{total:0,wins:0,losses:0,pending:0},red:{total:0,wins:0,losses:0,pending:0},gray:{total:0,wins:0,losses:0,pending:0}};
+  for(const row of scanner) {
+    const color=["green","orange","red"].includes(String(row.color))?String(row.color):"gray";
+    colors[color].total++;
+    if(row.outcome==="win") colors[color].wins++;
+    else if(row.outcome==="loss") colors[color].losses++;
+    else colors[color].pending++;
+  }
+  for(const value of Object.values(colors)) {
+    const resolved=value.wins+value.losses;
+    value.winrate=resolved?Math.round(1000*value.wins/resolved)/10:null;
+  }
+  return {
+    ok:true,policyVersion:"goal05_v2_20261006",
+    official:goal05Aggregate(official),
+    scanner:goal05Aggregate(scanner,{scanner:true}),
+    scannerByColor:colors,
+    officialRecent:official.slice(0,30).map(row=>{
+      let criteria={};try{criteria=JSON.parse(row.criteria_json||'{}');}catch(_){criteria={};}
+      return {...row,rating:criteria.rating??null,color:criteria.color??null,
+        historicalStrengthScore:criteria.historicalStrengthScore??null,topHistoricalSeasons:criteria.topHistoricalSeasons??null};
+    }),
+    scannerRecent:scanner.slice(0,30)
+  };
+}
 // Auto-create codes table if it doesn't exist
 try {
   const _cdb = new Database(CODES_DB_PATH);
