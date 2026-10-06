@@ -57,6 +57,10 @@ SECRET_PATTERNS = (
 )
 
 
+def technical_telegram_enabled() -> bool:
+    return str(os.environ.get("HERMES_TECH_TELEGRAM_ENABLED", "")).strip().lower() in {"1","true","yes","on","enabled"}
+
+
 def now_utc() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
@@ -591,11 +595,13 @@ def main() -> int:
     report_sent = False
     report_detail = "non requis (état inchangé)"
     actionable_issues = any(item["severity"] in ("P0", "P1") for item in issues)
-    if should_report(state, fingerprint, actionable_issues, args.report_always):
+    if technical_telegram_enabled() and should_report(state, fingerprint, actionable_issues, args.report_always):
         report_sent, report_detail = send_admin_report(report)
         if report_sent:
             state["last_report_at"] = time.time()
             state["last_report_fingerprint"] = fingerprint
+    elif not technical_telegram_enabled():
+        report_detail = "mode technique silencieux"
     print(f"HERMES_REPORT={'SENT' if report_sent else 'NOT_SENT'} — {report_detail}", flush=True)
 
     state.update({
