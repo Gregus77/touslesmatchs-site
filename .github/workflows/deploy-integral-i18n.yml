@@ -99,7 +99,7 @@ jobs:
               grep -Eq "<html lang=\"$lang(-[A-Z]{2})?\"" "$out" || { echo "BAD_HTML_LANG page=$name lang=$lang"; exit 1; }
               if [[ "$page" == "app.html" ]] && [[ "$lang" != "fr" ]]; then
                 visible="$out.visible"
-                sed -E '/<script([[:space:]>]|$)/,/<\\/script>/d; /<style([[:space:]>]|$)/,/<\\/style>/d; /<noscript([[:space:]>]|$)/,/<\\/noscript>/d; /<template([[:space:]>]|$)/,/<\\/template>/d; s/<[^>]+>/\\n/g' "$out" > "$visible"
+                perl -0777 -pe 's{<(script|style|noscript|template)\b[^>]*>.*?</\1\s*>}{}gis; s{<[^>]+>}{\n}g' "$out" > "$visible"
                 app_untranslated='(Votre signal [+]0,5 but équipe favorite|Suivi de la 30e à la 85e minute|Me connecter|Recevoir mon code par email|Nouveau sur TousLesMatchs|Je confirme avoir au moins 18 ans|Les signaux [+]0,5 but équipe favorite|Historique des analyses[.] Les envois Telegram)'
                 if grep -Eiq "$app_untranslated" "$visible"; then
                   echo "UNTRANSLATED_APP_COPY page=app lang=$lang"
