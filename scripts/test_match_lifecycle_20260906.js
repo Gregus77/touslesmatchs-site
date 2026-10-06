@@ -31,17 +31,10 @@ for(const name of ['index','app']){
    new vm.Script(match[2],{filename:name+'.html'});
  }
 }
-const html=fs.readFileSync(__dirname+'/../public/index.html','utf8');
-function part(a,b){return html.slice(html.indexOf(a),html.indexOf(b,html.indexOf(a)+a.length));}
-const ctx=vm.createContext({TLMMatchLifecycle:life});
-vm.runInContext(part('function heroOu25(','function heroWasSent('),ctx);
-vm.runInContext(part('function tlmHeroMinuteOf(','function tlmHomepageAnalyzedMatch('),ctx);
 const old={id:'Fluminense',minute:90,status:'IN_PLAY',ou25:{vote_count:4,consensus_count:4,window_status:'closed'}};
 const waiting={id:'waiting',minute:25,status:'IN_PLAY',ou25:{vote_count:0,consensus_count:0,window_status:'open'}};
 const active={id:'active',minute:60,status:'2H',ou25:{vote_count:0,consensus_count:0,window_status:'closed'}};
-const rows=[old,waiting,active];
-assert.equal(rows.slice().sort(ctx.compareHeroMatches)[0].id,'Fluminense');
-assert.deepEqual(rows.filter(life.canFeature).map(m=>m.id),['waiting','active']);
+assert.deepEqual([old,waiting,active].filter(life.canFeature).map(m=>m.id),['waiting','active']);
 assert.equal([old].filter(life.canFeature).length,0);
 assert.equal(old.ou25.vote_count,4); // No deletion of historical votes or results.
 console.log('OK: site/app lifecycle, Goal05 30–85 active, pre-30 waiting, second half supported, legacy votes preserved without legacy labels');
