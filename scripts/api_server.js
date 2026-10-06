@@ -3283,11 +3283,13 @@ function goal05AiConsensus(match,side) {
 async function buildStrictGoal05Criteria(match) {
   const minute=Number(match.minute||0),homeScore=Number(match.score_home||0),awayScore=Number(match.score_away||0);
   const rejected=(reason,extra={})=>({
-    eligible:false,play:false,reason,historicalVerified:false,formVerified:false,
-    opponentConcedes:false,attackersAvailable:false,liveStatsVerified:false,
-    motivationVerified:false,rankGap:null,liveOdd:null,oddFreshVerified:false,
-    aiConsensusVerified:false,aiVotes:0,...extra
+    eligible:false,play:false,reason,policyVersion:"goal05_v2_20261006",
+    historicalVerified:false,formVerified:false,opponentConcedes:false,
+    attackersAvailable:null,liveStatsVerified:false,motivationVerified:false,
+    qualityVerified:false,qualityScore:null,rating:null,color:"gray",coveragePct:0,
+    rankGap:null,liveOdd:null,oddFreshVerified:false,aiConsensusVerified:false,aiVotes:0,...extra
   });
+
   if(!GOAL05_ENABLED) return rejected("goal05_desactive");
   if(match.sport!=="Football"||match.source!=="api-sports") return rejected("source_non_eligible");
   if(isWomenMatch(match)||isCategoryBanned(match)||isUsaOrCanadaMatch(match)||isLowTrustCompetition(match)||isBlacklistedForLiveDisplay(match))
@@ -3306,80 +3308,112 @@ async function buildStrictGoal05Criteria(match) {
     const groupTotal=Number(homeRank.groupTotal||awayRank.groupTotal||standings?.total||0);
     if(!Number.isFinite(groupTotal)||groupTotal<10) return rejected("taille_classement_non_verifiee");
     const bottomThreshold=Math.max(1,groupTotal-4);
-    const homeEligible=homeRank.rank<=5&&awayRank.rank>=bottomThreshold;
-    const awayEligible=awayRank.rank<=5&&homeRank.rank>=bottomThreshold;
+    const homeEligible=Number(homeRank.rank)<=5&&Number(awayRank.rank)>=bottomThreshold;
+    const awayEligible=Number(awayRank.rank)<=5&&Number(homeRank.rank)>=bottomThreshold;
 
     let side,targetId,opponentId,targetName,opponentName,targetRank,opponentRank,targetScore;
     if(homeEligible) {
       side="home";targetId=match.homeId;opponentId=match.awayId;targetName=match.home;opponentName=match.away;
-      targetRank=homeRank.rank;opponentRank=awayRank.rank;targetScore=homeScore;
+      targetRank=Number(homeRank.rank);opponentRank=Number(awayRank.rank);targetScore=homeScore;
     } else if(awayEligible) {
       side="away";targetId=match.awayId;opponentId=match.homeId;targetName=match.away;opponentName=match.home;
-      targetRank=awayRank.rank;opponentRank=homeRank.rank;targetScore=awayScore;
-    } else return rejected("pas_top5_bottom5",{homeRank:homeRank.rank,awayRank:awayRank.rank,groupTotal});
+      targetRank=Number(awayRank.rank);opponentRank=Number(homeRank.rank);targetScore=awayScore;
+    } else {
+      return rejected("pas_top5_bottom5",{homeRank:Number(homeRank.rank),awayRank:Number(awayRank.rank),groupTotal});
+    }
 
     if(targetScore>0) return rejected("equipe_cible_a_deja_marque",{team:targetName,side,targetRank,opponentRank,groupTotal});
     const rankGap=opponentRank-targetRank;
 
-    const [targetStats,opponentStats,injuries,liveStats,odds,lineups,discipline,history]=await Promise.all([
+    const [targetStats,opponentStats,targetRecent,opponentRecent,injuries,liveStats,odds,lineups,discipline,history]=await Promise.all([
       fetchTeamStatistics(match.leagueId,match.season,targetId),
       fetchTeamStatistics(match.leagueId,match.season,opponentId),
+      fetchGoal05RecentProfile(match,targetId),
+      fetchGoal05RecentProfile(match,opponentId),
       fetchInjuries(match),fetchMatchStats(match.fixtureId),
       fetchRealOdds(match,{maxAgeMs:GOAL05_ODD_MAX_AGE_MS}),
       fetchGoal05Lineups(match),fetchGoal05Discipline(match),goal05History(match,targetId,opponentId)
     ]);
 
-    const targetForm=String(targetStats?.form||"").toUpperCase();
-    const wins=(targetForm.match(/W/g)||[]).length,draws=(targetForm.match(/D/g)||[]).length,formPoints=wins*3+draws;
     const targetInjuries=side==="home"?injuries?.home:injuries?.away;
     const targetLineup=(lineups||[]).find(l=>Number(l?.team?.id)===Number(targetId));
     const forwards=(targetLineup?.startXI||[]).filter(p=>String(p?.player?.pos||"").toUpperCase()==="F");
+    const attackersAvailable=targetLineup?forwards.length>=1:null;
+
     const shotsOnTarget=goal05Metric(liveStats,side,["shots_on_goal","shotsOnGoal"]);
     const totalShots=goal05Metric(liveStats,side,["shots","total_shots","shotsTotal"]);
     const possession=goal05Metric(liveStats,side,["possession","ball_possession"]);
+    const liveXg=goal05Metric(liveStats,side,["xg","expected_goals"]);
     const liveOdd=goal05TeamOdd(odds,side,targetName);
     const oddFetchedAt=odds?.fetchedAt||null;
     const oddAgeMs=oddFetchedAt?Date.now()-Date.parse(oddFetchedAt):Infinity;
     const oddFreshVerified=Number.isFinite(oddAgeMs)&&oddAgeMs>=0&&oddAgeMs<=GOAL05_ODD_MAX_AGE_MS;
 
-    const historicalVerified=history.verified===true;
-    const formVerified=targetForm.length>=4&&wins>=2&&formPoints>=8&&Number(targetStats?.gfAvg||0)>=1;
-    const opponentConcedes=Number(opponentStats?.gaAvg||0)>=1.1;
-    const attackersAvailable=Array.isArray(targetInjuries)&&targetInjuries.length===0&&forwards.length>=1;
+    const recentChecks=goal05V2.strictRecentChecks(targetRecent,opponentRecent);
+    const historicalVerified=history?.verified===true;
+    const formVerified=recentChecks.formVerified===true;
+    const opponentConcedes=recentChecks.opponentConcedes===true;
     const disciplineVerified=discipline?.redCards===0;
-    const liveStatsVerified=shotsOnTarget!==null&&totalShots!==null&&possession!==null&&shotsOnTarget>=3&&totalShots>=8&&possession>=52&&disciplineVerified;
+    const liveStatsVerified=disciplineVerified&&(
+      (shotsOnTarget!==null&&totalShots!==null&&Number(shotsOnTarget)>=2&&Number(totalShots)>=6) ||
+      (liveXg!==null&&Number(liveXg)>=0.65) ||
+      (shotsOnTarget!==null&&Number(shotsOnTarget)>=3)
+    );
     const motivationVerified=targetRank<=5&&opponentRank>=bottomThreshold;
     const aiConsensus=goal05AiConsensus(match,side);
     const aiVotes=aiConsensus.yesVotes,aiConsensusVerified=aiConsensus.verified===true;
 
+    const quality=goal05V2.scoreCandidate({
+      history,targetRecent,opponentRecent,
+      seasonGfAvg:targetStats?.gfAvg??null,
+      shotsOnTarget,totalShots,possession,liveXg,
+      homeAdvantage:side==="home",
+      attackersAvailable,
+      noRedCard:discipline?.redCards==null?null:disciplineVerified,
+      motivationVerified
+    });
+    const qualityVerified=quality.qualityVerified===true;
+
     const checks={
       minuteVerified:minute>=GOAL05_POLICY_FROM_MINUTE&&minute<=GOAL05_POLICY_TO_MINUTE,
-      rankVerified:motivationVerified,historicalVerified,formVerified,opponentConcedes,
-      attackersAvailable,liveStatsVerified,motivationVerified,
+      rankVerified:motivationVerified,
+      historicalVerified,formVerified,opponentConcedes,
+      liveStatsVerified,motivationVerified,qualityVerified,
       oddVerified:liveOdd!==null&&liveOdd>=GOAL05_POLICY_MIN_ODD,
       oddFreshVerified,aiConsensusVerified
     };
+    if(attackersAvailable===false) checks.attackersAvailable=false;
     const missing=Object.entries(checks).filter(([,ok])=>!ok).map(([name])=>name);
     const eligible=missing.length===0;
     return {
       eligible,play:eligible,team:targetName,opponent:opponentName,side,
-      reason:eligible?"tous_les_criteres_stricts_valides":missing.join(","),
+      policyVersion:"goal05_v2_20261006",
+      reason:eligible?"tous_les_criteres_v2_valides":missing.join(","),
       rankGap,targetRank,opponentRank,groupTotal,bottomThreshold,
-      historicalVerified,history,formVerified,targetForm,formPoints,
-      opponentConcedes,opponentGaAvg:opponentStats?.gaAvg??null,
-      attackersAvailable,forwards:forwards.map(p=>p?.player?.name).filter(Boolean),
-      liveStatsVerified,disciplineVerified,shotsOnTarget,totalShots,possession,
+      historicalVerified,history,
+      structuralTop:history?.structuralTop===true,
+      historicalStrengthScore:history?.historicalStrengthScore??null,
+      topHistoricalSeasons:history?.topSixSeasons??0,
+      historySeasonsAvailable:history?.seasonsAvailable??0,
+      formVerified,targetRecent:targetRecent||null,
+      opponentConcedes,opponentRecent:opponentRecent||null,
+      seasonGfAvg:targetStats?.gfAvg??null,seasonGaAvg:opponentStats?.gaAvg??null,
+      attackersAvailable,attackersCoverage:targetLineup?"verified":"unknown",
+      targetInjuriesKnown:Array.isArray(targetInjuries),targetInjuriesCount:Array.isArray(targetInjuries)?targetInjuries.length:null,
+      forwards:forwards.map(p=>p?.player?.name).filter(Boolean),
+      liveStatsVerified,disciplineVerified,shotsOnTarget,totalShots,possession,liveXg,
       motivationVerified,liveOdd,oddFetchedAt,oddAgeMs,oddFreshVerified,
+      qualityVerified,qualityScore:quality.score,rating:quality.rating,color:quality.color,
+      coveragePct:quality.coveragePct,scoreComponents:quality.components,
       aiConsensusVerified,aiVotes,aiActiveVotes:aiConsensus.activeVotes,aiTotalSeats:5,
       aiConfidence:aiConsensus.avgYesConfidence,aiSnapshotKey:aiConsensus.snapshotKey,aiVoteDetails:aiConsensus.votes,
       checkedAt:new Date().toISOString()
     };
   } catch(error) {
-    console.error("[goal05-strict]",match.home,match.away,error.message);
+    console.error("[goal05-strict-v2]",match.home,match.away,error.message);
     return rejected("erreur_verification_stricte");
   }
 }
-
 async function enrichStrictGoal05(matches) {
   if(!GOAL05_ENABLED) return (matches||[]).map(m=>({...m,goal05Criteria:{eligible:false,play:false,reason:"goal05_desactive"}}));
   const candidates=(matches||[]).filter(m=>{
