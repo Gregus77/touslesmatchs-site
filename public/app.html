@@ -178,7 +178,7 @@
   body.tlm-page-app #chatbot{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20260926-football-attempts"></script>
+<script src="/js/match-lifecycle.js?v=20261006-goal05-30-85"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1835,39 +1835,7 @@ function tlmMatchHour(m){
 
 </script>
 
-<script>
-/* TLM_DISPLAY_OU25_ONLY_V1 */
-(function(){
-  function allowedBet(text){
-    var t=String(text||"").toLowerCase();
-    if(!t)return true;
-    return t.indexOf("over 2.5")>=0 ||
-           t.indexOf("over 2,5")>=0 ||
-           t.indexOf("under 2.5")>=0 ||
-           t.indexOf("under 2,5")>=0 ||
-           t.indexOf("sélection réservée")>=0 ||
-           t.indexOf("selection reservee")>=0;
-  }
 
-  function cleanOldMarkets(){
-    document.querySelectorAll(
-      ".match-card,.analysis-card,.prediction-card,.item,.tlm-app-live-row"
-    ).forEach(function(el){
-      var t=el.textContent||"";
-
-      var oldMarket=
-        /victoire domicile|victoire extérieur|victoire exterieur|btts|but en 1[eè]re mi-temps|double chance/i.test(t);
-
-      if(oldMarket && !allowedBet(t)){
-        el.style.display="none";
-      }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded",cleanOldMarkets);
-  setInterval(cleanOldMarkets,3000);
-})();
-</script>
 
 
 
