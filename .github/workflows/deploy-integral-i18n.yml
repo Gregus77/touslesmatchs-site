@@ -40,7 +40,7 @@ jobs:
             test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
             while IFS= read -r file; do
               case "$file" in
-                public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|.github/workflows/deploy-integral-i18n.yml) ;;
+                public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|scripts/test_match_lifecycle_20260906.js|scripts/test_current_product_goal05_20261005.js|.github/workflows/deploy-integral-i18n.yml) ;;
                 *) echo "STOP: unrelated change: $file"; exit 1 ;;
               esac
             done < <(git diff --name-only HEAD "$target")
@@ -63,6 +63,8 @@ jobs:
             node --check public/js/tlm-wow-theme.js
             node --check public/js/match-lifecycle.js
             node scripts/test_i18n_integral_20260906.js
+            node scripts/test_match_lifecycle_20260906.js
+            node scripts/test_current_product_goal05_20261005.js
             for file in i18n.js i18n-auto.js tlm-wow-theme.js match-lifecycle.js; do
               curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/$file?v=$target" -o "$backup/$file.public"
               cmp "public/js/$file" "$backup/$file.public"
