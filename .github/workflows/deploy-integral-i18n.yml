@@ -92,7 +92,7 @@ jobs:
           for lang in "${langs[@]}"; do
             for page in "${pages[@]}"; do
               name="${page:-home}"; name="${name%.html}"
-              url="https://www.touslesmatchs.com/${page}?lang=${lang}&i18n=${{ github.sha }}"
+              url="https://www.touslesmatchs.com/${page}?lang=${lang}&v=${{ github.sha }}&i18n=${{ github.sha }}"
               out="/tmp/${name}-${lang}.html"
               echo "AUDIT page=$name lang=$lang"
               google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$url" > "$out"
