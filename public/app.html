@@ -4,7 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>TousLesMatchs — Conseil IA</title>
-<script src="/js/i18n.js?v=20261006-goal05-app-i18n" defer></script>
+<script>
+(function(){
+  try{
+    var requested=new URLSearchParams(window.location.search).get("lang");
+    if(["fr","en","es","pt","ru","zh"].indexOf(requested)!==-1){
+      document.documentElement.lang=requested;
+    }
+  }catch(e){}
+})();
+</script>
+<script src="/js/i18n.js?v=20261006-app-lang-bootstrap" defer></script>
 <meta name="description" content="Le verdict du Conseil IA : analyse du jour, signaux en direct et résultats vérifiables.">
 
 <meta name="theme-color" content="#12152a">
