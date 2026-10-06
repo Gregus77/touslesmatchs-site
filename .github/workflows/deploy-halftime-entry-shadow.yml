@@ -2,6 +2,12 @@ name: Legacy halftime O/U shadow (manual only)
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/halftime_entry_shadow.js"
+      - "scripts/test_halftime_entry_shadow.js"
+      - ".github/workflows/deploy-halftime-entry-shadow.yml"
 
 permissions:
   contents: read
@@ -24,6 +30,7 @@ jobs:
 
   deploy:
     needs: test
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
