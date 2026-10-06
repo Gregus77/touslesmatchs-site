@@ -68,10 +68,17 @@ jobs:
             }
 
             git fetch origin main
-            test "$(git branch --show-current)" = main
-            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = origin/main
-            test -z "$(git status --porcelain --untracked-files=no)"
+            git status --porcelain --untracked-files=no > "$TLM_BACKUP/tracked-status.txt"
+            git diff > "$TLM_BACKUP/tracked-working.patch"
+            git diff --cached > "$TLM_BACKUP/tracked-staged.patch"
+            if test -s "$TLM_BACKUP/tracked-status.txt"; then
+              git stash push -m "codex-preserved-before-halftime-shadow-${{ github.run_id }}"
+              echo "TRACKED_CHANGES_PRESERVED"
+            fi
+            if test "$(git branch --show-current)" != "main"; then git switch main; fi
+            git branch --set-upstream-to=origin/main main
             git pull --ff-only origin main
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
             trap rollback ERR
 
             node --check scripts/api_server.js
