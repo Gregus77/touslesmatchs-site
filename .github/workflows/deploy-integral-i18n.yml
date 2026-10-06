@@ -7,6 +7,7 @@ on:
       - public/js/i18n-auto.js
       - public/js/tlm-wow-theme.js
       - public/js/match-lifecycle.js
+      - public/app.html
       - scripts/test_i18n_integral_20260906.js
       - scripts/test_match_lifecycle_20260906.js
       - scripts/test_current_product_goal05_20261005.js
