@@ -11185,7 +11185,8 @@ function sendGoal05Latest(req, res) {
 
 app.get("/goal05/latest", sendGoal05Latest);
 app.get("/api/goal05/latest", sendGoal05Latest);
-app.get("/goal05/stats", (req,res)=>res.set("Cache-Control","no-store").json(goal05StatsPayload()));\napp.get("/api/goal05/stats", (req,res)=>res.set("Cache-Control","no-store").json(goal05StatsPayload()));
+app.get("/goal05/stats", (req,res)=>res.set("Cache-Control","no-store").json(goal05StatsPayload()));
+app.get("/api/goal05/stats", (req,res)=>res.set("Cache-Control","no-store").json(goal05StatsPayload()));
 app.get("/beta-plus05/status", (req, res) => {
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
   res.json({ ok:true, enabled:FOUNDER_BETA_ENABLED, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:0 });
