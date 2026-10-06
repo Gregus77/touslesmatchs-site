@@ -12104,7 +12104,7 @@ async function publishStrictGoal05Signals(matches) {
       team,opponent:criteria.opponent,competition:match.competition||"",minute:Number(match.minute||0),
       score_home:Number(match.score_home||0),score_away:Number(match.score_away||0),
       odd:Number(criteria.liveOdd||0),bet:team+" +0,5 but",
-      reason:"Top 5 vs Bottom 5 · cote réelle fraîche · contrôles live/historiques valides · "+Number(criteria.aiVotes||0)+"/5 IA",
+      reason:"Top 5 vs Bottom 5 · historique 4 saisons · forme 5 matchs · pression live · note "+String(criteria.rating??"?")+"/10 · "+Number(criteria.aiVotes||0)+"/5 IA",
       checks:criteria
     };
 
@@ -12115,6 +12115,19 @@ async function publishStrictGoal05Signals(matches) {
         signal.score_home,signal.score_away,signal.odd,Number(criteria.aiVotes||0),
         JSON.stringify(criteria),signal.sentAt,expiresAt
       );
+    db.prepare(`INSERT OR IGNORE INTO goal05_signal_evidence(signal_key,evidence_json,created_at)
+      VALUES (?,?,?)`).run(signalKey,JSON.stringify({
+        policyVersion:criteria.policyVersion,fixtureId,competition:match.competition||"",
+        home:match.home,away:match.away,targetTeam:team,minute:signal.minute,
+        scoreHome:signal.score_home,scoreAway:signal.score_away,
+        targetRank:criteria.targetRank,opponentRank:criteria.opponentRank,rankGap:criteria.rankGap,
+        history:criteria.history,targetRecent:criteria.targetRecent,opponentRecent:criteria.opponentRecent,
+        historicalStrengthScore:criteria.historicalStrengthScore,topHistoricalSeasons:criteria.topHistoricalSeasons,
+        shotsOnTarget:criteria.shotsOnTarget,totalShots:criteria.totalShots,possession:criteria.possession,liveXg:criteria.liveXg,
+        rating:criteria.rating,color:criteria.color,qualityScore:criteria.qualityScore,coveragePct:criteria.coveragePct,
+        aiVotes:criteria.aiVotes,aiConfidence:criteria.aiConfidence,aiVoteDetails:criteria.aiVoteDetails,
+        odd:signal.odd,oddFetchedAt:criteria.oddFetchedAt
+      }),signal.sentAt);
 
     fs.mkdirSync(require("path").dirname(GOAL05_LATEST_SIGNAL_FILE),{recursive:true});
     fs.writeFileSync(GOAL05_LATEST_SIGNAL_FILE,JSON.stringify(signal,null,2));
@@ -12123,7 +12136,10 @@ async function publishStrictGoal05Signals(matches) {
       matchKey:signalKey,home:match.home,away:match.away,competition:match.competition||"",
       minute:signal.minute,scoreHome:signal.score_home,scoreAway:signal.score_away,
       targetTeam:team,market:signal.bet,votes:Number(criteria.aiVotes||0),
-      confidence:Number(criteria.aiConfidence||0),odd:signal.odd,reason:signal.reason
+      confidence:Number(criteria.aiConfidence||0),odd:signal.odd,reason:signal.reason,
+      rating:criteria.rating,color:criteria.color,historicalTop:criteria.topHistoricalSeasons,
+      historicalSeasons:criteria.historySeasonsAvailable,historyScore:criteria.historicalStrengthScore,
+      qualityScore:criteria.qualityScore
     };
     for(const dest of clientTelegramPublisher.targets) {
       clientTelegramPublisher.enqueue("goal05",telegramData,dest,signalKey,Date.parse(expiresAt));
