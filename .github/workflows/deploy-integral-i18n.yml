@@ -87,16 +87,23 @@ jobs:
           set -euo pipefail
           pages=("" "live-ia.html" "performances.html" "bankroll.html" "dashboard.html" "app.html" "faq.html")
           langs=(en es pt ru zh)
+          untranslated='>\\s*(Se connecter|Créer mon compte|Résultats Over|Votre signal|Fenêtre d.analyse|Votes IA|IA validées|Gestion intelligente|Ma bankroll|Mon espace|Questions fréquentes|Verdict du Concile)\\s*<'
           for lang in "${langs[@]}"; do
-            expected="$lang"; test "$lang" = pt && expected=pt-BR; test "$lang" = zh && expected=zh-CN
             for page in "${pages[@]}"; do
               name="${page:-home}"; name="${name%.html}"
               url="https://www.touslesmatchs.com/${page}?lang=${lang}&i18n=${{ github.sha }}"
               out="/tmp/${name}-${lang}.html"
+              echo "AUDIT page=$name lang=$lang"
               google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$url" > "$out"
-              grep -q "<html lang=\"$expected\"" "$out"
-              grep -q 'tlm-language-universal\|lang-current' "$out"
-              ! grep -Eqi '>\s*(Se connecter|Créer mon compte|Résultats Over|Votre signal|Fenêtre d.analyse|Votes IA|IA validées|Gestion intelligente|Ma bankroll|Mon espace|Questions fréquentes|Verdict du Concile)\s*<' "$out"
+              grep -q "<html lang=\"$lang\"" "$out" || { echo "BAD_HTML_LANG page=$name lang=$lang"; exit 1; }
+              case "$name" in
+                home) grep -q 'lang-current' "$out" || { echo "LANG_CONTROL_MISSING page=$name lang=$lang"; exit 1; } ;;
+                app) grep -q 'tlm-language-universal' "$out" || { echo "LANG_CONTROL_MISSING page=$name lang=$lang"; exit 1; } ;;
+              esac
+              if grep -En "$untranslated" "$out"; then
+                echo "UNTRANSLATED_COPY page=$name lang=$lang"
+                exit 1
+              fi
             done
           done
           echo "INTEGRAL_I18N_BROWSER_OK"
