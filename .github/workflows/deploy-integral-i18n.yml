@@ -98,9 +98,31 @@ jobs:
               google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$url" > "$out"
               grep -Eq "<html lang=\"$lang(-[A-Z]{2})?\"" "$out" || { echo "BAD_HTML_LANG page=$name lang=$lang"; exit 1; }
               if [[ "$page" == "app.html" ]] && [[ "$lang" != "fr" ]]; then
-                app_untranslated='(Votre signal \\+0,5 but équipe favorite|Suivi de la 30e à la 85e minute|Me connecter|Recevoir mon code par email|Nouveau sur TousLesMatchs|Je confirme avoir au moins 18 ans|Les signaux \\+0,5 but équipe favorite|Historique des analyses\. Les envois Telegram)'
-                if grep -Eiq "$app_untranslated" "$out"; then
+                visible="$out.visible"
+                python3 - "$out" "$visible" <<'PY'
+import sys
+from html.parser import HTMLParser
+class VisibleText(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.skip = 0
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() in ("script", "style", "noscript", "template"):
+            self.skip += 1
+    def handle_endtag(self, tag):
+        if tag.lower() in ("script", "style", "noscript", "template") and self.skip:
+            self.skip -= 1
+    def handle_data(self, data):
+        if not self.skip and data.strip():
+            print(data.strip())
+parser = VisibleText()
+parser.feed(open(sys.argv[1], encoding="utf-8").read())
+open(sys.argv[2], "w", encoding="utf-8").write("\n")
+PY
+                app_untranslated='(Votre signal [+]0,5 but équipe favorite|Suivi de la 30e à la 85e minute|Me connecter|Recevoir mon code par email|Nouveau sur TousLesMatchs|Je confirme avoir au moins 18 ans|Les signaux [+]0,5 but équipe favorite|Historique des analyses[.] Les envois Telegram)'
+                if grep -Eiq "$app_untranslated" "$visible"; then
                   echo "UNTRANSLATED_APP_COPY page=app lang=$lang"
+                  grep -Ein "$app_untranslated" "$visible"
                   exit 1
                 fi
               fi
