@@ -282,6 +282,26 @@ async function doLogin(){
 <div class="page">
   <div class="page-title">Performances du Concile</div>
   <div class="page-sub">La stratégie actuelle est +0,5 but de l’équipe favorite. L’ancien historique est conservé intégralement comme ancien système ; aucun résultat historique n’est supprimé lors du changement de stratégie.</div>
+  <section id="goal05-v2-stats" style="margin:18px 0 20px;padding:18px;border:1px solid rgba(34,211,238,.28);border-radius:16px;background:linear-gradient(145deg,rgba(16,185,129,.10),rgba(34,211,238,.06));">
+    <div style="font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#7de8ff">Stratégie +0,5 V2 · statistiques séparées</div>
+    <div style="font-size:13px;color:var(--muted2);margin:6px 0 13px">Saison actuelle + 3 précédentes · forme 5 matchs · défense adverse · live · 4/5 IA · cote réelle ≥ 1,60.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+      <div style="padding:13px;border:1px solid var(--b1);border-radius:12px;background:rgba(255,255,255,.03)">
+        <strong style="display:block;margin-bottom:5px">🎯 Signaux officiels +0,5</strong>
+        <span id="goal05-official-kpi" style="font-size:12px;color:var(--muted2)">Chargement…</span>
+      </div>
+      <div style="padding:13px;border:1px solid var(--b1);border-radius:12px;background:rgba(255,255,255,.03)">
+        <strong style="display:block;margin-bottom:5px">🧪 Scanner propriétaire</strong>
+        <span id="goal05-scanner-kpi" style="font-size:12px;color:var(--muted2)">Chargement…</span>
+      </div>
+      <div style="padding:13px;border:1px solid var(--b1);border-radius:12px;background:rgba(255,255,255,.03)">
+        <strong style="display:block;margin-bottom:5px">🟢 Pastilles vertes scanner</strong>
+        <span id="goal05-green-kpi" style="font-size:12px;color:var(--muted2)">Chargement…</span>
+      </div>
+    </div>
+    <div id="goal05-scanner-recent" style="font-size:12px;color:var(--muted2);margin-top:11px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">Les observations du scanner ne sont jamais comptées comme des signaux Telegram officiels. Une cote absente reste absente et n’entre pas dans le ROI.</div>
+  </section>
 
   <div class="tier-tabs" id="tier-tabs">
     <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
@@ -653,6 +673,33 @@ fetchData(true).then(function () {
 }).then(function (d) {
   if (d && d.ok && Array.isArray(d.picks)) mergeDailyPicksIntoList(d.picks);
 }).catch(function () {});
+</script>
+<script id="goal05-v2-stats-js">
+(function(){
+  function pct(v){return v==null?'—':Number(v).toFixed(1).replace('.0','')+'%';}
+  function summary(s){
+    if(!s)return 'Indisponible';
+    var out=(s.wins||0)+' gagnés · '+(s.losses||0)+' perdus · '+(s.pending||0)+' en attente · '+pct(s.winrate);
+    if(s.priced) out+=' · cote moy. '+Number(s.averageOdd||0).toFixed(2)+' · ROI '+pct(s.roi);
+    return out;
+  }
+  fetch('/api/goal05/stats?t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(d){
+    if(!d||!d.ok)throw new Error('payload');
+    var a=document.getElementById('goal05-official-kpi'),b=document.getElementById('goal05-scanner-kpi'),g=document.getElementById('goal05-green-kpi'),recent=document.getElementById('goal05-scanner-recent');
+    if(a)a.textContent=summary(d.official);
+    if(b)b.textContent=summary(d.scanner);
+    var green=d.scannerByColor&&d.scannerByColor.green;
+    if(g)g.textContent=green?((green.wins||0)+' gagnés · '+(green.losses||0)+' perdus · '+(green.pending||0)+' en attente · '+pct(green.winrate)):'Aucune donnée';
+    if(recent&&Array.isArray(d.scannerRecent)&&d.scannerRecent.length){
+      recent.innerHTML='<strong>Dernières observations vérifiées :</strong> '+d.scannerRecent.slice(0,4).map(function(x){
+        var result=x.outcome==='win'?'✅ WIN':x.outcome==='loss'?'❌ LOSS':'⏳ à vérifier';
+        return (x.home||'')+' – '+(x.away||'')+' · '+(x.target_team||'')+' +0,5 · '+result;
+      }).join(' &nbsp;|&nbsp; ');
+    }
+  }).catch(function(){
+    ['goal05-official-kpi','goal05-scanner-kpi','goal05-green-kpi'].forEach(function(id){var el=document.getElementById(id);if(el)el.textContent='Statistiques momentanément indisponibles';});
+  });
+})();
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/cookie-consent.js" defer></script>
