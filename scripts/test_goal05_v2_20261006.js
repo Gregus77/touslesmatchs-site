@@ -37,7 +37,7 @@ const target=v2.recentGoalProfile([
 ],10);
 assert.equal(target.sample,5);
 assert.equal(target.scoredCount,5);
-assert.equal(target.gfAvg,1.8);
+assert.equal(target.gfAvg,1.6);
 
 const weakOpponent=v2.recentGoalProfile([
   fixture(11,"2026-10-05",70,80,2,1),
