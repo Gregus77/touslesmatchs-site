@@ -1,0 +1,50 @@
+name: Prove Goal05 app results 20261007
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prove-goal05-app-results-20261007.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Render public Results tab and verify Goal05 history
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://www.touslesmatchs.com/app.html?tab=perf&goal05_results_proof=${GITHUB_SHA}"
+          google-chrome --headless=new --no-sandbox --disable-gpu             --window-size=390,1200 --virtual-time-budget=18000             --dump-dom "$url" > /tmp/app-goal05-results.html
+          python3 - <<'PY'
+          import re
+          html=open('/tmp/app-goal05-results.html',encoding='utf-8').read()
+          checks=[
+            (r'<div class="v c-cyan">8</div><div class="l">Historique \+0,5</div>', 'total=8'),
+            (r'<div class="v c-green">5</div><div class="l">Gagnés</div>', 'wins=5'),
+            (r'<div class="v c-red">1</div><div class="l">Perdus</div>', 'losses=1'),
+            (r'<div class="v c-amber">2</div><div class="l">En attente</div>', 'pending=2'),
+          ]
+          for pattern,label in checks:
+              if not re.search(pattern,html):
+                  raise SystemExit('MISSING '+label)
+          for text in ['Vélez Sarsfield','Ponte Preta','Scanner propriétaire']:
+              if text not in html:
+                  raise SystemExit('MISSING '+text)
+          if 'Signaux terminés</div>' in html:
+              raise SystemExit('LEGACY_VISIBLE_RESULTS_RENDERER')
+          print('GOAL05_APP_RESULTS_VISIBLE_OK')
+          PY
+          google-chrome --headless=new --no-sandbox --disable-gpu             --window-size=390,1200 --virtual-time-budget=18000             --screenshot=/tmp/app-goal05-results.png "$url"
+          test -s /tmp/app-goal05-results.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: goal05-app-results-proof
+          path: |
+            /tmp/app-goal05-results.html
+            /tmp/app-goal05-results.png
+          retention-days: 7
