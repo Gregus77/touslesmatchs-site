@@ -6,8 +6,13 @@ const assert = require('node:assert/strict');
 const root = path.resolve('public');
 const base = 'http://127.0.0.1:8765';
 const output = path.resolve('guides-proof');
-const routes = ['/guides/', ...fs.readdirSync(path.join(root, 'guides'), {withFileTypes:true})
-  .filter(e => e.isDirectory()).map(e => `/guides/${e.name}/`)];
+const guideDirs = fs.readdirSync(path.join(root, 'guides'), {withFileTypes:true})
+  .filter(e => e.isDirectory())
+  .filter(e => {
+    const html = fs.readFileSync(path.join(root, 'guides', e.name, 'index.html'), 'utf8');
+    return !(html.includes('content="noindex,follow"') && /http-equiv=["']refresh["']/i.test(html));
+  });
+const routes = ['/guides/', ...guideDirs.map(e => `/guides/${e.name}/`)];
 (async () => {
   fs.mkdirSync(output, {recursive:true});
   const browser = await chromium.launch();
