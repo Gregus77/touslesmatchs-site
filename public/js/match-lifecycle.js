@@ -19,13 +19,16 @@
       var hit=String(values[i]==null?'':values[i]).trim().match(/^(\d+)(?:\+(\d+))?(?:['′’])?$/);
       if(hit){minute=Number(hit[1])+Number(hit[2]||0);break;}
     }
-    if(minute<0)return 'unknown';
+    if(minute<0){
+      if(statuses.some(function(s){return /^(LIVE|IN_PLAY|1H|2H|HT|Q1|Q2|Q3|Q4|P1|P2|P3|OT|BREAK|IN[1-9])$/.test(s);}))return 'live_unknown';
+      return 'unknown';
+    }
     if(minute>85)return 'closed';
     if(minute<30)return 'waiting';
     return 'open';
   }
   function canFeature(m){var p=phase(m);return p==='open'||p==='waiting';}
-  function canTrack(m){var p=phase(m);return p==='open'||p==='waiting'||p==='closed';}
+  function canTrack(m){var p=phase(m);return p==='open'||p==='waiting'||p==='live_unknown'||p==='closed';}
   function entryClosed(m){var p=phase(m);return !!m&&(p==='unknown'||p==='closed'||p==='finished'||p==='unavailable');}
   function marketText(m){
     /* LIVE_CURRENT_GOAL05_ONLY: l'ancien objet ou25 reste historique et ne pilote jamais l'affichage courant. */
@@ -43,6 +46,9 @@
     if(state==='excluded')return 'Non retenu pour le +0,5';
     if(state==='failed_before_providers'||state==='failed')return g.recommendation_status || 'Analyse +0,5 interrompue — statistiques ou données indisponibles';
     if(entryClosed(m))return 'Analyse terminée — aucun signal officiel +0,5';
+    if(phase(m)==='live_unknown')return Number(g.vote_count||g.yes_votes)>0
+      ? 'Analyse +0,5 en cours — minute live indisponible'
+      : 'Match en direct — minute live indisponible, aucun signal officiel +0,5';
     if(Number(g.vote_count||g.yes_votes)>0)return 'Analyse +0,5 — '+Number(g.consensus_count||g.yes_votes||0)+'/5 consensus';
     if(phase(m)==='waiting')return 'Analyse en cours — décision à partir de la 30e minute';
     return 'Analyse +0,5 en cours';
