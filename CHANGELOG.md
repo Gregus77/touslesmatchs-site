@@ -1,5 +1,12 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-07 — Signal +0,5 sur une équipe explicitement ciblée
+
+- Clarifie dans l’application, les pages actives, le SEO et l’API publique que chaque signal nomme une seule équipe, qui doit marquer au moins un but.
+- Retire les filtres hérités de marchés 2,5 qui pouvaient masquer des fiches valides et enlève les marchés secondaires visibles du direct.
+- Remplace les anciennes pages O/U et les guides associés par des redirections vers la stratégie active; ajoute un guide dédié à la lecture du +0,5 équipe.
+- Renforce les tests SEO/rendu afin qu’aucun texte pédagogique O/U ne reste publiquement présenté.
+
 ## 2026-10-06 — Règles publiques alignées sur +0,5 équipe favorite V2
 
 - `/api/public-signal-rules` publie désormais uniquement la stratégie active :

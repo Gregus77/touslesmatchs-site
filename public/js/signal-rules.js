@@ -7,13 +7,13 @@
       window.tlmSignalWindowEnd = r.to_minute;
       var lead = document.querySelector('.tlm-hero-lead');
       if (lead) lead.textContent = 'De la ' + r.from_minute + 'e à la ' + r.to_minute
-        + 'e minute, le système surveille les rencontres Top 5 contre Bottom 5. Le signal vise l’équipe favorite encore à 0 but, avec une cote réelle fraîche d’au moins '
+        + 'e minute, le système surveille les rencontres Top 5 contre Bottom 5. Le signal nomme une seule équipe : elle doit encore être à 0 but et marquer au moins un but (+0,5 équipe), avec une cote réelle fraîche d’au moins '
         + Number(r.min_odd).toFixed(2).replace('.', ',') + ' et un accord minimum de '
         + r.min_votes + ' IA sur 5.';
       var end = document.getElementById('hero-window-end');
       if (end) end.textContent = r.to_minute + "'";
       var note = document.getElementById('tier-note');
-      if (note) note.textContent = 'Stratégie actuelle +0,5 but de l’équipe favorite V2 : Top 5 face à une équipe Bottom 5 obligatoire. '
+      if (note) note.textContent = 'Stratégie actuelle +0,5 but d’une seule équipe ciblée V2 : l’équipe nommée doit marquer au moins un but; Top 5 contre Bottom 5 est obligatoire. '
         + 'La saison actuelle et les 3 précédentes, la forme offensive des 5 derniers matchs, la défense adverse et le live sont analysés. '
         + 'Entre la ' + r.from_minute + 'e et la ' + r.to_minute + 'e minute, l’équipe ciblée doit être encore à 0 but, avec au moins '
         + r.min_votes + ' IA sur 5, une note verte ≥ ' + r.min_score + '/10, une couverture factuelle ≥ '

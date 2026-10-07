@@ -683,7 +683,7 @@ body{overflow-x:hidden}
 
   <section class="tlm-app-stadium-hero" aria-labelledby="app-hero-title">
     <div class="tlm-app-kicker">Football · Analyse live</div>
-    <h1 id="app-hero-title">Votre signal +0,5 but équipe favorite.<span>Suivi de la 30e à la 85e minute.</span></h1>
+    <h1 id="app-hero-title">Une seule équipe ciblée : +0,5 but.<span>Son nom est affiché sur chaque signal.</span></h1>
     <p class="tlm-app-copy">Les équipes, les logos, le score et les drapeaux ci-dessous viennent du match réellement en cours.</p>
     <div class="tlm-app-match" id="app-live-stage" aria-live="polite">
       <div class="tlm-app-match-head"><span class="tlm-app-live-label" id="app-live-status">Recherche du direct</span><strong class="tlm-app-minute" id="app-live-minute">—</strong></div>
@@ -707,7 +707,7 @@ body{overflow-x:hidden}
 
   <!-- â•â• PERFORMANCES â•â• -->
   <section id="s-perf">
-    <h2>Résultats +0,5 but équipe favorite</h2>
+    <h2>Résultats +0,5 de l’équipe ciblée</h2>
     <p class="sub">Historique des analyses. Les envois Telegram vérifiés sont distingués de l’ancien système.</p>
     <div class="kpis" id="perf-kpis"></div>
     <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
@@ -979,7 +979,8 @@ body{overflow-x:hidden}
     var badge = hasSignal ? 'SIGNAL VALIDÉ' : 'SIGNAL EN ATTENTE';
     var badgeClass = hasSignal ? 'goal05-verdict-badge ok' : 'goal05-verdict-badge';
     var odd = hasSignal && signal.odd ? '@' + esc(signal.odd) : '@—';
-    var team = hasSignal ? esc(signal.team || 'Signal +0,5 but équipe favorite') : 'Aucun signal +0,5 but équipe favorite validé';
+    var targetTeam = hasSignal && (signal.target_team || signal.targetTeam || signal.team);
+    var team = hasSignal && targetTeam ? 'Équipe ciblée : ' + esc(targetTeam) + ' — doit marquer au moins un but (+0,5 but équipe)' : 'Aucun signal +0,5 avec équipe ciblée nommée n’est validé';
     var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Football uniquement · moteur en surveillance';
     var checks = hasSignal && signal.checks ? signal.checks : [
       { ok:false, text:'Écart historique favorable' },
@@ -1003,7 +1004,7 @@ body{overflow-x:hidden}
   }
 
   function goal05MemberRow() {
-    return '<div class="offer-stack" aria-label="Accès Premium +0,5 but équipe favorite"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">+0,5 but équipe favorite — Premium</div><div class="offer-desc">Tous les signaux admissibles et les alertes membres</div></div><div class="offer-price">14,90 €/mois</div></a></div>';
+    return '<div class="offer-stack" aria-label="Accès Premium +0,5 but équipe ciblée"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">+0,5 but équipe ciblée — Premium</div><div class="offer-desc">Tous les signaux admissibles et les alertes membres</div></div><div class="offer-price">14,90 €/mois</div></a></div>';
   }
 
   function renderGoal05Pick(signal) {
@@ -1034,12 +1035,12 @@ body{overflow-x:hidden}
     if (!p) {
       var emptyHeroCta = document.querySelector('.tlm-app-cta');
       if (emptyHeroCta) emptyHeroCta.textContent = 'Voir le signal gratuit';
-      box.innerHTML = '<div class="tlm-app-pick-card tlm-app-empty-signal"><strong>Aucun signal gratuit validé pour le moment</strong>La carte apparaîtra uniquement lorsqu’un vrai signal +0,5 but équipe favorite sera disponible.</div>';
+      box.innerHTML = '<div class="tlm-app-pick-card tlm-app-empty-signal"><strong>Aucun signal gratuit validé pour le moment</strong>La carte s’affichera uniquement quand un signal nommera clairement une équipe qui doit marquer au moins un but.</div>';
       return;
     }
     var home = (p.teamA && p.teamA.name) || p.home || 'Équipe à domicile';
     var away = (p.teamB && p.teamB.name) || p.away || "Équipe à l'extérieur";
-    var signal = p.bet || p.best_bet || p.selection || '+0,5 but équipe favorite';
+    var signal = p.bet || p.best_bet || p.selection || '+0,5 but équipe ciblée';
     var confidence = Number(p.confidence || p.score || 0);
     var odd = Number(p.real_odd || p.cote || p.odd || 0);
     var outcome = String(p.status || p.result || p.outcome || '').toLowerCase();
@@ -1091,16 +1092,13 @@ body{overflow-x:hidden}
   function appVotes(m){return appOu25(m).voteCount;}
   function appMatchTrackable(m){return appOu25(m).official===true||TLMMatchLifecycle.canTrack(m);}
   function appMiniVotes(m){
-    var state=appOu25(m);
-    var dots=state.slots.map(function(slot,i){
-      var voted=slot&&slot.status==='voted',dir=voted&&(slot.direction==='over'||slot.direction==='under')?slot.direction:'';
-      var terminal=appTerminalCaption(slot),label=voted?(state.locked?'✓':dir==='over'?'O':dir==='under'?'U':'?'):terminal?terminal.mark:String(i+1);
-      var failure=slot&&slot.reason||({unavailable:'fournisseur indisponible',empty:'réponse sans vote exploitable',parse_error:'réponse illisible',rejected_statistical:'vote écarté statistiquement'}[slot&&slot.status])||'vote en attente';
-      var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente')),voteTime=appVoteTime(slot&&slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;
-      return '<span class="tlm-app-live-mini-vote '+(voted?'voted ':'')+dir+(terminal?' terminal':'')+(state.official&&!TLMMatchLifecycle.entryClosed(m)?'':' old')+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
-    }).join('');
-    var preserved=esc(TLMMatchLifecycle.statusText(m))+' · ';
-    return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+esc(TLMMatchLifecycle.marketText(m))+' · '+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.consensusCount+'/5 consensus · '+appResponseCount(state.slots)+'/5 IA ont répondu</span></span>';
+    var raw=m&&(m.goal05_v2||m.goal05)||{};
+    var target=raw.target_team||raw.targetTeam||raw.team||m.target_team||m.targetTeam||"";
+    
+    var copy=target
+      ? "Équipe ciblée : "+esc(target)+" — marque au moins un but (+0,5 équipe)"
+      : "Match suivi en direct · aucun signal +0,5 avec équipe nommée publié";
+    return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+copy+'</span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
@@ -1250,7 +1248,7 @@ $("perf-kpis").innerHTML =
       + kpi(total ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
 
     if (!rows.length) {
-      $("perf-list").innerHTML = '<div class="state"><strong>Bilan +0,5 but équipe favorite en cours</strong><br>Aucun signal terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
+      $("perf-list").innerHTML = '<div class="state"><strong>Bilan +0,5 but équipe ciblée en cours</strong><br>Aucun signal terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
       return;
     }
     var html = "";
@@ -1261,7 +1259,7 @@ $("perf-kpis").innerHTML =
       var odd = num(a.real_odd || a.odd || a.cote) > 1 ? " · @" + num(a.real_odd || a.odd || a.cote).toFixed(2) : "";
       var provenance=a.telegram_delivery_proven?'Livraison Telegram prouvée':a.official_signal_snapshot_id?'Signal officiel enregistré · livraison Telegram non prouvée':'Historique archivé';
       html += '<a class="item" href="'+(a.official_signal_snapshot_id?'/live-ia?fixture='+encodeURIComponent(a.fixture_id||a.fixtureId||a.match_key||''):'#')+'" style="color:inherit;text-decoration:none"><div class="mid">'
-        + '<div class="t">' + esc(a.home || a.match || 'Signal +0,5 but équipe favorite') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
+        + '<div class="t">' + esc(a.home || a.match || 'Signal +0,5 but équipe ciblée') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
         + '<div class="m">' + esc((a.analysed_at || a.date || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + ' · '+esc(provenance)+'</div>'
         + appMiniVotes(a) + '<div class="m">Match terminé · score final '+esc(a.final_score||'indisponible')+' · Votes à '+esc(a.minute==null?'minute inconnue':a.minute+'′')+', score '+esc(a.score||'indisponible')+'</div>'
         + '</div>' + b + '</a>';
@@ -1301,7 +1299,7 @@ $("perf-kpis").innerHTML =
       + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
       + '<button class="btn btn-g" id="btn-lead">Créer mon compte gratuit</button>'
       + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
-      + '<div class="app-auth-note">Les signaux +0,5 but équipe favorite et les alertes membres sont disponibles avec Premium à 14,90 €/mois.</div></div></div>';
+      + '<div class="app-auth-note">Les signaux +0,5 but équipe ciblée et les alertes membres sont disponibles avec Premium à 14,90 €/mois.</div></div></div>';
 
     $("btn-in").addEventListener("click", function () {
       var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
@@ -1851,39 +1849,7 @@ function tlmMatchHour(m){
 
 </script>
 
-<script>
-/* TLM_DISPLAY_OU25_ONLY_V1 */
-(function(){
-  function allowedBet(text){
-    var t=String(text||"").toLowerCase();
-    if(!t)return true;
-    return t.indexOf("over 2.5")>=0 ||
-           t.indexOf("over 2,5")>=0 ||
-           t.indexOf("under 2.5")>=0 ||
-           t.indexOf("under 2,5")>=0 ||
-           t.indexOf("sélection réservée")>=0 ||
-           t.indexOf("selection reservee")>=0;
-  }
 
-  function cleanOldMarkets(){
-    document.querySelectorAll(
-      ".match-card,.analysis-card,.prediction-card,.item,.tlm-app-live-row"
-    ).forEach(function(el){
-      var t=el.textContent||"";
-
-      var oldMarket=
-        /victoire domicile|victoire extérieur|victoire exterieur|btts|but en 1[eè]re mi-temps|double chance/i.test(t);
-
-      if(oldMarket && !allowedBet(t)){
-        el.style.display="none";
-      }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded",cleanOldMarkets);
-  setInterval(cleanOldMarkets,3000);
-})();
-</script>
 
 
 
@@ -1891,7 +1857,7 @@ function tlmMatchHour(m){
 <script>(function(){
 function paint(el,total){if(!el)return;var text=(el.textContent+' '+(total||'')).replace(/\s+/g,' '),good=/\b[45]\s*\/\s*5\b/.test(text)&&!/insuffisant|aucun signal/i.test(text),bad=/consensus insuffisant/i.test(text)||(/\b[1-3]\s*\/\s*5\b/.test(text)&&!good);el.classList.toggle('consensus-valid',good);el.classList.toggle('consensus-insufficient',bad);}
 function refresh(){paint(document.getElementById('hero-consensus-label'),document.getElementById('hero-consensus-current')&&document.getElementById('hero-consensus-current').textContent);paint(document.getElementById('app-ai-result'),document.getElementById('app-ai-total')&&document.getElementById('app-ai-total').textContent);document.querySelectorAll('.mc-vote-verdict').forEach(function(el){var box=el.closest('.mc-vote-details');paint(el,box&&box.querySelector('.mc-vote-count')&&box.querySelector('.mc-vote-count').textContent);});}
-if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
+if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;function goal05Votes(m){var g=m&&(m.goal05_v2||m.goal05)||{};return Number(g.aiVotes||g.ai_votes||g.consensus_votes||m.consensus_votes||0);}compareHeroMatches=function(a,b){var av=goal05Votes(a),bv=goal05Votes(b);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
 new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
 })();</script>
 
