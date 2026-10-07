@@ -2,14 +2,14 @@
  * Les pages HTML et les donnees sportives utilisent le reseau en priorite.
  * Le cache reste uniquement un secours hors ligne.
  */
-const VERSION = "tlm-app-v31-multisport-status-v3-20261007";
+const VERSION = "tlm-app-v32-mobile-upcoming-dates-20261007";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
 const SHELL_ASSETS = [
   "/app",
   "/app.html",
-  "/css/global-header.css?v=20260915-account-v1",
+  "/css/global-header.css?v=20261007-mobile-align-v2",
   "/js/global-header.js?v=20260915-account-v1",
   "/js/match-lifecycle.js?v=20261007-status-v3",
   "/manifest.webmanifest",
