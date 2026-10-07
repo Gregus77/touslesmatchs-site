@@ -1,5 +1,25 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-07 — Signal +0,5 sur une équipe explicitement ciblée
+
+- Clarifie dans l’application, les pages actives, le SEO et l’API publique que chaque signal nomme une seule équipe, qui doit marquer au moins un but.
+- Retire les filtres hérités de marchés 2,5 qui pouvaient masquer des fiches valides et enlève les marchés secondaires visibles du direct.
+- Remplace les anciennes pages O/U et les guides associés par des redirections vers la stratégie active; ajoute un guide dédié à la lecture du +0,5 équipe.
+- Renforce les tests SEO/rendu afin qu’aucun texte pédagogique O/U ne reste publiquement présenté.
+
+## 2026-10-06 — Règles publiques alignées sur +0,5 équipe favorite V2
+
+- `/api/public-signal-rules` publie désormais uniquement la stratégie active :
+  Top 5 contre Bottom 5 obligatoire, fenêtre 30–85, 4 IA sur 5, cote réelle
+  fraîche ≥ 1,60, note verte ≥ 8/10 et couverture factuelle ≥ 75 %.
+- `public/js/signal-rules.js`, la FAQ et la page Pronostic IA ne reconstruisent
+  plus de règle publique depuis les anciens seuils O/U 2,5.
+- Les 30 pages SEO multilingues présentent +0,5 V2 comme stratégie active ; les
+  anciennes pages O/U sont conservées et signalées comme contenu pédagogique.
+- Le tableau SEO reconnaît les sélections +0,5 et les votes V2 au lieu de limiter
+  l’affichage aux marchés O/U historiques.
+- Ajoute un test de régression qui exécute la vraie réponse API et le vrai rendu
+  navigateur du texte public.
 ## 2026-09-06 — Libellés publics alignés sur le quorum 3 IA sur 5
 
 - Remplace les anciens minimums 4/5 par le quorum réellement déployé de 3/5
