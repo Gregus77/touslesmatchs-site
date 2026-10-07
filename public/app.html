@@ -1233,7 +1233,7 @@ body{overflow-x:hidden}
     if(!s)return null;
     var target=s.target_team||s.target||s.selection_team||s.picked_team||'Équipe ciblée';
     var date=s.observed_at||s.picked_at||s.created_at||s.recorded_at||s.updated_at||s.date||'';
-    var finalScore=(s.final_score_home!=null&&s.final_score_away!=null)?(s.final_score_home+'-'+s.final_score_away'):'';
+    var finalScore=(s.final_score_home!=null&&s.final_score_away!=null)?(s.final_score_home+'-'+s.final_score_away):'';
     return {
       id:s.id||'',
       home:s.home||'',
