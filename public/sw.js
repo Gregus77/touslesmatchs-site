@@ -2,7 +2,7 @@
  * Les pages HTML et les donnees sportives utilisent le reseau en priorite.
  * Le cache reste uniquement un secours hors ligne.
  */
-const VERSION = "tlm-app-v30-multisport-scanner-v2-20261007";
+const VERSION = "tlm-app-v31-multisport-status-v3-20261007";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
@@ -11,7 +11,7 @@ const SHELL_ASSETS = [
   "/app.html",
   "/css/global-header.css?v=20260915-account-v1",
   "/js/global-header.js?v=20260915-account-v1",
-  "/js/match-lifecycle.js?v=20261007-multisport-scanner-v2",
+  "/js/match-lifecycle.js?v=20261007-status-v3",
   "/manifest.webmanifest",
   "/favicon.ico",
   "/favicon-48.png",
@@ -130,7 +130,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Images et ressources statiques : cache d'abord, réseau en secours.
+  // JS/CSS : réseau d'abord pour éviter qu'une ancienne logique reste figée dans la PWA.
+  if (request.destination === "script" || request.destination === "style") {
+    event.respondWith(networkFirst(request, SHELL_CACHE, () => caches.match(request).then((hit) => hit || Response.error())));
+    return;
+  }
+
+  // Images : cache d'abord, réseau en secours.
   event.respondWith(caches.match(request).then((hit) => hit || fetch(request).then((response) => {
     if (response && response.ok && request.destination === "image") {
       const copy = response.clone();
