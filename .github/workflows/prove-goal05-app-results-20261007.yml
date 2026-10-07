@@ -14,29 +14,40 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - name: Render public Results tab and verify Goal05 history
+      - name: Render public Results tab and compare with live Goal05 stats
         shell: bash
         run: |
           set -euo pipefail
+          curl -fsSL --retry 5 --retry-delay 2             "https://www.touslesmatchs.com/api/goal05/stats?t=${GITHUB_SHA}"             -o /tmp/goal05-stats.json
           url="https://www.touslesmatchs.com/app.html?tab=perf&goal05_results_proof=${GITHUB_SHA}"
           google-chrome --headless=new --no-sandbox --disable-gpu             --window-size=390,1200 --virtual-time-budget=18000             --dump-dom "$url" > /tmp/app-goal05-results.html
           python3 - <<'PY'
-          import re
+          import json,re
+          stats=json.load(open('/tmp/goal05-stats.json',encoding='utf-8'))
+          if not stats.get('ok'):
+              raise SystemExit('GOAL05_STATS_NOT_OK')
+          scanner=stats.get('scanner') or {}
+          expected={
+              'Historique +0,5': int(scanner.get('total') or 0),
+              'Gagnés': int(scanner.get('wins') or 0),
+              'Perdus': int(scanner.get('losses') or 0),
+              'En attente': int(scanner.get('pending') or 0),
+          }
           html=open('/tmp/app-goal05-results.html',encoding='utf-8').read()
-          checks=[
-            (r'<div class="v c-cyan">8</div><div class="l">Historique \+0,5</div>', 'total=8'),
-            (r'<div class="v c-green">5</div><div class="l">Gagnés</div>', 'wins=5'),
-            (r'<div class="v c-red">1</div><div class="l">Perdus</div>', 'losses=1'),
-            (r'<div class="v c-amber">2</div><div class="l">En attente</div>', 'pending=2'),
-          ]
-          for pattern,label in checks:
+          for label,value in expected.items():
+              pattern=r'<div class="v(?: [^"]*)?">'+re.escape(str(value))+r'</div><div class="l">'+re.escape(label)+r'</div>'
               if not re.search(pattern,html):
-                  raise SystemExit('MISSING '+label)
-          for text in ['Vélez Sarsfield','Ponte Preta','Scanner propriétaire']:
-              if text not in html:
-                  raise SystemExit('MISSING '+text)
+                  raise SystemExit('KPI_MISMATCH '+label+' expected='+str(value))
+          recent=stats.get('scannerRecent') or []
+          for row in recent[:4]:
+              home=row.get('home') or ''
+              if home and home not in html:
+                  raise SystemExit('MISSING_MATCH '+home)
+          if recent and 'Scanner propriétaire' not in html:
+              raise SystemExit('MISSING_SCANNER_PROVENANCE')
           if 'Signaux terminés</div>' in html:
               raise SystemExit('LEGACY_VISIBLE_RESULTS_RENDERER')
+          print('PRODUCTION_SCANNER_STATS='+json.dumps(scanner,ensure_ascii=False,sort_keys=True))
           print('GOAL05_APP_RESULTS_VISIBLE_OK')
           PY
           google-chrome --headless=new --no-sandbox --disable-gpu             --window-size=390,1200 --virtual-time-budget=18000             --screenshot=/tmp/app-goal05-results.png "$url"
@@ -47,6 +58,7 @@ jobs:
           path: |
             /tmp/app-goal05-results.html
             /tmp/app-goal05-results.png
+            /tmp/goal05-stats.json
           retention-days: 7
 
-# retry-proof-07bb876
+# dynamic-production-proof
