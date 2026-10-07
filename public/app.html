@@ -1304,10 +1304,13 @@ body{overflow-x:hidden}
       return 0;
     }
 
-    var total=statCount(scannerStats,'total',derived(scannerRows,'total'))+statCount(officialStats,'total',derived(officialRows,'total'));
-    var wins=statCount(scannerStats,'wins',derived(scannerRows,'wins'))+statCount(officialStats,'wins',derived(officialRows,'wins'));
-    var losses=statCount(scannerStats,'losses',derived(scannerRows,'losses'))+statCount(officialStats,'losses',derived(officialRows,'losses'));
-    var pending=statCount(scannerStats,'pending',derived(scannerRows,'pending'))+statCount(officialStats,'pending',derived(officialRows,'pending'));
+    // Les KPI de cet écran reflètent l'historique scanner propriétaire demandé
+    // par le fondateur. Les signaux Telegram officiels restent visibles et
+    // explicitement distingués dans la liste, sans gonfler ces compteurs.
+    var total=statCount(scannerStats,'total',derived(scannerRows,'total'));
+    var wins=statCount(scannerStats,'wins',derived(scannerRows,'wins'));
+    var losses=statCount(scannerStats,'losses',derived(scannerRows,'losses'));
+    var pending=statCount(scannerStats,'pending',derived(scannerRows,'pending'));
 
     $("perf-kpis").innerHTML=
         kpi(String(total),"Historique +0,5","c-cyan")
