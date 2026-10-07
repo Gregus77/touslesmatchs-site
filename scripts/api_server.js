@@ -5950,6 +5950,179 @@ app.get("/upcoming-picks", async (req, res) => {
   }
 });
 
+
+/* TLM_HOURLY_SCANNER_PROMO_20261007
+   Scanner exploratoire distinct du produit officiel Goal05.
+   Miroir FR Gratuit/Premium jusqu'au 07/11/2026 inclus. */
+const TLM_SCANNER_FREE_END="2026-11-07";
+const TLM_SCANNER_WINDOW_HOURS=18;
+let _tlmScannerLastSlot="";
+let _tlmScannerBusy=false;
+
+function tlmScannerPromoActive(){
+  return telegramClient.parisParts().day<=TLM_SCANNER_FREE_END;
+}
+function tlmScannerTargets(){
+  const promo=tlmScannerPromoActive();
+  return clientTelegramPublisher.targets.filter(function(t){
+    return t.lang==="fr"&&(t.tier==="premium"||(promo&&t.tier==="free"));
+  });
+}
+function tlmScannerKickoff(value){
+  const d=new Date(value);
+  if(isNaN(d.getTime()))return "heure à confirmer";
+  return d.toLocaleString("fr-FR",{timeZone:"Europe/Paris",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).replace(","," ·");
+}
+function tlmScannerComp(f){
+  const p=String(f.competition||"").split(/\s+[·•]\s+/);
+  return {league:(p[0]||"Compétition").trim(),country:String(f.country||p.slice(1).join(" · ")||"International").trim()};
+}
+function tlmScannerRating(gap,gf,ga,form){
+  const wins=(String(form||"").match(/W|V/g)||[]).length;
+  const n=6+Math.min(1.4,Math.max(0,Number(gap)||0)*0.12)
+    +Math.min(1.1,Math.max(0,Number(gf)||0)*0.45)
+    +Math.min(1,Math.max(0,Number(ga)||0)*0.42)
+    +Math.min(0.5,wins*0.12);
+  return Math.max(0,Math.min(10,Math.round(n*10)/10));
+}
+function tlmScannerColor(n){return n>=8?"green":n>=7?"orange":"red";}
+
+async function tlmScannerFootballRow(f){
+  const c=tlmScannerComp(f);
+  const base={key:"Football:"+(f.sourceId||f.fixtureId||f.id||f.home+"|"+f.away+"|"+f.kickoff),
+    sourceId:String(f.sourceId||f.fixtureId||""),sport:"Football",home:f.home,away:f.away,
+    competition:c.league,country:c.country,kickoff:f.kickoff,kickoffLabel:tlmScannerKickoff(f.kickoff),
+    targetTeam:null,targetSide:null,targetRank:null,opponentRank:null,targetMetric:null,opponentMetric:null,
+    form:null,rating:null,color:"gray",selection:null,reason:"Top 5 / Bottom 5 non vérifié"};
+  if(!f.leagueId||!f.season||!f.homeId||!f.awayId)return base;
+  try{
+    const table=await fetchStandings(f.leagueId,f.season);
+    const h=table&&table.rows&&table.rows.find(function(x){return Number(x.teamId)===Number(f.homeId);});
+    const a=table&&table.rows&&table.rows.find(function(x){return Number(x.teamId)===Number(f.awayId);});
+    if(!h||!a||Number(h.groupIndex)!==Number(a.groupIndex))return Object.assign({},base,{reason:"classement commun non vérifiable"});
+    const total=Number(h.groupTotal||a.groupTotal||table.total||0);
+    if(!Number.isFinite(total)||total<10)return Object.assign({},base,{reason:"classement incomplet"});
+    const bottom=Math.max(1,total-4);
+    let side,target,opponent,targetId,opponentId;
+    if(Number(h.rank)<=5&&Number(a.rank)>=bottom){side="home";target=h;opponent=a;targetId=f.homeId;opponentId=f.awayId;}
+    else if(Number(a.rank)<=5&&Number(h.rank)>=bottom){side="away";target=a;opponent=h;targetId=f.awayId;opponentId=f.homeId;}
+    else return Object.assign({},base,{reason:"règle stricte non respectée : "+f.home+" "+h.rank+"e · "+f.away+" "+a.rank+"e"});
+    const stats=await Promise.all([fetchTeamStatistics(f.leagueId,f.season,targetId),fetchTeamStatistics(f.leagueId,f.season,opponentId)]);
+    const gf=Number(stats[0]&&stats[0].gfAvg),ga=Number(stats[1]&&stats[1].gaAvg);
+    const rating=tlmScannerRating(Number(opponent.rank)-Number(target.rank),Number.isFinite(gf)?gf:0,Number.isFinite(ga)?ga:0,stats[0]&&stats[0].form);
+    return Object.assign({},base,{
+      targetTeam:side==="home"?f.home:f.away,targetSide:side,
+      targetRank:target.rank+"e/"+total,opponentRank:opponent.rank+"e/"+total,
+      targetMetric:Number.isFinite(gf)?gf:null,opponentMetric:Number.isFinite(ga)?ga:null,
+      form:stats[0]&&stats[0].form||null,rating:rating,color:tlmScannerColor(rating),
+      selection:"marque au moins un but (+0,5 équipe)",
+      reason:"Top 5 contre Bottom 5 vérifié dans le même classement"
+    });
+  }catch(e){
+    console.error("[scanner] enrich football",e.message);
+    return Object.assign({},base,{reason:"classement/statistiques momentanément indisponibles"});
+  }
+}
+function tlmScannerExploratoryRow(f){
+  const c=tlmScannerComp(f);
+  return {key:String(f.sport||"Sport")+":"+(f.sourceId||f.id||f.home+"|"+f.away+"|"+f.kickoff),
+    sourceId:String(f.sourceId||""),sport:f.sport||"Sport",home:f.home,away:f.away,competition:c.league,country:c.country,
+    kickoff:f.kickoff,kickoffLabel:tlmScannerKickoff(f.kickoff),targetTeam:null,targetSide:null,targetRank:null,
+    opponentRank:null,targetMetric:null,opponentMetric:null,form:null,rating:null,color:"gray",selection:null,
+    reason:"veille exploratoire : critère spécifique au sport non vérifié, aucune sélection forcée"};
+}
+function tlmScannerSchema(){
+  db.exec("CREATE TABLE IF NOT EXISTS hourly_scanner_tracking(scanner_key TEXT PRIMARY KEY,source_id TEXT,sport TEXT,home TEXT,away TEXT,competition TEXT,country TEXT,kickoff TEXT,target_team TEXT,target_side TEXT,rating REAL,color TEXT,status TEXT NOT NULL DEFAULT 'pending',result_sent INTEGER NOT NULL DEFAULT 0,data_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT (datetime('now')),updated_at TEXT NOT NULL DEFAULT (datetime('now')));CREATE INDEX IF NOT EXISTS idx_hourly_scanner_pending ON hourly_scanner_tracking(status,result_sent,kickoff);");
+}
+function tlmScannerTrack(rows){
+  tlmScannerSchema();
+  const q=db.prepare("INSERT INTO hourly_scanner_tracking(scanner_key,source_id,sport,home,away,competition,country,kickoff,target_team,target_side,rating,color,data_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scanner_key) DO UPDATE SET source_id=excluded.source_id,sport=excluded.sport,home=excluded.home,away=excluded.away,competition=excluded.competition,country=excluded.country,kickoff=excluded.kickoff,target_team=excluded.target_team,target_side=excluded.target_side,rating=excluded.rating,color=excluded.color,data_json=excluded.data_json,updated_at=datetime('now')");
+  db.transaction(function(list){list.forEach(function(r){q.run(r.key,r.sourceId||null,r.sport,r.home,r.away,r.competition,r.country,r.kickoff,r.targetTeam||null,r.targetSide||null,r.rating==null?null:r.rating,r.color||"gray",JSON.stringify(r));});})(rows);
+}
+function tlmOpenRouterGet(path){
+  return new Promise(function(resolve){
+    if(!OPENROUTER_API_KEY)return resolve({ok:false});
+    const req=https.request({hostname:"openrouter.ai",path:path,method:"GET",headers:{Authorization:"Bearer "+OPENROUTER_API_KEY,Accept:"application/json"},timeout:10000},function(res){
+      let raw="";res.on("data",function(x){raw+=x;});res.on("end",function(){let d=null;try{d=JSON.parse(raw);}catch(_){ }resolve({ok:res.statusCode>=200&&res.statusCode<300,data:d});});
+    });
+    req.on("error",function(){resolve({ok:false});});req.on("timeout",function(){req.destroy();resolve({ok:false});});req.end();
+  });
+}
+async function tlmOpenRouterStatus(){
+  let r=await tlmOpenRouterGet("/api/v1/credits"),remaining=null,source="";
+  if(r.ok&&r.data&&r.data.data){
+    const total=Number(r.data.data.total_credits),used=Number(r.data.data.total_usage);
+    if(Number.isFinite(total)&&Number.isFinite(used)){remaining=Math.max(0,total-used);source="solde compte";}
+  }
+  if(!Number.isFinite(remaining)){
+    r=await tlmOpenRouterGet("/api/v1/key");
+    const d=r.data&&r.data.data||r.data||{};
+    if(r.ok&&Number.isFinite(Number(d.limit_remaining))){remaining=Number(d.limit_remaining);source="limite clé";}
+  }
+  let daily=2;try{daily=Number(require("./ai_budget_guard").parisBudget().limit)||2;}catch(_){}
+  const threshold=Math.max(5,daily*1.25);
+  return {remaining:remaining,source:source,recharge:Number.isFinite(remaining)&&remaining<threshold,
+    text:Number.isFinite(remaining)?remaining.toFixed(2)+" $ restants ("+source+")":"solde non lisible automatiquement"};
+}
+async function tlmScannerRows(){
+  const now=Date.now(),limit=now+TLM_SCANNER_WINDOW_HOURS*3600000;
+  let result=_upcomingPicksCache;
+  if(!result||!result.ts||now-result.ts>2*3600000)result=await computeUpcomingPicks();
+  const fixtures=(result.fixtures||[]).filter(function(f){const t=new Date(f.kickoff).getTime();return Number.isFinite(t)&&t>now&&t<=limit;})
+    .sort(function(a,b){return new Date(a.kickoff)-new Date(b.kickoff);}).slice(0,24);
+  const rows=[];
+  for(const f of fixtures)rows.push(String(f.sport||"Football").toLowerCase()==="football"?await tlmScannerFootballRow(f):tlmScannerExploratoryRow(f));
+  rows.sort(function(a,b){return (b.rating==null?-1:b.rating)-(a.rating==null?-1:a.rating)||new Date(a.kickoff)-new Date(b.kickoff);});
+  return rows.slice(0,8);
+}
+async function tlmScannerBroadcast(){
+  if(_tlmScannerBusy)return;
+  _tlmScannerBusy=true;
+  try{
+    const rows=await tlmScannerRows();tlmScannerTrack(rows);
+    const p=telegramClient.parisParts();
+    const data={label:p.day+" · "+String(p.hour).padStart(2,"0")+"h",updatedAt:new Date().toLocaleTimeString("fr-FR",{timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit"}),windowHours:TLM_SCANNER_WINDOW_HOURS,rows:rows};
+    tlmScannerTargets().forEach(function(dest){clientTelegramPublisher.enqueue("scanner",data,dest,p.day+":"+p.hour);});
+    await clientTelegramPublisher.flush();
+    const or=await tlmOpenRouterStatus();
+    if(TELEGRAM_ADMIN_CHAT_ID){
+      const rendered=telegramClient.render("scanner",data,{id:"admin",lang:"fr",tier:"premium",paymentVerified:false});
+      const money=or.recharge?"\n\n🔴 <b>OPENROUTER : RECHARGE RECOMMANDÉE</b> — "+escTgHtml(or.text):"\n\n💳 <b>OpenRouter</b> : "+escTgHtml(or.text);
+      await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID,rendered.text+money+"\n\n🎁 Gratuit = Premium jusqu’au "+TLM_SCANNER_FREE_END+".",{adminScannerUpdate:true});
+    }
+    if(!tlmScannerPromoActive()&&!fs.existsSync("/data/scanner-free-promo-ended.sent")){
+      if(TELEGRAM_ADMIN_CHAT_ID)await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID,"⏰ <b>Fin du mois gratuit scanner</b>\n\nLe miroir Gratuit/Premium est terminé. Valider la bascule commerciale du canal Gratuit avant toute mise en paiement.",{adminOperationalAlert:true});
+      fs.writeFileSync("/data/scanner-free-promo-ended.sent",new Date().toISOString()+"\n",{mode:0o600});
+    }
+  }catch(e){console.error("[scanner] broadcast",e.message);}finally{_tlmScannerBusy=false;}
+}
+async function tlmScannerResults(){
+  tlmScannerSchema();
+  const rows=db.prepare("SELECT * FROM hourly_scanner_tracking WHERE status='pending' AND result_sent=0 AND target_team IS NOT NULL AND datetime(kickoff)<=datetime('now','-75 minutes') ORDER BY datetime(kickoff) LIMIT 12").all();
+  for(const tr of rows){
+    if(!tr.source_id)continue;
+    try{
+      const raw=await httpGet("https://v3.football.api-sports.io/fixtures?id="+encodeURIComponent(tr.source_id),{"x-apisports-key":API_SPORTS_KEY});
+      const g=raw&&raw.response&&raw.response[0],st=String(g&&g.fixture&&g.fixture.status&&g.fixture.status.short||"").toUpperCase();
+      if(["FT","AET","PEN"].indexOf(st)<0)continue;
+      const data=JSON.parse(tr.data_json),sh=g.goals&&g.goals.home,sa=g.goals&&g.goals.away;
+      if(sh==null||sa==null)continue;
+      const outcome=data.targetSide==="home"?(Number(sh)>=1?"win":"loss"):(Number(sa)>=1?"win":"loss");
+      const payload=Object.assign({},data,{outcome:outcome,scoreHome:sh,scoreAway:sa});
+      tlmScannerTargets().forEach(function(dest){clientTelegramPublisher.enqueue("scanner_result",payload,dest,tr.scanner_key+":"+sh+"-"+sa);});
+      await clientTelegramPublisher.flush();
+      if(TELEGRAM_ADMIN_CHAT_ID){const x=telegramClient.render("scanner_result",payload,{id:"admin",lang:"fr",tier:"premium",paymentVerified:false});await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID,x.text,{adminScannerUpdate:true});}
+      db.prepare("UPDATE hourly_scanner_tracking SET status='finished',result_sent=1,updated_at=datetime('now') WHERE scanner_key=?").run(tr.scanner_key);
+    }catch(e){console.error("[scanner] result",e.message);}
+  }
+}
+function tlmMaybeRunScanner(hour,todayKey){
+  tlmScannerResults().catch(function(e){console.error("[scanner-results]",e.message);});
+  if(hour%2!==0)return;
+  const slot=todayKey+":"+hour;if(_tlmScannerLastSlot===slot)return;_tlmScannerLastSlot=slot;
+  tlmScannerBroadcast().catch(function(e){console.error("[scanner-broadcast]",e.message);});
+}
+
 function buildH2HBlock(h2h, homeName, awayName) {
   if (!h2h) return "";
   return `
@@ -19205,6 +19378,7 @@ function checkAnalyticsSchedule() {
   const hour = parseInt(timePart.split(":")[0]);
   const day = now.toLocaleDateString("en-US", { timeZone: "Europe/Paris", weekday: "long" });
   const todayKey = now.toISOString().slice(0, 10);
+  tlmMaybeRunScanner(hour,todayKey);
   const reliabilitySlot = `${todayKey}:${hour}:${Math.floor(now.getMinutes() / 15)}`;
   if (_lastReliabilitySlot !== reliabilitySlot) {
     _lastReliabilitySlot = reliabilitySlot;
@@ -20193,6 +20367,7 @@ app.listen(PORT, () => {
     }
 
     setInterval(checkAnalyticsSchedule, 60000);
+    setTimeout(function(){tlmScannerResults().catch(function(){});tlmScannerBroadcast().catch(function(e){console.error("[scanner-startup]",e.message);});},90000);
     setTimeout(() => {
       runReliabilityLoop("startup-proof");
       runReliabilityLoop("startup-lock-proof");
