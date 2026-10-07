@@ -1,7 +1,7 @@
 {
   "date": "2026-10-07",
   "timezone": "Europe/Paris",
-  "purpose": "exploratory-pre-match-only",
+  "purpose": "exploratory-daily-watch-and-results",
   "officialProduct": {
     "sport": "football",
     "market": "une équipe ciblée marquera au moins un but",
@@ -29,7 +29,7 @@
       "bottom": "Lotte Giants",
       "color": "green",
       "rating": "8,7",
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Classement pré-match favorable à KIA",
         "Écart Top 5 / Bottom 5 vérifié dans le même classement KBO"
@@ -37,7 +37,11 @@
       "classification": {
         "status": "valid",
         "reason": "KBO à 10 équipes : 3e contre 8e respecte Top 5 / Bottom 5."
-      }
+      },
+      "result": "KIA Tigers 12–4 Lotte Giants",
+      "selection": "KIA Tigers",
+      "outcome": "Gagnant",
+      "source": "MyKBO Stats / Sportify"
     },
     {
       "sport": "⚽ Football",
@@ -50,14 +54,18 @@
       "bRank": "16e J2",
       "color": "green",
       "rating": null,
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Écart de divisions identifié"
       ],
       "classification": {
         "status": "non-classable",
         "reason": "Pas de classement commun J1/J2 : aucune note chiffrée Top 5 / Bottom 5."
-      }
+      },
+      "result": "Sanfrecce Hiroshima 4–0 Iwaki FC",
+      "selection": "Sanfrecce Hiroshima",
+      "outcome": "Gagnant",
+      "source": "JFA"
     },
     {
       "sport": "🏒 Hockey",
@@ -72,7 +80,7 @@
       "bottom": "Admiral Vladivostok",
       "color": "orange",
       "rating": "7,4",
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Même conférence",
         "Classement pré-match compatible avec la règle Top 5 / Bottom 5"
@@ -80,7 +88,11 @@
       "classification": {
         "status": "valid",
         "reason": "Même conférence Est : 1er contre 8e, classement commun exploitable."
-      }
+      },
+      "result": "Metallurg Magnitogorsk 2–5 Admiral Vladivostok",
+      "selection": "Metallurg Magnitogorsk",
+      "outcome": "Perdant",
+      "source": "HC Admiral"
     },
     {
       "sport": "🏀 Basketball",
@@ -93,14 +105,18 @@
       "bRank": "9e actuel",
       "color": "orange",
       "rating": null,
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Début de saison déclaré non significatif"
       ],
       "classification": {
         "status": "non-classable",
         "reason": "Classement de début de saison insuffisamment significatif : aucune note chiffrée."
-      }
+      },
+      "result": "Busan KCC Egis 103–98 Daegu KOGAS Pegasus",
+      "selection": "Busan KCC Egis",
+      "outcome": "Gagnant",
+      "source": "SportScore"
     },
     {
       "sport": "⚾ Baseball",
@@ -113,14 +129,18 @@
       "bRank": "4e",
       "color": "orange",
       "rating": null,
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Ligue à 6 équipes"
       ],
       "classification": {
         "status": "non-classable",
         "reason": "Avec 6 équipes, Top 5 / Bottom 5 se chevauchent trop fortement : aucune note chiffrée."
-      }
+      },
+      "result": "Hanshin Tigers 2–1 Hiroshima Toyo Carp",
+      "selection": "Hanshin Tigers",
+      "outcome": "Gagnant",
+      "source": "Weekly Baseball Online"
     },
     {
       "sport": "⚽ Football",
@@ -133,14 +153,18 @@
       "bRank": "1er J3",
       "color": "orange",
       "rating": null,
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Écart de divisions identifié"
       ],
       "classification": {
         "status": "non-classable",
         "reason": "Pas de classement commun J1/J3 : aucune note chiffrée Top 5 / Bottom 5."
-      }
+      },
+      "result": "Cerezo Osaka 2–0 Kagoshima United",
+      "selection": "Cerezo Osaka",
+      "outcome": "Gagnant",
+      "source": "J.LEAGUE"
     },
     {
       "sport": "⚽ Football",
@@ -153,14 +177,18 @@
       "bRank": "5e J2",
       "color": "orange",
       "rating": null,
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Écart de divisions identifié"
       ],
       "classification": {
         "status": "non-classable",
         "reason": "Pas de classement commun J1/J2 : aucune note chiffrée Top 5 / Bottom 5."
-      }
+      },
+      "result": "Avispa Fukuoka 0–1 Yokohama FC",
+      "selection": "Yokohama FC",
+      "outcome": "Gagnant",
+      "source": "J.LEAGUE"
     },
     {
       "sport": "🏒 Hockey",
@@ -175,7 +203,7 @@
       "bottom": "Sibir Novosibirsk",
       "color": "orange",
       "rating": "6,5",
-      "status": "À venir",
+      "status": "Terminé",
       "metrics": [
         "Même conférence",
         "Classement pré-match compatible avec la règle Top 5 / Bottom 5"
@@ -183,7 +211,12 @@
       "classification": {
         "status": "valid",
         "reason": "Même conférence Est : 5e contre 11e, classement commun exploitable."
-      }
+      },
+      "result": "Sibir Novosibirsk 4–5 Salavat Yulaev Ufa (OT)",
+      "selection": "Salavat Yulaev Ufa",
+      "outcome": "Gagnant",
+      "source": "HC Salavat Yulaev"
     }
-  ]
+  ],
+  "updatedAt": "2026-10-07T21:35:00+02:00"
 }
