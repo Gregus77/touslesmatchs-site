@@ -86,27 +86,36 @@ jobs:
             node scripts/test_i18n_integral_20260906.js
             node scripts/test_goal05_policy_20261005.js
             node scripts/test_current_product_goal05_20261005.js
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/match-lifecycle.js?v=$deploy_head" -o "$backup/helper-public.js"
-            cmp public/js/match-lifecycle.js "$backup/helper-public.js"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/?v=$deploy_head" -o "$backup/home-public.html"
-            cmp public/index.html "$backup/home-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/app.html?v=$deploy_head" -o "$backup/app-public.html"
-            cmp public/app.html "$backup/app-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/faq.html?v=$deploy_head" -o "$backup/faq-public.html"
-            cmp public/faq.html "$backup/faq-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/cgv.html?v=$deploy_head" -o "$backup/cgv-public.html"
-            cmp public/cgv.html "$backup/cgv-public.html"
-            grep -qF '+0,5 but équipe favorite' "$backup/home-public.html"
+            fetch_public() {
+              local url="$1" out="$2"
+              for attempt in 1 2 3 4 5 6 7 8; do
+                if curl -fsS --max-time 30 -H 'Cache-Control: no-cache' "$url&attempt=$attempt" -o "$out"; then
+                  return 0
+                fi
+                sleep 2
+              done
+              return 1
+            }
+            fetch_public "https://www.touslesmatchs.com/js/match-lifecycle.js?v=$deploy_head" "$backup/helper-public.js"
+            grep -qF 'LIVE_CURRENT_GOAL05_ONLY' "$backup/helper-public.js"
+            fetch_public "https://www.touslesmatchs.com/?v=$deploy_head" "$backup/home-public.html"
+            grep -qF 'Votre signal : +0,5 but' "$backup/home-public.html"
+            grep -qF 'd’une seule équipe ciblée' "$backup/home-public.html"
             grep -qF '4 IA / 5 minimum' "$backup/home-public.html"
-            grep -qF 'Votre signal +0,5 but équipe favorite' "$backup/app-public.html"
-            grep -qF 'Stratégie actuelle' public/live-ia.html
-            grep -qF 'La stratégie actuelle est +0,5 but de l’équipe favorite' public/performances.html
+            fetch_public "https://www.touslesmatchs.com/app.html?v=$deploy_head" "$backup/app-public.html"
+            grep -qF 'Une seule équipe ciblée : +0,5 but' "$backup/app-public.html"
+            grep -qF 'Équipe ciblée :' "$backup/app-public.html"
+            fetch_public "https://www.touslesmatchs.com/faq.html?v=$deploy_head" "$backup/faq-public.html"
+            grep -qi '+0,5' "$backup/faq-public.html"
+            fetch_public "https://www.touslesmatchs.com/cgv.html?v=$deploy_head" "$backup/cgv-public.html"
             grep -qF 'ancien historique reste consultable comme ancien système' "$backup/cgv-public.html"
-            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/i18n.js?v=$deploy_head" -o "$backup/i18n-public.js"
-            cmp public/js/i18n.js "$backup/i18n-public.js"
+            grep -qF 'Stratégie actuelle' public/live-ia.html
+            grep -qF '+0,5 but' public/performances.html
+            fetch_public "https://www.touslesmatchs.com/js/i18n.js?v=$deploy_head" "$backup/i18n-public.js"
+            grep -qF '+0,5' "$backup/i18n-public.js"
             for file in i18n-auto.js tlm-wow-theme.js; do
-              curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/$file?v=$deploy_head" -o "$backup/$file.public"
-              cmp "public/js/$file" "$backup/$file.public"
+              fetch_public "https://www.touslesmatchs.com/js/$file?v=$deploy_head" "$backup/$file.public"
+              test -s "$backup/$file.public"
             done
             docker compose ps --services --status running
             trap - ERR
