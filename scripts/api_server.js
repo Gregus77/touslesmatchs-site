@@ -1786,7 +1786,8 @@ function sendTelegramMessage(chatId, text, deliveryMeta = null, skipRussianMirro
   // redemarrage restent dans les logs, sans polluer Telegram.
   if (String(chatId) === String(TELEGRAM_ADMIN_CHAT_ID)
       && deliveryMeta?.adminDailyDigest !== true
-      && deliveryMeta?.adminOperationalAlert !== true) {
+      && deliveryMeta?.adminOperationalAlert !== true
+      && deliveryMeta?.adminScannerUpdate !== true) {
     console.log("[telegram-admin] bloque: digest quotidien uniquement");
     return Promise.resolve(false);
   }
@@ -5652,6 +5653,11 @@ async function fetchUpcomingSecondaryFixtures(dates = []) {
 
           out.push({
             id: `${cfg.key.slice(0,2)}-${g?.id || key}`,
+            sourceId: g?.id != null ? String(g.id) : null,
+            leagueId: g?.league?.id ?? null,
+            season: g?.league?.season ?? g?.season ?? null,
+            homeId: g?.teams?.home?.id ?? null,
+            awayId: g?.teams?.away?.id ?? null,
             home, away,
             competition: league + (country ? " · " + country : ""),
             country,
@@ -5756,6 +5762,9 @@ async function computeUpcomingPicks() {
       if (stats.trustedChecked >= 60) continue;
       stats.trustedChecked++;
       const observedBase = {
+        id: `ft-${f.fixture.id}`, sourceId: String(f.fixture.id), source: "api-sports",
+        fixtureId: f.fixture.id, leagueId: f.league?.id ?? null, season: f.league?.season ?? null,
+        homeId: f.teams.home?.id ?? null, awayId: f.teams.away?.id ?? null,
         home: f.teams.home.name, away: f.teams.away.name,
         competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
         country: f.league.country || "", sport: "Football", kickoff: f.fixture.date,
@@ -5917,6 +5926,8 @@ app.get("/upcoming-picks", async (req, res) => {
         home_logo: p.home_logo, away_logo: p.away_logo,
       })),
       fixtures: (result.fixtures || []).filter(p => new Date(p.kickoff).getTime() > Date.now()).map(p => ({
+        id:p.id||null,sourceId:p.sourceId||null,fixtureId:p.fixtureId||null,
+        leagueId:p.leagueId||null,season:p.season||null,homeId:p.homeId||null,awayId:p.awayId||null,
         home: p.home, away: p.away, competition: p.competition, country: p.country,
         sport: p.sport || "Football", kickoff: p.kickoff,
         home_logo: p.home_logo || null, away_logo: p.away_logo || null,
