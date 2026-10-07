@@ -5,6 +5,7 @@
 - Préserve le design actuel; ajoute le détail des résultats +0,5 avec provenance officielle/scanner et cotes réellement disponibles.
 - Remplace la seconde interface Android par l’entrée du site canonique et conserve les liens internes vers résultats, direct et compte.
 - Aucun changement de données, d’offres ou de règles. Tests locaux dédiés et navigateur réussis; test sur APK réel et validation avant publication restent requis.
+- Sur accord de Greg, restaure popup + son dans les pages partagées, avec activation facultative dans Mon compte, test sonore, contrôle serveur, fraîcheur, anti-doublon et reprise après erreur réseau. Ne promet pas de notification application fermée.
 - Handoff : `docs/handoff/2026-10-07-goal05-site-app-parity.md`.
 
 ## 2026-10-07 — Signal +0,5 sur une équipe explicitement ciblée

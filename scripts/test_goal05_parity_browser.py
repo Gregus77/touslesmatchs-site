@@ -1,5 +1,6 @@
 """Actual browser checks with isolated fixtures, never production writes."""
 import json
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 from playwright.sync_api import sync_playwright
@@ -23,7 +24,7 @@ STATS = {
 with sync_playwright() as p:
     browser = p.chromium.launch(channel='chrome', headless=True)
     context = browser.new_context()
-    state = {'failure': False}
+    state = {'failure': False, 'alert_locked': False, 'alert_age': 0, 'alert_id': 'alert-fixture-1', 'alert_calls': 0}
     def route(request):
         url = request.request.url
         if not url.startswith(BASE + '/'):
@@ -32,6 +33,12 @@ with sync_playwright() as p:
         path = urlsplit(url).path
         if path == '/api/goal05/stats':
             request.fulfill(status=503 if state['failure'] else 200, content_type='application/json', body=json.dumps(STATS))
+        elif path == '/api/goal05/latest':
+            state['alert_calls'] += 1
+            authorized = request.request.headers.get('authorization') == 'Bearer test-otp-token'
+            locked = state['alert_locked'] or not authorized
+            signal = {'id': state['alert_id'], 'type': 'goal05_team_over_0_5', 'status': 'active', 'sentAt': (datetime.now(timezone.utc) - timedelta(seconds=state['alert_age'])).isoformat(), 'team': 'Club <img src=x onerror=alert(1)>', 'home': 'Club A', 'away': 'Club B', 'odd': 1.8}
+            request.fulfill(content_type='application/json', body=json.dumps({'ok': True, 'locked': locked, 'signal': signal}))
         elif path == '/api/analysis-history':
             request.fulfill(content_type='application/json', body=json.dumps({'ok': True, 'analyses': [], 'total': 0, 'stats': {'total': 523, 'wins': 427, 'losses': 96, 'pending': 0, 'winrate': 82, 'roi_pct': 35}}))
         elif path == '/api/auth/verify-otp':
@@ -97,5 +104,49 @@ with sync_playwright() as p:
     page.goto(BASE + '/performances', wait_until='networkidle')
     assert 'indisponibles' in page.locator('#goal05-scanner-recent').inner_text()
     assert page.locator('#k-total').inner_text() == '523'
+    # Restore user-approved popup + sound on the canonical account and pages.
+    context.add_init_script("""
+      window.alertToneStarts=0;
+      const Original=window.AudioContext||window.webkitAudioContext;
+      if(Original){const create=Original.prototype.createOscillator;Original.prototype.createOscillator=function(){
+        const oscillator=create.call(this),start=oscillator.start.bind(oscillator);
+        oscillator.start=function(...args){window.alertToneStarts++;return start(...args);};return oscillator;
+      };}
+    """)
+    calls_before = state['alert_calls']
+    page.goto(BASE + '/dashboard', wait_until='networkidle')
+    page.locator('#tlm-alert-toggle').wait_for(state='visible')
+    assert state['alert_calls'] == calls_before, 'Opt-in is required before signal polling'
+    page.locator('#tlm-alert-toggle').click()
+    popup = page.locator('#tlm-signal-popup')
+    popup.wait_for(state='visible')
+    assert 'Club <img' in popup.inner_text()
+    assert popup.locator('img').count() == 0, 'Provider text must never execute as HTML'
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Popup must not create mobile overflow'
+    page.screenshot(path=str(OUT / 'goal05-popup-mobile.png'))
+    assert page.evaluate('window.alertToneStarts') >= 1, 'Real browser audio oscillator must start after a gesture'
+    starts = page.evaluate('window.alertToneStarts')
+    page.evaluate('window.TLMSignalAlerts.check()')
+    assert page.evaluate('window.alertToneStarts') == starts, 'Repeated polls must not replay the tone'
+    popup.get_by_role('button', name='Fermer').click()
+    page.goto(BASE + '/performances', wait_until='networkidle')
+    assert page.locator('#tlm-signal-popup').count() == 0, 'Seen signal must not alert again on another page'
+    state['alert_id'] = 'alert-fixture-2'
+    page.evaluate('window.TLMSignalAlerts.check()')
+    page.locator('#tlm-signal-popup').wait_for(state='visible')
+    state['alert_locked'] = True
+    page.evaluate('window.TLMSignalAlerts.check()')
+    assert page.locator('#tlm-signal-popup').is_hidden(), 'Lost authorization must hide the popup'
+    state['alert_locked'] = False
+    state['alert_id'] = 'alert-fixture-old'
+    state['alert_age'] = 300
+    page.evaluate('window.TLMSignalAlerts.check()')
+    assert page.locator('#tlm-signal-popup').is_hidden(), 'Old signal must stay silent'
+    page.goto(BASE + '/dashboard', wait_until='networkidle')
+    page.locator('#tlm-alert-toggle').click()
+    calls_before = state['alert_calls']
+    page.evaluate('window.TLMSignalAlerts.check()')
+    assert state['alert_calls'] == calls_before, 'Disabled alerts must stop polling'
+    assert page.evaluate("localStorage.getItem('tlm_signal_alerts')") == '0'
     browser.close()
-print('BROWSER_DESKTOP_MOBILE_STATS_APP_PARITY_OTP_ACCESS_AND_ERROR_OK')
+print('BROWSER_STATS_APP_PARITY_OTP_ACCESS_POPUP_SOUND_DEDUPE_AND_ERROR_OK')

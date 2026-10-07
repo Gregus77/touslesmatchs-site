@@ -1,0 +1,5 @@
+.tlm-signal-popup{position:fixed;z-index:9600;right:16px;bottom:88px;box-sizing:border-box;max-width:420px;width:calc(100% - 32px);padding:18px;background:var(--bg2,#0b1027);border:1px solid var(--cyan,#38cffd);border-radius:14px;color:var(--text,#f5f6ff);font:14px/1.5 Inter,system-ui,sans-serif;box-shadow:0 12px 40px #0008;overflow-wrap:anywhere}
+.tlm-signal-popup[hidden]{display:none}
+.tlm-signal-popup strong{display:block;font-size:16px}
+.tlm-signal-popup a,.tlm-signal-popup button{display:inline-block;font:inherit;padding:8px 12px;margin-right:10px;color:var(--cyan,#38cffd);background:transparent;border:1px solid var(--b2,#363957);border-radius:8px;cursor:pointer;text-decoration:none}
+.tlm-signal-popup a:focus-visible,.tlm-signal-popup button:focus-visible{outline:2px solid var(--cyan,#38cffd);outline-offset:3px}

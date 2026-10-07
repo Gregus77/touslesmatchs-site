@@ -127,6 +127,8 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
   <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
   <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
+  <link rel="stylesheet" href="/css/signal-alerts.css?v=20261007">
+  <script src="/js/signal-alerts.js?v=20261007" defer></script>
 </head>
 <body class="tlm-wow tlm-page-dashboard">
 
@@ -177,6 +179,11 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
       <button class="dash-action-btn" id="billing-btn" onclick="openBillingPortal()">⚙️ Gérer / résilier mon abonnement</button>
       <a class="dash-action-btn" href="/#plans">↗️ Découvrir Premium</a>
     </div>
+    <section style="margin:20px 0" aria-label="Alertes de signaux">
+      <button class="dash-action-btn" id="tlm-alert-toggle" type="button" aria-pressed="false">Activer popup + son</button>
+      <button class="dash-action-btn" id="tlm-alert-test" type="button">Tester le son</button>
+      <p id="tlm-alert-status" role="status" style="font-size:12px;color:var(--muted)">Alertes uniquement pour les signaux officiels accessibles à votre compte, quand la page est ouverte. Le son dépend des autorisations de votre appareil.</p>
+    </section>
     <div id="passkey-manage-area" style="display:none;margin-top:16px;background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:18px">
       <div class="section-title" style="margin-top:0">Mes passkeys</div>
       <div class="auth-sub">Enregistre plusieurs appareils. Aucun visage ni aucune empreinte n'est conservé par TousLesMatchs.</div>
