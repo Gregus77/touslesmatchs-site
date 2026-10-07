@@ -190,7 +190,7 @@
   body.tlm-page-app #chatbot{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20261007-status-v3"></script>
+<script src="/js/match-lifecycle.js?v=20261007-live-unknown-v4"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1130,20 +1130,23 @@ body{overflow-x:hidden}
     [$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(!img)return;if(!flag){img.hidden=true;return;}img.hidden=false;img.src=flag;img.alt='Drapeau '+country;img.onerror=function(){this.hidden=true;};});
     var hs=appHomeScore(m),as=appAwayScore(m);$("app-live-score").textContent=(hs===''?'—':hs)+' - '+(as===''?'—':as);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
     var minute=Number(String(m.minute||'').replace(/[^0-9.]/g,''));
-    var analysisClosed=TLMMatchLifecycle.entryClosed(m)||!TLMMatchLifecycle.canFeature(m);
+    var lifecyclePhase=TLMMatchLifecycle.phase(m);
+    var analysisClosed=TLMMatchLifecycle.entryClosed(m);
+    var liveMinuteUnavailable=lifecyclePhase==='live_unknown';
     var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<30);
     var exclusionReason=String(m.analysis_exclusion_reason||'');
     var aligned=Number(voteState.consensusCount)||Math.max(voteState.overCount,voteState.underCount);
     var direction=voteState.consensusDirection||(voteState.overCount>=voteState.underCount?'over':'under');
     $("app-ai-total").textContent=votes?(voteState.locked?'CONSENSUS '+aligned+'/5':'ANALYSE +0,5 — '+aligned+'/5'):'0/5';
     $("app-ai-responses").textContent=appResponseCount(voteState.slots)+'/5 IA ont répondu';
-    $("app-ai-label").textContent=voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Analyse IA +0,5':exclusionReason?'Analyse non lancée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
+    $("app-ai-label").textContent=voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':liveMinuteUnavailable?'En direct — minute indisponible':votes?'Analyse IA +0,5':exclusionReason?'Analyse non lancée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
     var preservedAt=voteState.snapshotMinute!=null?(" · enregistré à "+voteState.snapshotMinute+"'"):'';var preservedClock=appVoteTime(voteState.consensusAt);if(preservedClock)preservedAt+=' à '+preservedClock;
     if(TLMMatchLifecycle.entryClosed(m))$("app-ai-label").textContent='Analyse historique — entrée fermée';
     $("app-ai-result").textContent=voteState.official?(m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
       :votes&&analysisClosed?'Anciennes tendances — aucun signal officiel'
       :votes&&isFinite(minute)&&minute<30?'Tendance — pas encore de signal'
       :votes?(m.diffusion_block||exclusionReason||'Tendance — autres critères non remplis, aucun signal')
+      :liveMinuteUnavailable?'Match en direct — minute à récupérer avant toute décision'
       :exclusionReason||m.block_reason||m.data_notice||(analysisWaiting?'Analyse en cours — affichage à partir de la 30e minute':'En attente des IA');
     $("app-vote-explanation").textContent='';
     Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},voted=slot.status==='voted',terminal=appTerminalCaption(slot);el.classList.toggle('on',false);el.classList.toggle('terminal',!!terminal);el.classList.toggle('old',false);el.classList.toggle('over',false);el.classList.toggle('under',false);el.textContent=terminal?terminal.mark:String(i+1);var detail=voted?('IA '+(i+1)+' : ancienne réponse O/U masquée — non utilisée pour le +0,5'):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente du vote +0,5'));el.title=detail;el.dataset.explanation=detail;el.setAttribute('aria-label',detail);});
