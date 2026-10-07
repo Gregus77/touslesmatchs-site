@@ -15641,12 +15641,18 @@ app.post("/internal/strong-signals", (req, res) => {
 // ── Statistiques publiques réelles utilisées par le site et l'application ──
 app.get("/public-signal-rules", (req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, from_minute: 35, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE, includes_first_half_stoppage: true,
-    delivery_from_minute: officialSnapshots.OFFICIAL_FROM_MINUTE,
-    delivery_to_minute: officialSnapshots.OFFICIAL_TO_MINUTE,
-    min_votes: CLIENT_OU25_MIN_VOTES, min_confidence: CLIENT_OU25_MIN_CONFIDENCE,
-    min_odd: TIER_MIN_REAL_ODD, max_odd: TIER_MAX_REAL_ODD,
-    min_rank_gap: 5, top5_bottom5_priority: true });
+  res.json({
+    ok: true,
+    strategy: "goal05-favorite-v2",
+    from_minute: 30,
+    to_minute: 85,
+    min_votes: 4,
+    min_odd: 1.60,
+    min_score: 8,
+    min_coverage_pct: 75,
+    top5_bottom5_required: true,
+    target_must_be_scoreless: true,
+  });
 });
 app.get("/public-analysis-stats", (req, res) => {
   try {

@@ -14,5 +14,7 @@ jobs:
         run: |
           node scripts/test_goal05_policy_20261005.js
           node scripts/test_current_product_goal05_20261005.js
+          node scripts/test_public_goal05_rules_copy_20261006.js
+          node scripts/test_public_seo_active_goal05_20261007.js
       - name: Statistics coverage never invents data
         run: node scripts/test_stats_coverage_20260926.js

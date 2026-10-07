@@ -3,37 +3,37 @@
   <url>
     <loc>https://www.touslesmatchs.com/</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/live-ia</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/performances</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/pronostics</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/pronostic-ia</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/faq</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/resultats-quotidiens</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/mentions-legales</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/cgu</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/cgv</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/confidentialite</loc>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/fr/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/" />
@@ -44,7 +44,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/en/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/" />
@@ -55,7 +55,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/es/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/" />
@@ -66,7 +66,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/pt-br/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/" />
@@ -77,7 +77,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/ru/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/" />
@@ -88,7 +88,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/zh-cn/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/" />
@@ -99,7 +99,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/fr/pronostics-foot-aujourdhui/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-aujourdhui/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
@@ -110,7 +110,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/en/football-predictions-today/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-aujourdhui/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
@@ -121,7 +121,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/es/pronosticos-futbol-hoy/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-aujourdhui/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
@@ -132,7 +132,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/pt-br/palpites-futebol-hoje/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-aujourdhui/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
@@ -143,7 +143,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/ru/prognozy-futbol-segodnya/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-aujourdhui/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
@@ -154,7 +154,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/zh-cn/jinri-zuqiu-yuce/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-aujourdhui/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
@@ -165,139 +165,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/football-predictions-today/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/fr/pronostics-over-2-5/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-over-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-mas-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-mais-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-bolshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/da-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/en/over-2-5-goals-predictions/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-over-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-mas-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-mais-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-bolshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/da-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/es/pronosticos-mas-de-2-5-goles/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-over-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-mas-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-mais-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-bolshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/da-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/pt-br/palpites-mais-de-2-5-gols/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-over-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-mas-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-mais-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-bolshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/da-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/ru/total-bolshe-2-5/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-over-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-mas-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-mais-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-bolshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/da-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/zh-cn/da-2-5-qiu-yuce/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-over-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-mas-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-mais-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-bolshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/da-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/over-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/fr/pronostics-under-2-5/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-under-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-menos-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-menos-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-menshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/xiao-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/en/under-2-5-goals-predictions/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-under-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-menos-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-menos-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-menshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/xiao-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/es/pronosticos-menos-de-2-5-goles/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-under-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-menos-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-menos-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-menshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/xiao-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/pt-br/palpites-menos-de-2-5-gols/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-under-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-menos-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-menos-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-menshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/xiao-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/ru/total-menshe-2-5/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-under-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-menos-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-menos-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-menshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/xiao-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
-    <loc>https://www.touslesmatchs.com/zh-cn/xiao-2-5-qiu-yuce/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-under-2-5/" />
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <xhtml:link rel="alternate" hreflang="es" href="https://www.touslesmatchs.com/es/pronosticos-menos-de-2-5-goles/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://www.touslesmatchs.com/pt-br/palpites-menos-de-2-5-gols/" />
-    <xhtml:link rel="alternate" hreflang="ru" href="https://www.touslesmatchs.com/ru/total-menshe-2-5/" />
-    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://www.touslesmatchs.com/zh-cn/xiao-2-5-qiu-yuce/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/under-2-5-goals-predictions/" />
-    <lastmod>2026-08-30</lastmod>
-  </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/fr/pronostics-foot-ia/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-ia/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
@@ -308,7 +176,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/en/ai-football-predictions/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-ia/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
@@ -319,7 +187,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/es/pronosticos-futbol-ia/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-ia/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
@@ -330,7 +198,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/pt-br/palpites-futebol-ia/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-ia/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
@@ -341,7 +209,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/ru/prognozy-futbol-ii/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-ia/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
@@ -352,7 +220,7 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url>
+<url>
     <loc>https://www.touslesmatchs.com/zh-cn/ai-zuqiu-yuce/</loc>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/fr/pronostics-foot-ia/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
@@ -363,11 +231,6 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://www.touslesmatchs.com/en/ai-football-predictions/" />
     <lastmod>2026-08-30</lastmod>
   </url>
-  <url><loc>https://www.touslesmatchs.com/guides/</loc><lastmod>2026-09-16</lastmod></url>
-  <url><loc>https://www.touslesmatchs.com/guides/comprendre-over-under-25/</loc><lastmod>2026-09-08</lastmod></url>
-  <url><loc>https://www.touslesmatchs.com/guides/btts-ou-over-25/</loc><lastmod>2026-09-08</lastmod></url>
-  <url><loc>https://www.touslesmatchs.com/guides/comprendre-consensus-ia/</loc><lastmod>2026-09-14</lastmod></url>
-  <url><loc>https://www.touslesmatchs.com/guides/matchs-live-sans-signal/</loc><lastmod>2026-09-13</lastmod></url>
-  <url><loc>https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/</loc><lastmod>2026-09-16</lastmod></url>
-  <url><loc>https://www.touslesmatchs.com/guides/nouvelle-version-ia-football/</loc><lastmod>2026-09-12</lastmod></url>
+<url><loc>https://www.touslesmatchs.com/guides/</loc><lastmod>2026-09-16</lastmod></url>
+<url><loc>https://www.touslesmatchs.com/guides/equipe-ciblee-plus-0-5/</loc></url>
 </urlset>

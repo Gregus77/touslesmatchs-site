@@ -3,20 +3,21 @@
   fetch('/api/public-signal-rules', {cache: 'no-store'})
     .then(function (r) { if (!r.ok) throw new Error('rules'); return r.json(); })
     .then(function (r) {
-      if (!r.ok || !Number.isFinite(r.to_minute)) return;
+      if (r.strategy !== 'goal05-favorite-v2' || !Number.isFinite(r.to_minute)) return;
       window.tlmSignalWindowEnd = r.to_minute;
       var lead = document.querySelector('.tlm-hero-lead');
-      if (lead) lead.textContent = 'Entre la ' + r.from_minute + 'e et la ' + r.to_minute
-        + 'e minute, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins '
+      if (lead) lead.textContent = 'De la ' + r.from_minute + 'e à la ' + r.to_minute
+        + 'e minute, le système surveille les rencontres Top 5 contre Bottom 5. Le signal nomme une seule équipe : elle doit encore être à 0 but et marquer au moins un but (+0,5 équipe), avec une cote réelle fraîche d’au moins '
+        + Number(r.min_odd).toFixed(2).replace('.', ',') + ' et un accord minimum de '
         + r.min_votes + ' IA sur 5.';
       var end = document.getElementById('hero-window-end');
       if (end) end.textContent = r.to_minute + "'";
       var note = document.getElementById('tier-note');
-      if (note) note.textContent = 'Règle actuelle Premium : football de championnat entre la '
-        + r.from_minute + 'e et la ' + r.to_minute + 'e minute, majorité minimale '
-        + r.min_votes + '/5, confiance ≥' + r.min_confidence + '/100, cote ANJ réelle entre '
-        + Number(r.min_odd).toFixed(2).replace('.', ',') + ' et '
-        + Number(r.max_odd).toFixed(2).replace('.', ',') + ' et écart vérifié d’au moins '
-        + Number(r.min_rank_gap || 5) + ' places au classement. Les affiches top 5 contre bottom 5 sont prioritaires ; aucun résultat n’est garanti.';
-    }).catch(function () { /* Keep neutral wording if the API is unavailable. */ });
+      if (note) note.textContent = 'Stratégie actuelle +0,5 but d’une seule équipe ciblée V2 : l’équipe nommée doit marquer au moins un but; Top 5 contre Bottom 5 est obligatoire. '
+        + 'La saison actuelle et les 3 précédentes, la forme offensive des 5 derniers matchs, la défense adverse et le live sont analysés. '
+        + 'Entre la ' + r.from_minute + 'e et la ' + r.to_minute + 'e minute, l’équipe ciblée doit être encore à 0 but, avec au moins '
+        + r.min_votes + ' IA sur 5, une note verte ≥ ' + r.min_score + '/10, une couverture factuelle ≥ '
+        + r.min_coverage_pct + ' % et une cote réelle fraîche ≥ '
+        + Number(r.min_odd).toFixed(2).replace('.', ',') + '. Aucun résultat n’est garanti.';
+    }).catch(function () { /* Keep the current static wording if the API is unavailable. */ });
 })();

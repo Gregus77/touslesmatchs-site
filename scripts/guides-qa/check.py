@@ -62,7 +62,15 @@ def resolve(path):
     return next((p for p in choices if p.is_file()), None)
 
 
-pages = {p: Page(p) for p in sorted((ROOT / 'guides').rglob('index.html'))}
+guide_paths = sorted((ROOT / 'guides').rglob('index.html'))
+redirect_stubs = []
+for p in guide_paths:
+    text = p.read_text()
+    if 'content="noindex,follow"' in text and 'http-equiv="refresh"' in text:
+        assert '<script' not in text, (p, 'redirect stub must be script-free')
+        assert '/guides/equipe-ciblee-plus-0-5/' in text, (p, 'redirect target')
+        redirect_stubs.append(p)
+pages = {p: Page(p) for p in guide_paths if p not in redirect_stubs}
 assert len(pages) >= 2, 'Missing guide collection'
 locations = [n.text for n in ET.parse(ROOT / 'sitemap.xml').iter('{http://www.sitemaps.org/schemas/sitemap/0.9}loc')]
 assert not [u for u, n in Counter(locations).items() if n > 1], 'Duplicate sitemap URL'
@@ -86,4 +94,4 @@ for path, page in pages.items():
     assert '18+' in path.read_text() and 'Aucun gain garanti' in path.read_text(), path
 for asset in re.findall(r"url\(['\"]?([^)'\"]+)", (ROOT / 'css/guides.css').read_text()):
     assert resolve(urlsplit(asset).path), ('missing CSS asset', asset)
-print(f'PASS: {len(pages)} pages, HTML, canonical, sitemap, internal links and anchors, CSS assets.')
+print(f'PASS: {len(pages)} indexable guides + {len(redirect_stubs)} redirect stubs, HTML, canonical, sitemap, internal links and anchors, CSS assets.')

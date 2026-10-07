@@ -17,6 +17,9 @@ on:
       - public/js/i18n.js
       - scripts/test_current_product_goal05_20261005.js
       - scripts/test_goal05_policy_20261005.js
+      - scripts/test_public_goal05_rules_copy_20261006.js
+      - scripts/test_public_seo_active_goal05_20261007.js
+      - public/**
       - .github/workflows/deploy-match-lifecycle.yml
       - .github/workflows/test-current-product-goal05-20261005.yml
 
@@ -36,6 +39,8 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/test_current_product_goal05_20261005.js
+          node scripts/test_public_goal05_rules_copy_20261006.js
+          node scripts/test_public_seo_active_goal05_20261007.js
           node scripts/test_goal05_policy_20261005.js
           node scripts/test_i18n_integral_20260906.js
           echo CURRENT_GOAL05_PRODUCT_TESTS_OK
