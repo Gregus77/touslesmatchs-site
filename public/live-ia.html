@@ -1837,11 +1837,14 @@ function renderHistoryList(analyses, append) {
     else if (a.score) scoreHtml = '<span class="h-score">Score live : ' + escHtml(a.score) + ' (' + (a.minute || '?') + '\')</span>';
 
     var timeStr = '';
-    if (a.analysed_at) {
-      try {
-        var d = new Date(a.analysed_at + 'Z');
-        timeStr = d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit'}) + ' à ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
-      } catch(e) { timeStr = a.analysed_at; }
+    var historyDate=tlmMatchDate({
+      kickoff:a.kickoff||a.utcDate||a.date||a.start_time||a.startTime||a.analysed_at||a.created_at
+    });
+    if(historyDate){
+      timeStr=historyDate.toLocaleDateString('fr-FR',{timeZone:'Europe/Paris',day:'2-digit',month:'2-digit',year:'numeric'})
+        +' à '+historyDate.toLocaleTimeString('fr-FR',{timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit'});
+    } else {
+      timeStr='Date indisponible';
     }
 
     html += '<div class="h-card">';
@@ -1928,9 +1931,14 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
    puis pays > championnat > heure
 */
 function tlmMatchDate(m){
-  var raw=m.kickoff||m.utcDate||m.date||m.start_time||m.startTime||"";
-  var d=new Date(raw);
-  return isNaN(d.getTime()) ? null : d;
+  var raw=m&&(m.kickoff||m.utcDate||m.date||m.start_time||m.startTime||m.startsAt||m.analysed_at||m.created_at)||"";
+  if(raw==null||raw==="")return null;
+  if(typeof raw==="number"){var ms=raw<1e12?raw*1000:raw,dn=new Date(ms);return isNaN(dn.getTime())?null:dn;}
+  var txt=String(raw).trim();
+  if(!txt||/^invalid date$/i.test(txt))return null;
+  var d=new Date(txt);
+  if(isNaN(d.getTime())&&/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}/.test(txt))d=new Date(txt.replace(" ","T")+"Z");
+  return isNaN(d.getTime())?null:d;
 }
 
 function tlmParisDayKey(d){
