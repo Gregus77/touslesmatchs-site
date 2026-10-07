@@ -5589,6 +5589,91 @@ function refreshUpcomingPicksInBackground() {
   return _upcomingPicksRefreshPromise;
 }
 
+// Calendrier multisport exploratoire pour la rubrique "À venir".
+// Séparé du Concile officiel : aucun vote IA, aucune diffusion Telegram.
+// Cache 2 h pour rester très loin des quotas API-Sports secondaires.
+let _upcomingSecondaryFixturesCache = { ts: 0, data: [] };
+async function fetchUpcomingSecondaryFixtures(dates = []) {
+  if (!API_SPORTS_KEY) return _upcomingSecondaryFixturesCache.data;
+  if (Date.now() - _upcomingSecondaryFixturesCache.ts < 2 * 60 * 60 * 1000)
+    return _upcomingSecondaryFixturesCache.data;
+
+  const configs = [
+    {
+      key: "basketball", sport: "Basketball", host: "v1.basketball.api-sports.io",
+      leagueOk: name => /\b(nba|euroleague|euroligue|kbl|korean basketball league|nbl)\b/i.test(name)
+    },
+    {
+      key: "hockey", sport: "Hockey", host: "v1.hockey.api-sports.io",
+      leagueOk: name => /\b(nhl|khl|ahl)\b/i.test(name)
+    },
+    {
+      key: "baseball", sport: "Baseball", host: "v1.baseball.api-sports.io",
+      leagueOk: name => /\b(mlb|major league baseball|kbo|kbo league|npb|nippon professional baseball)\b/i.test(name)
+    }
+  ];
+
+  const now = Date.now();
+  const horizon = now + 36 * 60 * 60 * 1000;
+  const out = [];
+  const seen = new Set();
+
+  for (const cfg of configs) {
+    if (typeof shouldSkipApiSportsSport === "function" && shouldSkipApiSportsSport(cfg.key)) continue;
+    for (const date of dates) {
+      try {
+        const raw = await httpGet(
+          `https://${cfg.host}/games?date=${encodeURIComponent(date)}`,
+          { "x-apisports-key": API_SPORTS_KEY }
+        );
+        if (typeof handleApiSportsErrors === "function" && handleApiSportsErrors(cfg.key, raw)) continue;
+        for (const g of (raw?.response || [])) {
+          const kickoff = new Date(g?.date || "").getTime();
+          if (!Number.isFinite(kickoff) || kickoff <= now || kickoff > horizon) continue;
+
+          const short = String(g?.status?.short || "").trim().toUpperCase();
+          if (short && !["NS","SCHEDULED","TIMED"].includes(short)) continue;
+
+          const home = g?.teams?.home?.name || "";
+          const away = g?.teams?.away?.name || "";
+          if (!home || !away) continue;
+
+          const league = String(g?.league?.name || cfg.sport).trim();
+          if (!cfg.leagueOk(league)) continue;
+
+          const rawCountry = g?.country ?? g?.league?.country ?? "";
+          const country = typeof rawCountry === "object"
+            ? String(rawCountry?.name || "").trim()
+            : String(rawCountry || "").trim();
+
+          const key = `${cfg.sport}|${home}|${away}|${Math.floor(kickoff/1800000)}`.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          out.push({
+            id: `${cfg.key.slice(0,2)}-${g?.id || key}`,
+            home, away,
+            competition: league + (country ? " · " + country : ""),
+            country,
+            sport: cfg.sport,
+            kickoff: g.date,
+            home_logo: g?.teams?.home?.logo || null,
+            away_logo: g?.teams?.away?.logo || null,
+            status: "scheduled",
+            source: "api-sports"
+          });
+        }
+      } catch (e) {
+        console.warn(`[upcoming-picks] ${cfg.key} schedule:`, e.message);
+      }
+    }
+  }
+
+  out.sort((a,b) => new Date(a.kickoff) - new Date(b.kickoff));
+  _upcomingSecondaryFixturesCache = { ts: Date.now(), data: out };
+  return out;
+}
+
 async function computeUpcomingPicks() {
   if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
   if (!API_SPORTS_KEY) return _upcomingPicksCache;
@@ -5712,6 +5797,12 @@ async function computeUpcomingPicks() {
       picks.push(pick);
       savePrematchPickIfNew(pick);
     }
+
+    // Le bloc calendrier ne doit pas devenir vide dès que l'Europe dort.
+    // On ajoute les grandes ligues basket/hockey/baseball dans la même fenêtre,
+    // sans les considérer comme des picks H2H ni comme des signaux officiels.
+    const secondaryFixtures = await fetchUpcomingSecondaryFixtures([today, tomorrow]);
+    trustedFixtures.push(...secondaryFixtures);
   } catch (e) { console.error("[upcoming-picks]", e.message); }
   // Tri chronologique (pas par confiance) : Greg veut que quelqu'un qui ne
   // se connecte qu'une fois dans la journée voie tout le programme qualifié
@@ -5738,7 +5829,7 @@ async function computeUpcomingPicks() {
   const featuredMatch = top.length ? null : (observationPool
     .filter(p => new Date(p.kickoff).getTime() > Date.now())
     .sort((a, b) => (Number(b.confidence || 0) - Number(a.confidence || 0)) || (new Date(a.kickoff) - new Date(b.kickoff)))[0] || null);
-  _upcomingPicksCache = { ts: Date.now(), data: top, fixtures: trustedFixtures.slice().sort((a,b) => new Date(a.kickoff) - new Date(b.kickoff)).slice(0,60), featuredMatch, stats };
+  _upcomingPicksCache = { ts: Date.now(), data: top, fixtures: trustedFixtures.slice().sort((a,b) => new Date(a.kickoff) - new Date(b.kickoff)).slice(0,100), featuredMatch, stats };
   return _upcomingPicksCache;
 }
 
