@@ -138,7 +138,8 @@ function render(kind,data,dest) {
   lines.push(legal(dest.lang));
   const text=lines.filter(Boolean).join('\n\n');
   if(text.length>4096) throw new Error('Telegram template too long');
-  return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,...(free&&paymentVerified?{reply_markup:{inline_keyboard:[[{text:CTA[dest.lang],url:payment(dest.lang)}]]}}:(free?{}:{reply_markup:{inline_keyboard:buildInlineKeyboard()}}))};
+  const scannerPlain=['scanner','scanner_result'].includes(kind);
+  return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,...(scannerPlain?{}:(free&&paymentVerified?{reply_markup:{inline_keyboard:[[{text:CTA[dest.lang],url:payment(dest.lang)}]]}}:(free?{}:{reply_markup:{inline_keyboard:buildInlineKeyboard()}})))};
 }
 function request(token,payload) {
   return new Promise(resolve=>{
