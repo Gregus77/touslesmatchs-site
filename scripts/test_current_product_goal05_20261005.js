@@ -34,16 +34,13 @@ assert.match(home,/L’ancien système reste conservé uniquement dans l’histo
 assert.doesNotMatch(home,/Votre signal<br>Over ou Under 2,5/);
 
 assert.match(app,/Une seule équipe ciblée : \+0,5 but/);
-assert.match(app,/Équipe ciblée : .*marquer au moins un but/);
-assert.match(app,/<script id="tlm-goal05-live-pro-js">/);
-assert.doesNotMatch(app,/tlm-goal05-live-pro-js" type="application\/x-disabled"/);
+// Android now uses the canonical site rather than a second, diverging UI.
+// Route behavior and query safety are exercised by test_goal05_site_app_parity_20261007.js.
+assert.match(app,/src="\/js\/app-site-parity\.js\?v=20261007"/);
+assert.match(app,/href="\/\?source=android&amp;app=site"/);
+assert.match(app,/href="\/performances\?source=android&amp;app=site"/);
 assert.doesNotMatch(app,/Ancien produit \+0,5 abandonné/);
-assert.match(app,/var rows=\(\(all\[0\]\.analyses\)\|\|\[\]\)\.slice\(\)/);
-assert.doesNotMatch(app,/var rows=\(\(all\[0\]\.analyses\)\|\|\[\]\)\.filter\(is05\)/);
-assert.match(app,/Historique total/);
-assert.match(app,/Ancien système/);
-assert.match(app,/Actuel \+0,5/);
-assert.match(app,/min>=30&&min<=85/);
+assert.match(app,/même historique conservé/);
 
 assert.doesNotMatch(app,/(?:TLM_DISPLAY_OU25_ONLY_V1|appOu25|match\.ou25|direction==='over'|direction==='under')/);
 assert.doesNotMatch(home,/(?:TLM_DISPLAY_OU25_ONLY_V1|heroOu25|match\.ou25|direction==='over'|direction==='under')/);

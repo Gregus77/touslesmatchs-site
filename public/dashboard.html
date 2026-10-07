@@ -440,6 +440,9 @@ function loadDashboard() {
     document.getElementById('dash-email').textContent = d.email;
     var plan = d.plan;
     var status = d.status;
+    // Presentation only: use the plan verified by the account endpoint.
+    // Server-side access checks remain authoritative for all analysis payloads.
+    try { localStorage.setItem('tlm_plan', status === 'active' ? String(plan || 'free').toLowerCase() : 'free'); } catch (e) {}
     var isLegacyPaid = plan === 'standard' || plan === 'elite' || plan === 'vip';
     var isPaidActive = plan !== 'free' && status === 'active';
 

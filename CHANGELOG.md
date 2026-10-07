@@ -1,5 +1,12 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-07 — Détail +0,5 et application sur les pages du site (non déployé)
+
+- Préserve le design actuel; ajoute le détail des résultats +0,5 avec provenance officielle/scanner et cotes réellement disponibles.
+- Remplace la seconde interface Android par l’entrée du site canonique et conserve les liens internes vers résultats, direct et compte.
+- Aucun changement de données, d’offres ou de règles. Tests locaux dédiés et navigateur réussis; test sur APK réel et validation avant publication restent requis.
+- Handoff : `docs/handoff/2026-10-07-goal05-site-app-parity.md`.
+
 ## 2026-10-07 — Signal +0,5 sur une équipe explicitement ciblée
 
 - Clarifie dans l’application, les pages actives, le SEO et l’API publique que chaque signal nomme une seule équipe, qui doit marquer au moins un but.

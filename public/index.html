@@ -2455,7 +2455,7 @@ document.addEventListener('click', function(e){
 (function(){
   if(window.__tlmPaidAnalysisGate)return; window.__tlmPaidAnalysisGate=1;
   function plan(){try{return String(localStorage.getItem("tlm_plan")||"").toLowerCase();}catch(e){return "";}}
-  function token(){try{return localStorage.getItem("tlm_token")||localStorage.getItem("tlm_session")||"";}catch(e){return "";}}
+  function token(){try{return localStorage.getItem("tlm_session_token")||localStorage.getItem("tlm_token")||localStorage.getItem("tlm_session")||"";}catch(e){return "";}}
   function hasAccess(){var p=plan();return !!token() && /(standard|premium|elite|vip|founder|fondateur|beta|goal05|admin)/i.test(p);}
   function ensureModal(){
     if(document.getElementById("tlm-paid-gate-modal"))return;
