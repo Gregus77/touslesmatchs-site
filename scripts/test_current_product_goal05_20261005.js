@@ -26,13 +26,15 @@ assert.match(agents,/stratégie client actuelle est \*\*\+0,5 but de l’équipe
 assert.match(agents,/O\/U 2,5 est un ancien système/);
 assert.match(agents,/ne doivent plus être présentés comme la stratégie actuelle/);
 
-assert.match(home,/Votre signal<br>\+0,5 but équipe favorite/);
+assert.match(home,/Votre signal : \+0,5 but<br>d’une seule équipe ciblée/);
+assert.match(home,/Chaque signal nomme une équipe précise/);
 assert.match(home,/4 IA \/ 5 minimum/);
 assert.match(home,/tlm-goal05-current-box/);
 assert.match(home,/L’ancien système reste conservé uniquement dans l’historique technique/);
 assert.doesNotMatch(home,/Votre signal<br>Over ou Under 2,5/);
 
-assert.match(app,/Votre signal \+0,5 but équipe favorite/);
+assert.match(app,/Une seule équipe ciblée : \+0,5 but/);
+assert.match(app,/Équipe ciblée : .*marquer au moins un but/);
 assert.match(app,/<script id="tlm-goal05-live-pro-js">/);
 assert.doesNotMatch(app,/tlm-goal05-live-pro-js" type="application\/x-disabled"/);
 assert.doesNotMatch(app,/Ancien produit \+0,5 abandonné/);
@@ -44,7 +46,8 @@ assert.match(app,/Actuel \+0,5/);
 assert.match(app,/min>=30&&min<=85/);
 
 assert.match(live,/Stratégie actuelle/);
-assert.match(live,/\+0,5 but de l’équipe favorite/);
+assert.match(live,/\+0,5 but de l’équipe ciblée/);
+assert.match(live,/Un seul nom d’équipe par match/);
 assert.match(live,/Historique · ancien système/);
 assert.doesNotMatch(live,/TLM_DISPLAY_OU25_ONLY_V1/);
 
