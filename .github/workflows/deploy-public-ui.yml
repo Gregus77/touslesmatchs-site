@@ -1,0 +1,59 @@
+name: Deploy public UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "public/**"
+      - ".github/workflows/deploy-public-ui.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-public-ui-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy public UI to VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            exec 9>/tmp/tlm-production-deploy.lock
+            flock -w 600 9
+
+            git fetch --prune origin main
+            if test -n "$(git status --porcelain --untracked-files=no)"; then
+              echo "STOP: tracked VPS changes present"
+              git status --short
+              exit 41
+            fi
+            git switch main
+            git pull --ff-only origin main
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+            docker compose up -d --force-recreate site
+            sleep 5
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-site)" = "true"
+            curl -fsSL --max-time 20 "https://www.touslesmatchs.com/app.html?t=$(date +%s)" | grep -q "Surveillance live"
+
+            # Nettoyage sûr : jamais de volumes ni de données.
+            git branch --merged main | sed 's/^[* ]*//' | grep -v '^main$' | xargs -r git branch -d || true
+            git remote prune origin || true
+            git gc --auto || true
+            docker image prune -f >/dev/null || true
+            docker builder prune -f --filter until=168h >/dev/null || true
+
+            echo PUBLIC_UI_DEPLOYED
