@@ -65,7 +65,7 @@ async function render(apiRules) {
   assert.match(rendered.elements.lead.textContent, /4 IA sur 5/);
   assert.match(rendered.elements.note.textContent, /une seule équipe ciblée/);
   assert.match(rendered.elements.note.textContent, /marquer au moins un but/);
-  assert.match(rendered.elements.note.textContent, /Top 5 face à une équipe Bottom 5/);
+  assert.match(rendered.elements.note.textContent, /Top 5 contre Bottom 5/);
   assert.match(rendered.elements.note.textContent, /une seule équipe ciblée/);
   assert.match(rendered.elements.note.textContent, /encore à 0 but/);
   assert.match(rendered.elements.note.textContent, /note verte ≥ 8\/10/);
