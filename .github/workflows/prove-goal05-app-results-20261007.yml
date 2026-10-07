@@ -19,7 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSL --retry 5 --retry-delay 2             "https://www.touslesmatchs.com/api/goal05/stats?t=${GITHUB_SHA}"             -o /tmp/goal05-stats.json
-          url="https://www.touslesmatchs.com/app.html?tab=perf&goal05_results_proof=${GITHUB_SHA}"
+          url="https://www.touslesmatchs.com/app.html?tab=perf&lang=fr&goal05_results_proof=${GITHUB_SHA}"
           google-chrome --headless=new --no-sandbox --disable-gpu             --window-size=390,1200 --virtual-time-budget=18000             --dump-dom "$url" > /tmp/app-goal05-results.html
           python3 - <<'PY'
           import json,re
