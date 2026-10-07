@@ -28,12 +28,21 @@ export default function AnalyseLive() {
   // PHASE 3 V2: Formulaire minimaliste — seulement 2 champs
   function analyser() {
     if (!home || !away) { setError("Entre les deux équipes."); return; }
+    var email = "", code = "";
+    try {
+      email = localStorage.getItem("tlm_email") || "";
+      code = localStorage.getItem("tlm_code") || "";
+    } catch (e) {}
+    if (!email || !code) {
+      setError("Connecte-toi à ton compte payant depuis l’espace membre pour lancer une analyse.");
+      return;
+    }
     setLoading(true); setResult(null); setError("");
     // Backend récupère auto: compétition, score, minute via API football-data
     fetch("/api/analyse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ home, away })
+      body: JSON.stringify({ home, away, email, code })
     })
       .then(function(r){ return r.json(); })
       .then(function(d){

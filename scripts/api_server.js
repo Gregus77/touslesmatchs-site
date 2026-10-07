@@ -8160,8 +8160,10 @@ function renewalEmailHtml(row, daysLeft, stats) {
 
 // ── Admin auth helper ─────────────────────────────────────────────────────────
 function isAdmin(email, code) {
-  const auth = verifyCode(email, code);
-  return auth.valid && code.toUpperCase().startsWith("ELITE-ADMIN");
+  if (typeof email !== "string" || typeof code !== "string" || !email.trim() || !code.trim()) return false;
+  const normalizedCode = code.trim().toUpperCase();
+  const auth = verifyCode(email.trim().toLowerCase(), normalizedCode);
+  return auth.valid && normalizedCode.startsWith("ELITE-ADMIN");
 }
 
 // ── Expiry cron (check every hour) ────────────────────────────────────────────
@@ -10894,39 +10896,28 @@ function checkAnalysisRate(ip) {
 }
 
 app.post("/analyse", async (req, res) => {
-  const { home, away, match_id } = req.body || {};
-  if (!home || !away) return res.json({ ok: false, error: "Deux équipes requises" });
   const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
   if (!checkAnalysisRate(ip)) return res.status(429).json({ ok: false, error: "Trop de requêtes, attends 1 minute." });
-
-  try {
-    const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
-    if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
-    if (rejectScoreConflict(verifiedMatch, res)) return;
-    const blockReason = livePickBlockReason(verifiedMatch);
-    if (blockReason) return res.json({ ok: false, error: blockReason });
-    // Cet endpoint ne passe PAS par shouldAutoObserveMatch (reserve au moteur
-    // automatique) : sans ce garde-fou, un appel direct pouvait faire analyser
-    // un match jeunes/amical/ligue douteuse en contournant tout le filtre de
-    // fiabilite. Constate le 29/07/2026 sur un U19 norvegien, visible nulle
-    // part sur le site (deja masque par le filtre d'affichage) mais toujours
-    // atteignable via cet endpoint appele directement.
-    if (isExcludedFromPicks(verifiedMatch)) return res.json({ ok: false, error: "Analyse indisponible pour cette competition." });
-    const analysis = await runConcileAnalysis(verifiedMatch);
-    const chief = analysis.agents[analysis.agents.length - 1];
-
-    res.json({
-      ok: true,
-      resume: chief.raison,
-      value_bet: { marche: chief.bet, prob: chief.confidence, cote_min_conseillée: (1 / (chief.confidence / 100)).toFixed(2), raison: chief.raison },
-      over25: { prob: 58, tendance: "Tendance légèrement positive sur les buts." },
-      btts: { prob: 52, tendance: "Les deux équipes ont des attaques actives." },
-      resultat: { domicile: 45, nul: 28, exterieur: 27, explication: "Légère faveur pour l'équipe à domicile." },
-      premier_but_mi_temps: { premiere: 55, deuxieme: 45, explication: "Les premières mi-temps sont souvent plus ouvertes." },
-    });
-  } catch (e) {
-    res.json({ ok: false, error: "Erreur d'analyse" });
-  }
+  const body = req.body || {};
+  const legacyResponse = {
+    status(status) { res.status(status); return this; },
+    json(data) {
+      if (!data.ok) return res.json(data);
+      const verdict = (data.agents || []).at(-1);
+      return res.json({
+        ok: true,
+        resume: verdict?.raison || "Analyse indisponible",
+        value_bet: verdict ? { marche: verdict.bet, prob: verdict.confidence, cote_min_conseillée: (1 / (verdict.confidence / 100)).toFixed(2), raison: verdict.raison } : null,
+        over25: { prob: 58, tendance: "Tendance légèrement positive sur les buts." },
+        btts: { prob: 52, tendance: "Les deux équipes ont des attaques actives." },
+        resultat: { domicile: 45, nul: 28, exterieur: 27, explication: "Légère faveur pour l'équipe à domicile." },
+        premier_but_mi_temps: { premiere: 55, deuxieme: 45, explication: "Les premières mi-temps sont souvent plus ouvertes." },
+        cached: !!data.cached,
+        ...(data.credits_left !== undefined ? { credits_left: data.credits_left, credits_max: data.credits_max } : {}),
+      });
+    },
+  };
+  return handleConcileAnalysis({ body: { ...body, match: body.match || { home: body.home, away: body.away, id: body.match_id } } }, legacyResponse);
 });
 
 // ── Live IA — token-gated Concile analysis ─────────────────────────────────────
@@ -11022,8 +11013,7 @@ function verifyCode(email, code) {
 
 // Cache des analyses de la journée (clé = email+matchId)
 function isAdminAccess(email, code) {
-  if (!email || !code) return false;
-  return isAdmin(email, code) || code.toUpperCase().trim().startsWith("ELITE-ADMIN");
+  return isAdmin(email, code);
 }
 
 function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
@@ -11054,9 +11044,9 @@ function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
 
 const analysisCache = new Map();
 
-app.post("/concile-analysis", async (req, res) => {
+async function handleConcileAnalysis(req, res) {
   const { email, code, match } = req.body || {};
-  if (!email || !code) return res.json({ ok: false, error: "Connexion requise" });
+  if (typeof email !== "string" || typeof code !== "string" || !email.trim() || !code.trim()) return res.json({ ok: false, error: "Connexion requise" });
   if (!match || !match.home || !match.away) return res.json({ ok: false, error: "Données du match manquantes" });
 
   const auth = verifyCode(email, code);
@@ -11075,6 +11065,8 @@ app.post("/concile-analysis", async (req, res) => {
   if (rejectScoreConflict(verifiedMatch, res)) return;
   const blockReason = livePickBlockReason(verifiedMatch);
   if (blockReason) return res.json({ ok: false, error: blockReason });
+
+  if (isExcludedFromPicks(verifiedMatch)) return res.json({ ok: false, error: "Analyse indisponible pour cette competition." });
 
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
   // Cache partagé par match+état (pas par user) pour économiser les tokens Groq
@@ -11128,7 +11120,8 @@ app.post("/concile-analysis", async (req, res) => {
   } catch (e) {
     res.json({ ok: false, error: "Erreur d'analyse — réessaie" });
   }
-});
+}
+app.post("/concile-analysis", handleConcileAnalysis);
 
 // ── Pre-match analysis (homepage pick, avant coup d'envoi) ───────────────────
 app.post("/prematch-analysis", async (req, res) => {
