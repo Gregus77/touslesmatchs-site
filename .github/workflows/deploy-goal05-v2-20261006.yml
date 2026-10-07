@@ -110,6 +110,156 @@ jobs:
             test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_ENABLED"')" = "1"
             test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_PUSH_ENABLED"')" = "1"
 
+            # Reconstitue l'historique des pronostics +0,5 donnés dans le scanner ChatGPT.
+            # Idempotent : chaque ligne possède un ID stable et est remplacée à l'identique aux déploiements suivants.
+            docker exec -i touslesmatchs-api node - <<'NODE'
+            const Database=require('better-sqlite3');
+            const db=new Database('/data/tlm.db');
+            const table='goal05_scanner_history';
+            const templateId='owner_scanner_20261005_velez_platense';
+            const template=db.prepare(`SELECT * FROM ${table} WHERE id=?`).get(templateId);
+            if(!template) throw new Error('missing scanner template '+templateId);
+            const info=db.prepare(`PRAGMA table_info(${table})`).all();
+            const byName=Object.fromEntries(info.map(x=>[x.name,x]));
+            const uniqueCols=new Set();
+            for(const idx of db.prepare(`PRAGMA index_list(${table})`).all()){
+              if(!idx.unique) continue;
+              for(const col of db.prepare(`PRAGMA index_info('${String(idx.name).replaceAll("'","''")}')`).all()){
+                if(col.name && col.name!=='id') uniqueCols.add(col.name);
+              }
+            }
+            const rows=[
+              {
+                id:'owner_scanner_20261005_velez_platense',
+                ts:'2026-10-05T22:00:00Z', date:'2026-10-05',
+                home:'Vélez Sarsfield', away:'Platense', target:'Vélez Sarsfield',
+                rating:8.6, color:'green', outcome:'win', scoreHome:2, scoreAway:2,
+                competition:'Argentina Liga Profesional',
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat vérifié'
+              },
+              {
+                id:'owner_scanner_20261005_banfield_rosario',
+                ts:'2026-10-05T23:15:00Z', date:'2026-10-05',
+                home:'Banfield', away:'Rosario Central', target:'Rosario Central',
+                rating:8.1, color:'green', outcome:'win', scoreHome:1, scoreAway:1,
+                competition:'Argentina Liga Profesional',
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat vérifié'
+              },
+              {
+                id:'owner_scanner_20261005_estudiantes_gimnasia_mendoza',
+                ts:'2026-10-05T22:00:00Z', date:'2026-10-05',
+                home:'Estudiantes', away:'Gimnasia Mendoza', target:'Gimnasia Mendoza',
+                rating:7.0, color:'orange', outcome:'loss', scoreHome:3, scoreAway:0,
+                competition:'Argentina Liga Profesional',
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat vérifié'
+              },
+              {
+                id:'owner_scanner_20261006_sport_sao_bernardo',
+                ts:'2026-10-06T22:30:00Z', date:'2026-10-06',
+                home:'Sport Recife', away:'São Bernardo', target:'Sport Recife',
+                rating:7.7, color:'green', outcome:'win', scoreHome:2, scoreAway:1,
+                competition:'Brazil Serie B',
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat vérifié'
+              },
+              {
+                id:'owner_scanner_20261007_olimpia_nacional',
+                ts:'2026-10-07T00:15:00Z', date:'2026-10-07',
+                home:'Olimpia', away:'Nacional Asunción', target:'Olimpia',
+                rating:7.0, color:'orange', outcome:'pending', scoreHome:null, scoreAway:null,
+                competition:'Paraguay Primera Division',
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat à vérifier'
+              },
+              {
+                id:'owner_scanner_20261007_ponte_juventude',
+                ts:'2026-10-07T00:35:00Z', date:'2026-10-07',
+                home:'Ponte Preta', away:'Juventude', target:'Juventude',
+                rating:9.0, color:'green', outcome:'win', scoreHome:0, scoreAway:1,
+                competition:'Brazil Serie B',
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat confirmé dans la conversation'
+              }
+            ];
+            const aliases={
+              id:['id'],
+              home:['home','home_team','team_home','home_name'],
+              away:['away','away_team','team_away','away_name'],
+              target:['target_team','target','selection_team','picked_team'],
+              rating:['rating','note','score','scanner_rating'],
+              color:['color','pastille'],
+              outcome:['outcome','result','status'],
+              scoreHome:['final_score_home','score_home','home_score'],
+              scoreAway:['final_score_away','score_away','away_score'],
+              competition:['competition','league','competition_name'],
+              date:['date','match_date','fixture_date'],
+              note:['notes','note_text','comment','reason']
+            };
+            function setAliases(obj, names, value){
+              for(const n of names) if(Object.prototype.hasOwnProperty.call(obj,n)) obj[n]=value;
+            }
+            function timeLike(original, iso, dateOnly=false){
+              if(typeof original==='number'){
+                const ms=Date.parse(iso);
+                return Math.abs(original)>1e11 ? ms : Math.floor(ms/1000);
+              }
+              if(typeof original==='string'){
+                if(dateOnly || /^\d{4}-\d{2}-\d{2}$/.test(original)) return iso.slice(0,10);
+                return iso;
+              }
+              return original==null ? iso : original;
+            }
+            const insert=db.transaction((p,seq)=>{
+              const row={...template};
+              setAliases(row,aliases.id,p.id);
+              setAliases(row,aliases.home,p.home);
+              setAliases(row,aliases.away,p.away);
+              setAliases(row,aliases.target,p.target);
+              setAliases(row,aliases.rating,p.rating);
+              setAliases(row,aliases.color,p.color);
+              setAliases(row,aliases.outcome,p.outcome);
+              setAliases(row,aliases.scoreHome,p.scoreHome);
+              setAliases(row,aliases.scoreAway,p.scoreAway);
+              setAliases(row,aliases.competition,p.competition);
+              setAliases(row,aliases.date,p.date);
+              setAliases(row,aliases.note,p.note);
+              for(const key of Object.keys(row)){
+                const lk=key.toLowerCase();
+                if(lk==='odd_at_pick'||lk==='odd'||lk==='odds'||lk.includes('price_at_pick')) row[key]=null;
+                if(lk==='selection'||lk==='pick'||lk==='market_selection') row[key]=p.target+' +0,5';
+                if(lk==='market'||lk==='market_name'||lk==='bet_type') row[key]='+0,5 but équipe ciblée';
+                if(lk==='source'||lk==='provenance'||lk==='origin') row[key]='chatgpt_scanner_history';
+                if(/created_at|updated_at|observed_at|picked_at|recorded_at|resolved_at|kickoff_at|match_time/.test(lk)){
+                  if(lk==='resolved_at' && p.outcome==='pending') row[key]=null;
+                  else row[key]=timeLike(row[key],p.ts,false);
+                }
+                if((lk==='date'||lk.endsWith('_date')) && !aliases.date.includes(key)){
+                  row[key]=timeLike(row[key],p.ts,true);
+                }
+              }
+              for(const col of uniqueCols){
+                if(col==='id') continue;
+                const meta=byName[col];
+                if(!meta) continue;
+                const touched=[
+                  ...aliases.home,...aliases.away,...aliases.target,...aliases.rating,...aliases.color,
+                  ...aliases.outcome,...aliases.scoreHome,...aliases.scoreAway,...aliases.competition,
+                  ...aliases.date,...aliases.note
+                ].includes(col);
+                if(touched) continue;
+                if(meta.notnull===0) row[col]=null;
+                else if(typeof row[col]==='string') row[col]=row[col]+'#'+p.id;
+                else if(typeof row[col]==='number') row[col]=row[col]+1000+seq;
+              }
+              const cols=Object.keys(row);
+              const sql=`INSERT OR REPLACE INTO ${table} (${cols.map(x=>'"'+x.replaceAll('"','""')+'"').join(',')}) VALUES (${cols.map(()=>'?').join(',')})`;
+              db.prepare(sql).run(...cols.map(k=>row[k]));
+            });
+            rows.forEach((r,i)=>insert(r,i));
+            const ids=rows.map(r=>r.id);
+            const check=db.prepare(`SELECT id,home,away,target_team,rating,color,outcome,final_score_home,final_score_away,odd_at_pick FROM ${table} WHERE id IN (${ids.map(()=>'?').join(',')}) ORDER BY id`).all(...ids);
+            console.log('GOAL05_CHAT_HISTORY',JSON.stringify(check));
+            if(check.length!==rows.length) throw new Error('chat history import incomplete');
+            NODE
+            echo GOAL05_CHAT_HISTORY_IMPORTED
+
             docker exec touslesmatchs-api node -e "const Database=require('better-sqlite3');const db=new Database('/data/tlm.db',{readonly:true});for(const table of ['goal05_signal_registry','goal05_signal_evidence','goal05_signal_results','goal05_scanner_history']){if(!db.prepare('SELECT name FROM sqlite_master WHERE type=\'table\' AND name=?').get(table))throw new Error('missing '+table)}const v=db.prepare(\"SELECT outcome,final_score_home h,final_score_away a,color,odd_at_pick FROM goal05_scanner_history WHERE id='owner_scanner_20261005_velez_platense'\").get();if(!v||v.outcome!=='win'||v.h!==2||v.a!==2||v.color!=='green'||v.odd_at_pick!==null)throw new Error('Velez scanner proof invalid');console.log('GOAL05_V2_DB_OK')"
 
             curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" > /tmp/g05-health.json
