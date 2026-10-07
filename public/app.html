@@ -1523,22 +1523,69 @@ $("perf-kpis").innerHTML =
     }).catch(function(){box.innerHTML='<div class="card"><div class="state">Direct +0,5 indisponible.</div></div>';});
   }
   function is05(a){var t=[a.bet,a.best_bet,a.market,a.selection,a.signal,a.reason,a.raison,a.notes,a.type].join(" ").toLowerCase();return t.indexOf("+0,5")>=0||t.indexOf("0,5")>=0||t.indexOf("0.5")>=0||t.indexOf("goal05")>=0;}
-  function norm(s){if(!s)return null;return {home:s.home||s.team||"Signal +0,5",away:s.away||s.opponent||"",competition:s.competition||s.meta||"",bet:s.bet||"+0,5 but",outcome:s.outcome||s.result||null,real_odd:s.odd||s.cote||null,analysed_at:s.sentAt||s.created_at||s.date||""};}
+  function norm(s){
+    if(!s)return null;
+    return {
+      home:s.home||s.team||"Signal +0,5",
+      away:s.away||s.opponent||"",
+      competition:s.competition||s.meta||"",
+      bet:s.bet||"+0,5 but",
+      outcome:s.outcome||s.result||null,
+      real_odd:s.odd||s.cote||null,
+      analysed_at:s.sentAt||s.created_at||s.date||"",
+      source_kind:"official_goal05"
+    };
+  }
+  function scannerNorm(s){
+    if(!s)return null;
+    var target=s.target_team||s.target||s.selection_team||s.picked_team||"Équipe ciblée";
+    return {
+      id:s.id||"",
+      home:s.home||"",
+      away:s.away||"",
+      competition:s.competition||s.league||"",
+      bet:target+" +0,5 but",
+      selection:target+" +0,5 but",
+      outcome:s.outcome||s.result||null,
+      real_odd:s.odd_at_pick!=null?s.odd_at_pick:(s.odd||s.cote||null),
+      analysed_at:s.observed_at||s.picked_at||s.created_at||s.recorded_at||s.updated_at||s.date||"",
+      source_kind:"scanner_goal05",
+      rating:s.rating,
+      color:s.color
+    };
+  }
+  function isScanner(a){return !!(a&&a.source_kind==="scanner_goal05");}
   function kpi(v,l,c){return '<div class="kpi"><div class="v '+(c||"")+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div></div>';}
   function renderPerf(){
     var kp=document.getElementById("perf-kpis"), list=document.getElementById("perf-list"); if(!kp||!list)return;
-    Promise.all([get("/analysis-history?limit=300").catch(function(){return {analyses:[]};}),get("/api/goal05/latest").catch(function(){return {};})]).then(function(all){
+    Promise.all([
+      get("/analysis-history?limit=300").catch(function(){return {analyses:[]};}),
+      get("/api/goal05/latest").catch(function(){return {};}),
+      get("/api/goal05/stats?t="+Date.now()).catch(function(){return {scannerRecent:[]};})
+    ]).then(function(all){
       var rows=((all[0].analyses)||[]).slice();
       [all[1].signal,all[1].lastSignal].forEach(function(s){var r=norm(s);if(r)rows.unshift(r);});
-      var seen={};rows=rows.filter(function(a){var key=[a.match_key||a.id||"",a.home||"",a.away||"",a.bet||a.best_bet||"",a.analysed_at||a.date||a.created_at||""].join("|");if(seen[key])return false;seen[key]=1;return true;});
+      var scanner=((all[2]&&all[2].scannerRecent)||[]).map(scannerNorm).filter(Boolean);
+      scanner.forEach(function(r){rows.push(r);});
+      var seen={};rows=rows.filter(function(a){
+        var source=isScanner(a)?"scanner":"history";
+        var key=[source,a.match_key||a.id||"",a.home||"",a.away||"",a.bet||a.best_bet||"",a.analysed_at||a.date||a.created_at||""].join("|");
+        if(seen[key])return false;seen[key]=1;return true;
+      });
+      rows.sort(function(a,b){
+        var da=Date.parse(a.analysed_at||a.date||a.created_at||0)||0;
+        var db=Date.parse(b.analysed_at||b.date||b.created_at||0)||0;
+        return db-da;
+      });
       var current=rows.filter(is05), legacy=rows.filter(function(a){return !is05(a);});
       kp.innerHTML=kpi(String(rows.length),"Historique total","c-cyan")+kpi(String(legacy.length),"Ancien système","")+kpi(String(current.length),"Actuel +0,5","c-green");
       if(!rows.length){list.innerHTML='<div class="state"><strong>Historique en attente</strong><br>Aucune analyse historique disponible.</div>';return;}
       list.innerHTML=rows.slice(0,100).map(function(a){
         var b=a.outcome==="win"?'<span class="badge b-win">Gagné</span>':a.outcome==="loss"?'<span class="badge b-loss">Perdu</span>':'<span class="badge b-wait">En attente</span>';
-        var strategy=is05(a)?'<span class="badge b-win">Actuel · +0,5</span>':'<span class="badge b-wait">Ancien système</span>';
+        var strategy=isScanner(a)?'<span class="badge b-live">Scanner · +0,5</span>':is05(a)?'<span class="badge b-win">Signal · +0,5</span>':'<span class="badge b-wait">Ancien système</span>';
         var market=is05(a)?(a.bet||a.best_bet||a.selection||""):"Ancien signal";
-        return '<div class="item"><div class="mid"><div class="t">'+esc(a.home||"Analyse")+(a.away?' — '+esc(a.away):'')+'</div><div class="m">'+esc((a.analysed_at||a.date||a.created_at||"").slice(0,10))+' · '+esc(a.competition||"")+(market?' · '+esc(market):'')+'</div></div>'+strategy+b+'</div>';
+        var rating=isScanner(a)&&Number.isFinite(Number(a.rating))?' · '+Number(a.rating).toFixed(1).replace('.0','')+'/10':'';
+        return '<div class="item"><div class="mid"><div class="t">'+esc(a.home||"Analyse")+(a.away?' — '+esc(a.away):'')+'</div><div class="m">'+esc(String(a.analysed_at||a.date||a.created_at||"").slice(0,10))+' · '+esc(a.competition||"")+(market?' · '+esc(market):'')+esc(rating)+'</div></div>'+strategy+b+'</div>';
       }).join("");
     });
   }
