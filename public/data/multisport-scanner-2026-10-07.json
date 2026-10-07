@@ -1,0 +1,189 @@
+{
+  "date": "2026-10-07",
+  "timezone": "Europe/Paris",
+  "purpose": "exploratory-pre-match-only",
+  "officialProduct": {
+    "sport": "football",
+    "market": "une équipe ciblée marquera au moins un but",
+    "councilMinimum": "4/5",
+    "official": true
+  },
+  "classificationRules": {
+    "default": "Classement commun obligatoire. Top 5 = rang <= 5. Bottom 5 = rang >= nombre_equipes - 4.",
+    "football": "Les comparaisons inter-divisions/coupes sans classement commun sont non classables.",
+    "basketball": "Classement commun requis ; un début de saison déclaré non significatif est non classable.",
+    "baseball": "Classement commun requis ; les ligues trop petites où Top 5 et Bottom 5 se chevauchent fortement sont non classables.",
+    "hockey": "Le classement de conférence peut servir uniquement si les deux équipes sont dans la même conférence."
+  },
+  "matches": [
+    {
+      "sport": "⚾ Baseball",
+      "league": "KBO · Corée du Sud",
+      "time": "11h30",
+      "startsAt": "2026-10-07T11:30:00+02:00",
+      "a": "KIA Tigers",
+      "aRank": "3e",
+      "b": "Lotte Giants",
+      "bRank": "8e",
+      "top": "KIA Tigers",
+      "bottom": "Lotte Giants",
+      "color": "green",
+      "rating": "8,7",
+      "status": "À venir",
+      "metrics": [
+        "Classement pré-match favorable à KIA",
+        "Écart Top 5 / Bottom 5 vérifié dans le même classement KBO"
+      ],
+      "classification": {
+        "status": "valid",
+        "reason": "KBO à 10 équipes : 3e contre 8e respecte Top 5 / Bottom 5."
+      }
+    },
+    {
+      "sport": "⚽ Football",
+      "league": "Coupe de l’Empereur · Japon",
+      "time": "11h30",
+      "startsAt": "2026-10-07T11:30:00+02:00",
+      "a": "Sanfrecce Hiroshima",
+      "aRank": "3e J1",
+      "b": "Iwaki FC",
+      "bRank": "16e J2",
+      "color": "green",
+      "rating": null,
+      "status": "À venir",
+      "metrics": [
+        "Écart de divisions identifié"
+      ],
+      "classification": {
+        "status": "non-classable",
+        "reason": "Pas de classement commun J1/J2 : aucune note chiffrée Top 5 / Bottom 5."
+      }
+    },
+    {
+      "sport": "🏒 Hockey",
+      "league": "KHL · Russie",
+      "time": "16h00",
+      "startsAt": "2026-10-07T16:00:00+02:00",
+      "a": "Metallurg Magnitogorsk",
+      "aRank": "1er Est",
+      "b": "Admiral Vladivostok",
+      "bRank": "8e Est",
+      "top": "Metallurg Magnitogorsk",
+      "bottom": "Admiral Vladivostok",
+      "color": "orange",
+      "rating": "7,4",
+      "status": "À venir",
+      "metrics": [
+        "Même conférence",
+        "Classement pré-match compatible avec la règle Top 5 / Bottom 5"
+      ],
+      "classification": {
+        "status": "valid",
+        "reason": "Même conférence Est : 1er contre 8e, classement commun exploitable."
+      }
+    },
+    {
+      "sport": "🏀 Basketball",
+      "league": "KBL · Corée du Sud",
+      "time": "12h00",
+      "startsAt": "2026-10-07T12:00:00+02:00",
+      "a": "Busan KCC Egis",
+      "aRank": "5e actuel",
+      "b": "Daegu KOGAS Pegasus",
+      "bRank": "9e actuel",
+      "color": "orange",
+      "rating": null,
+      "status": "À venir",
+      "metrics": [
+        "Début de saison déclaré non significatif"
+      ],
+      "classification": {
+        "status": "non-classable",
+        "reason": "Classement de début de saison insuffisamment significatif : aucune note chiffrée."
+      }
+    },
+    {
+      "sport": "⚾ Baseball",
+      "league": "NPB Central League · Japon",
+      "time": "11h00",
+      "startsAt": "2026-10-07T11:00:00+02:00",
+      "a": "Hanshin Tigers",
+      "aRank": "1er",
+      "b": "Hiroshima Toyo Carp",
+      "bRank": "4e",
+      "color": "orange",
+      "rating": null,
+      "status": "À venir",
+      "metrics": [
+        "Ligue à 6 équipes"
+      ],
+      "classification": {
+        "status": "non-classable",
+        "reason": "Avec 6 équipes, Top 5 / Bottom 5 se chevauchent trop fortement : aucune note chiffrée."
+      }
+    },
+    {
+      "sport": "⚽ Football",
+      "league": "Coupe de l’Empereur · Japon",
+      "time": "11h30",
+      "startsAt": "2026-10-07T11:30:00+02:00",
+      "a": "Cerezo Osaka",
+      "aRank": "11e J1",
+      "b": "Kagoshima United",
+      "bRank": "1er J3",
+      "color": "orange",
+      "rating": null,
+      "status": "À venir",
+      "metrics": [
+        "Écart de divisions identifié"
+      ],
+      "classification": {
+        "status": "non-classable",
+        "reason": "Pas de classement commun J1/J3 : aucune note chiffrée Top 5 / Bottom 5."
+      }
+    },
+    {
+      "sport": "⚽ Football",
+      "league": "Coupe de l’Empereur · Japon",
+      "time": "11h30",
+      "startsAt": "2026-10-07T11:30:00+02:00",
+      "a": "Avispa Fukuoka",
+      "aRank": "18e J1",
+      "b": "Yokohama FC",
+      "bRank": "5e J2",
+      "color": "orange",
+      "rating": null,
+      "status": "À venir",
+      "metrics": [
+        "Écart de divisions identifié"
+      ],
+      "classification": {
+        "status": "non-classable",
+        "reason": "Pas de classement commun J1/J2 : aucune note chiffrée Top 5 / Bottom 5."
+      }
+    },
+    {
+      "sport": "🏒 Hockey",
+      "league": "KHL · Russie",
+      "time": "14h30",
+      "startsAt": "2026-10-07T14:30:00+02:00",
+      "a": "Sibir Novosibirsk",
+      "aRank": "11e Est",
+      "b": "Salavat Yulaev Ufa",
+      "bRank": "5e Est",
+      "top": "Salavat Yulaev Ufa",
+      "bottom": "Sibir Novosibirsk",
+      "color": "orange",
+      "rating": "6,5",
+      "status": "À venir",
+      "metrics": [
+        "Même conférence",
+        "Classement pré-match compatible avec la règle Top 5 / Bottom 5"
+      ],
+      "classification": {
+        "status": "valid",
+        "reason": "Même conférence Est : 5e contre 11e, classement commun exploitable."
+      }
+    }
+  ]
+}
