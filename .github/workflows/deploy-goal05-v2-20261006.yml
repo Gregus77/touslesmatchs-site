@@ -165,17 +165,17 @@ jobs:
                 id:'owner_scanner_20261007_olimpia_nacional',
                 ts:'2026-10-07T00:15:00Z', date:'2026-10-07',
                 home:'Olimpia', away:'Nacional Asunción', target:'Olimpia',
-                rating:7.0, color:'orange', outcome:'pending', scoreHome:null, scoreAway:null,
+                rating:7.0, color:'orange', outcome:'win', scoreHome:1, scoreAway:1,
                 competition:'Paraguay Primera Division',
-                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat à vérifier'
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat vérifié'
               },
               {
                 id:'owner_scanner_20261007_ponte_juventude',
                 ts:'2026-10-07T00:35:00Z', date:'2026-10-07',
                 home:'Ponte Preta', away:'Juventude', target:'Juventude',
-                rating:9.0, color:'green', outcome:'win', scoreHome:0, scoreAway:1,
+                rating:9.0, color:'green', outcome:'win', scoreHome:null, scoreAway:null,
                 competition:'Brazil Serie B',
-                note:'ChatGPT scanner · +0,5 but équipe ciblée · résultat confirmé dans la conversation'
+                note:'ChatGPT scanner · +0,5 but équipe ciblée · WIN acquis au but de Juventude à la 36e · score final à confirmer'
               }
             ];
             const aliases={
