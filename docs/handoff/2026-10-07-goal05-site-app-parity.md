@@ -4,7 +4,7 @@
 
 - Base vérifiée sur le VPS : `07bb876639ca5630327ec802b6b3de24f1395df1`.
 - Le conteneur site sert `/opt/touslesmatchs/public` comme `/srv`.
-- Branche isolée : `codex/goal05-stats-app-parity`. Aucun déploiement exécuté.
+- Branche source isolée : `codex/goal05-stats-app-parity`. Publication autorisée par Greg et exécutée le 7 octobre 2026.
 - Aucun changement visuel de l’accueil, des offres, de Stripe, de Telegram, des règles sportives ou des données.
 - Ne pas intégrer la refonte rejetée `codex/salle-decision-ia2`.
 
@@ -31,10 +31,19 @@
 - Les captures sous `work/` et les jeux de données navigateur sont uniquement des tests locaux, pas des preuves de résultats sportifs réels.
 - `npm test -- --watchAll=false` ne démarre pas : `react-scripts` absent de cette copie. Ne pas appeler la suite générale réussie.
 
-## Publication, seulement après validation de Greg
+## Publication exécutée et vérifiée
 
-1. Recontrôler HEAD, état du VPS et montage servi; ne pas écraser un serveur ayant évolué.
-2. Sauvegarder les neuf fichiers publics concernés et relever leurs empreintes.
-3. Appliquer seulement les neuf fichiers publics : `app.html`, `performances.html`, `index.html`, `dashboard.html`, `live-ia.html`, `js/app-site-parity.js`, `js/goal05-results.js`, `js/signal-alerts.js`, `css/signal-alerts.css`. Aucun remplacement global de `public/`, aucune fusion de la refonte rejetée. Le design de fond reste inchangé; seuls les contrôles d’alertes du compte et la popup sont ajoutés.
-4. Vérifier les URL publiques et `/api/goal05/stats`, puis APK Android réel avec connexion et notifications. La validation navigateur n’est pas une validation APK.
-5. En cas de problème, restaurer ces neuf fichiers depuis la sauvegarde; aucun retour arrière de base de données n’est nécessaire.
+- Version publique exacte : `63505d9fa9fc5eb4cb55bb28c99975e405dc93ac`.
+- Branche VPS dédiée : `codex/goal05-site-app-live-20261007T162036Z`. La branche `main` demeure à la base `07bb876639ca5630327ec802b6b3de24f1395df1`.
+- Sauvegarde : `/opt/touslesmatchs-backups/goal05-site-app-20261007T162036Z`, avec archive et empreintes des cinq pages existantes, commit/branche de base et état préalable. Les quatre nouveaux fichiers étaient absents de la base et restent récupérables par Git.
+- Neuf fichiers publics seulement : `app.html`, `performances.html`, `index.html`, `dashboard.html`, `live-ia.html`, `js/app-site-parity.js`, `js/goal05-results.js`, `js/signal-alerts.js`, `css/signal-alerts.css`. Aucun remplacement global, aucune fusion de la refonte rejetée, aucun redémarrage ou rebuild des quatre conteneurs métier.
+- `scripts/test_goal05_public_release_20261007.py` vérifie les neuf empreintes HTTP contre les blobs Git exacts de la version publiée. Contrôles Chrome en ligne à 1440 et 390 pixels, redirection réelle de l’entrée Android vers accueil/résultats, en-tête et contrôles d’alertes du compte : réussis. Les requêtes non-GET et les API hors liste de lecture sûre sont bloquées; aucun email, paiement, pronostic ou notification réelle déclenché.
+- Données réelles après publication : officiels 0; scanner 8 (5 gagnés, 1 perdu, 2 en attente, 83,3 % sur les 6 résolus); verts 6 (4 gagnés, 2 en attente). Aucune cote disponible dans ces observations : aucun ROI ajouté. Ancien historique : 523 résolus, 427 gagnés, 96 perdus, 82 %; 33 en attente séparés. Empreintes de l’API et du thème inchangées.
+- Deux erreurs de l’accueil restent présentes : accès à `minute` lorsque le match est absent dans `heroGoal05State`, et double déclaration de `i18n`. Toutes deux reproduites avec la page originale `07bb876` sous le même contrôle navigateur; aucune nouvelle erreur détectée dans le parcours ciblé. Ne pas présenter l’accueil comme exempt d’erreurs ni les corriger silencieusement hors périmètre.
+- Limite restante : validation sur APK physique, reconnexion éventuelle, affichage et son sur téléphone réel. Notification native/application fermée non validée. Les tests navigateur ne remplacent pas ce contrôle.
+
+## Retour arrière ciblé
+
+- Vérifier d’abord HEAD et absence de modifications suivies concurrentes sur le VPS. Ne jamais forcer, nettoyer ou réinitialiser la copie.
+- Si `main` est toujours au commit de base indiqué, `git switch main` rétablit les cinq pages antérieures et retire les quatre fichiers ajoutés par cette branche. Si `main` a évolué, revenir sans forcer au commit de base exact après contrôle des changements concurrents.
+- L’archive des pages et les empreintes sont disponibles dans la sauvegarde ci-dessus. Aucun retour arrière de base de données, paiement ou configuration n’est nécessaire.

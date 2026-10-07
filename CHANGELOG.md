@@ -1,12 +1,13 @@
 # CHANGELOG — TousLesMatchs
 
-## 2026-10-07 — Détail +0,5 et application sur les pages du site (non déployé)
+## 2026-10-07 — Détail +0,5 et application sur les pages du site (publié)
 
 - Préserve le design actuel; ajoute le détail des résultats +0,5 avec provenance officielle/scanner et cotes réellement disponibles.
 - Remplace la seconde interface Android par l’entrée du site canonique et conserve les liens internes vers résultats, direct et compte.
-- Aucun changement de données, d’offres ou de règles. Tests locaux dédiés et navigateur réussis; test sur APK réel et validation avant publication restent requis.
+- Aucun changement de données, d’offres ou de règles. Tests locaux dédiés et navigateur réussis. Publication autorisée par Greg; neuf fichiers publics vérifiés par empreinte, vues ordinateur/mobile et parcours app vérifiés en ligne. Test sur APK réel encore requis.
 - Sur accord de Greg, restaure popup + son dans les pages partagées, avec activation facultative dans Mon compte, test sonore, contrôle serveur, fraîcheur, anti-doublon et reprise après erreur réseau. Ne promet pas de notification application fermée.
 - Handoff : `docs/handoff/2026-10-07-goal05-site-app-parity.md`.
+- Version publique : `63505d9fa9fc5eb4cb55bb28c99975e405dc93ac`. Historique réel de 523 résultats conservé. Deux erreurs préexistantes de l’accueil reproduites sur la version antérieure; aucune nouvelle erreur détectée dans le contrôle ciblé.
 
 ## 2026-10-07 — Signal +0,5 sur une équipe explicitement ciblée
 
