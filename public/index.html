@@ -1193,8 +1193,8 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <div class="tlm-hero-grid">
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
-          <h1 id="hero-title">Votre signal<br>+0,5 but équipe favorite.<span class="hero-gradient">Suivi en direct.</span></h1>
-          <p class="tlm-hero-lead">De la 30e à la 85e minute, le système surveille les rencontres Top 5 contre Bottom 5. Le signal vise l’équipe favorite qui n’a pas encore marqué, avec une cote réelle fraîche d’au moins 1,60 et un accord minimum de 4 IA sur 5.</p>
+          <h1 id="hero-title">Votre signal : +0,5 but<br>d’une seule équipe ciblée.<span class="hero-gradient">Son nom apparaît sur la fiche.</span></h1>
+          <p class="tlm-hero-lead">Chaque signal nomme une équipe précise dans le match : seule cette équipe doit marquer au moins un but (+0,5 but équipe). Les sélections suivent les règles V2 en direct de la 30e à la 85e minute.</p>
           <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">+0,5 but équipe</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
@@ -1206,7 +1206,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
             <div class="tlm-stage-score"><span id="hero-live-score">— - —</span><small class="tlm-stage-period" id="hero-live-period">En attente</small></div>
             <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-away-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
           </div>
-          <div class="tlm-goal05-current-box"><strong>Stratégie actuelle · +0,5 but</strong><span>Top 5 vs Bottom 5 · 30′–85′ · cote réelle ≥ 1,60 · 4/5 IA</span><small>L’ancien système reste conservé uniquement dans l’historique technique.</small></div><div class="tlm-ai-box tlm-ou25-current-hidden">
+          <div class="tlm-goal05-current-box"><strong>Stratégie actuelle · +0,5 but</strong><span>Top 5 vs Bottom 5 · 30′–85′ · cote réelle ≥ 1,60 · 4/5 IA</span><small>L’ancien système reste conservé uniquement dans l’historique technique.</small></div><div class="tlm-ai-box tlm-legacy-current-hidden">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
             <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><button type="button" class="tlm-ai-vote"><i>1</i>IA 1</button><button type="button" class="tlm-ai-vote"><i>2</i>IA 2</button><button type="button" class="tlm-ai-vote"><i>3</i>IA 3</button><button type="button" class="tlm-ai-vote"><i>4</i>IA 4</button><button type="button" class="tlm-ai-vote"><i>5</i>IA 5</button></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0/5</strong><span id="hero-response-count">0/5 IA ont répondu</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
             <div class="tlm-vote-snapshot" id="hero-vote-explanation" aria-live="polite"></div>
@@ -1805,14 +1805,19 @@ function tlmMatchAllowed(m){
 function heroFlag(img,country){var code=TLM_COUNTRY_CODES[country];if(!img)return;if(!code){img.hidden=true;img.removeAttribute('src');return;}img.hidden=false;img.src='https://flagcdn.com/w40/'+code+'.png';img.alt='Drapeau '+country;img.onerror=function(){this.hidden=true;};}
 function setHeroText(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
 function setHeroLogo(id,src,name){var el=document.getElementById(id);if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
-function heroOu25(m){
-  var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];
-  while(slots.length<5)slots.push({status:'pending',direction:null});
-  return {slots:slots,voteCount:Number(raw.vote_count)||0,consensusCount:Number(raw.consensus_count)||0,
-    overCount:Number(raw.over_count)||0,underCount:Number(raw.under_count)||0,
-    locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute),snapshotScore:raw.snapshot_score||null,consensusAt:raw.consensus_at||null,
-    official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,recommendationStatus:raw.recommendation_status||null,
-    consensusDirection:raw.consensus_direction||null,officialConfidence:raw.official_confidence,officialOdd:raw.official_odd,outcome:raw.outcome||null};
+function heroGoal05State(m){
+  var raw=m&&(m.goal05_v2||m.goal05)||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];
+  while(slots.length<5)slots.push({status:'pending'});
+  var voted=slots.filter(function(v){return v&&v.status==='voted';}).length;
+  var voteCount=Number(raw.vote_count||raw.ai_votes||raw.response_count||raw.responded_votes||0)||voted;
+  var consensusCount=Number(raw.consensus_count||raw.yes_votes||raw.consensus_votes||0);
+  return {raw:raw,slots:slots,voteCount:voteCount,consensusCount:consensusCount,
+    windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?(m&&m.minute==null?null:Number(m.minute)):Number(raw.snapshot_minute),snapshotScore:raw.snapshot_score||null,consensusAt:raw.consensus_at||null,
+    official:raw.official===true||raw.validated===true||!!(m&&m.goal05_official===true),
+    officialId:raw.official_signal_snapshot_id||(m&&m.official_signal_snapshot_id)||null,recommendationStatus:raw.recommendation_status||null,
+    officialConfidence:raw.official_confidence!=null?raw.official_confidence:raw.confidence,
+    officialOdd:raw.official_odd!=null?raw.official_odd:raw.odd,outcome:raw.outcome||null,
+    targetTeam:raw.target_team||raw.targetTeam||raw.team||(m&&(m.target_team||m.targetTeam))||''};
 }
 function heroResponseCount(slots){
   return (slots||[]).filter(function(slot){return slot&&['voted','empty','parse_error','rejected_statistical'].indexOf(slot.status)!==-1;}).length;
@@ -1837,7 +1842,7 @@ function heroVoteTime(value){
   return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 }
 function tlmVoteSnapshotText(m){
-  var state=heroOu25(m),minute=state.snapshotMinute,score=state.snapshotScore;
+  var state=heroGoal05State(m),minute=state.snapshotMinute,score=state.snapshotScore;
   if(minute==null)return '';
   var text='Calculé à '+minute+"'";
   if(typeof score==='string'&&/^\d+-\d+$/.test(score))text+=' · score '+score;
@@ -1845,7 +1850,7 @@ function tlmVoteSnapshotText(m){
   return text;
 }
 function tlmVotesAreOld(m){
-  var state=heroOu25(m),phase=TLMMatchLifecycle.phase(m),score=state.snapshotScore;
+  var state=heroGoal05State(m),phase=TLMMatchLifecycle.phase(m),score=state.snapshotScore;
   if(!state.voteCount)return false;
   if(TLMMatchLifecycle.entryClosed(m))return true;
   if(state.official)return false;
@@ -1854,11 +1859,9 @@ function tlmVotesAreOld(m){
   return !!scoreChanged||phase==='closed'||phase==='finished'||phase==='unavailable';
 }
 function tlmVoteCirclesHtml(m){
-  /* LEGACY_LIVE_VOTES_MASKED: les votes O/U historiques restent en base mais ne sont jamais montrés comme votes +0,5. */
-  var current=m&&m.goal05||{},slots=Array.isArray(current.votes)?current.votes.slice(0,5):[];
-  while(slots.length<5)slots.push({status:'pending'});
+  var state=heroGoal05State(m),slots=state.slots,target=state.targetTeam;
   return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)
-    +'<span class="tlm-analysis-market">Analyse +0,5</span><div class="tlm-row-votes" aria-label="Votes IA +0,5">'
+    +'<span class="tlm-analysis-market">'+(target?'Équipe ciblée : '+esc(target):'Analyse +0,5')+'</span><div class="tlm-row-votes" aria-label="Votes IA +0,5">'
     +slots.map(function(slot,index){
       var voted=slot&&slot.status==='voted',terminal=heroTerminalCaption(slot),mark=voted?'✓':terminal?terminal.mark:String(index+1);
       var cls='tlm-row-vote'+(voted?' voted':'')+(terminal?' terminal':'');
@@ -1885,11 +1888,9 @@ function renderAnalyzedList(rows){
   }).join('')+'</div>';
 }
 function heroConsensusDetail(m){
-  var state=heroOu25(m),valid=state.slots.filter(function(v){return v&&v.status==='voted'&&(v.direction==='over'||v.direction==='under');});
-  var over=valid.filter(function(v){return v.direction==='over';}),under=valid.filter(function(v){return v.direction==='under';});
-  var leaders=over.length>=under.length?over:under,direction=over.length>=under.length?'over':'under';
-  var confidence=leaders.map(function(v){return Number(v.confidence);}).filter(function(v){return isFinite(v);});
-  return {direction:direction,count:leaders.length,averageConfidence:confidence.length?Math.round(confidence.reduce(function(a,b){return a+b;},0)/confidence.length):null};
+  var state=heroGoal05State(m),valid=state.slots.filter(function(v){return v&&v.status==='voted';});
+  var confidence=valid.map(function(v){return Number(v.confidence);}).filter(function(v){return isFinite(v);});
+  return {count:state.consensusCount||valid.length,averageConfidence:confidence.length?Math.round(confidence.reduce(function(a,b){return a+b;},0)/confidence.length):null};
 }
 function heroH2hText(m){
   var h=m&&m.h2h_last3;
@@ -1902,11 +1903,11 @@ function heroStandingText(m){
   return ' · classement '+Number(e.home_rank)+'e vs '+Number(e.away_rank)+'e ('+Number(e.rank_gap)+' places)'+(e.top5_bottom5===true?' · top 5/bottom 5':'');
 }
 var tlmSignalWindowEnd=null;
-function heroVoteCount(m){return heroOu25(m).voteCount;}
+function heroVoteCount(m){return heroGoal05State(m).voteCount;}
 function compareHeroMatches(a,b){
   var ae=a&&a.selection_evidence||{},be=b&&b.selection_evidence||{};
   if((ae.top5_bottom5===true)!==(be.top5_bottom5===true))return be.top5_bottom5===true?1:-1;
-  var av=heroOu25(a),bv=heroOu25(b);
+  var av=heroGoal05State(a),bv=heroGoal05State(b);
   if(av.consensusCount!==bv.consensusCount)return bv.consensusCount-av.consensusCount;
   var ac=heroConsensusDetail(a).averageConfidence,bc=heroConsensusDetail(b).averageConfidence;
   if(ac!==bc)return (bc==null?-1:bc)-(ac==null?-1:ac);
@@ -1923,7 +1924,7 @@ function compareHeroMatches(a,b){
 function heroWasSent(m){return !!(m&&m.telegram_delivery_proven===true);}
 function renderHeroLive(m){
   var status=document.getElementById('hero-live-status');
-  var voteState=heroOu25(m),votes=voteState.voteCount,sent=heroWasSent(m),minute=tlmHeroMinuteOf(m),consensus=heroConsensusDetail(m);
+  var voteState=heroGoal05State(m),votes=voteState.voteCount,sent=heroWasSent(m),minute=tlmHeroMinuteOf(m),consensus=heroConsensusDetail(m);
   var country=heroCountry(m);
   var analysisLink=document.getElementById('hero-analysis-link');
   setHeroText('hero-live-date',new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}));
@@ -1954,8 +1955,7 @@ function renderHeroLive(m){
   var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed';
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<30);
   var alignedCount=Number(voteState.consensusCount)||consensus.count;
-  var direction=voteState.consensusDirection||consensus.direction;
-  setHeroText('hero-consensus-current',votes?(voteState.locked?'CONSENSUS '+alignedCount+'/5':'ANALYSE +0,5 — '+alignedCount+'/5'):'0/5');
+  setHeroText('hero-consensus-current',votes?('ANALYSE +0,5 — '+alignedCount+'/5'):'0/5');
   setHeroText('hero-response-count',heroResponseCount(voteState.slots)+'/5 IA ont répondu');
   setHeroText('hero-ai-title',voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Tendance IA en cours':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisWaiting?'Analyse à venir':'En attente d’analyse');
   var paidExplanation='';
@@ -1985,15 +1985,14 @@ function renderHeroLive(m){
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');
   var voteRow=document.getElementById('hero-ai-votes');if(voteRow)voteRow.classList.toggle('stale',tlmVotesAreOld(m));
   for(var i=0;i<voteEls.length;i++){
-    var slot=voteState.slots[i]||{},voted=slot.status==='voted',dir=voteState.locked?null:slot.direction;
-    var terminal=heroTerminalCaption(slot);
+    var slot=voteState.slots[i]||{},voted=slot.status==='voted',terminal=heroTerminalCaption(slot);
     voteEls[i].classList.toggle('on',voted);voteEls[i].classList.toggle('terminal',!!terminal);
     voteEls[i].classList.toggle('old',voted&&(!voteState.official||TLMMatchLifecycle.entryClosed(m)));
-    voteEls[i].classList.toggle('over',voted&&dir==='over');voteEls[i].classList.toggle('under',voted&&dir==='under');
+    voteEls[i].classList.remove('over','under');
     var mark=voteEls[i].querySelector('i');
-    if(mark)mark.textContent=voted?(voteState.locked?'✓':dir==='over'?'O':dir==='under'?'U':'?'):terminal?terminal.mark:String(i+1);
+    if(mark)mark.textContent=voted?'✓':terminal?terminal.mark:String(i+1);
     if(voteEls[i].lastChild&&voteEls[i].lastChild.nodeType===3)voteEls[i].lastChild.textContent=terminal?terminal.label:'IA '+(i+1);
-    var voteTime=heroVoteTime(slot.updated_at),detail='IA '+(i+1)+' : '+(voted?(voteState.locked?'vote enregistré, direction réservée aux abonnés':dir==='over'?'Over':'Under'):(terminal?terminal.label:'en attente'));
+    var voteTime=heroVoteTime(slot.updated_at),detail='IA '+(i+1)+' : '+(voted?'vote +0,5 enregistré':terminal?terminal.label:'en attente du vote +0,5');
     if(voted&&voteTime)detail+=' · '+voteTime;
     voteEls[i].title=detail;voteEls[i].dataset.explanation=detail;voteEls[i].setAttribute('aria-label',detail);
   }
@@ -2293,7 +2292,7 @@ async function loadPick(){
         '<div class="pick-match"><div class="pick-team"><div class="pick-team-logo">'+logo(proof.home_logo,proof.home)+'</div><div class="pick-team-name">'+esc(proof.home)+'</div></div>'+
         '<div class="pick-vs">VS</div><div class="pick-team"><div class="pick-team-logo">'+logo(proof.away_logo,proof.away)+'</div><div class="pick-team-name">'+esc(proof.away)+'</div></div></div>'+
         '<div class="pick-score-badge '+(proofWin?'win':'loss')+'">'+proofScore+' · '+(proofWin?'✓ Gagné':'✗ Perdu')+'</div>'+
-        '<div class="pick-bet">+0,5 but équipe favorite</div>'+
+        '<div class="pick-bet">+0,5 but de l’équipe ciblée</div>'+
         '<div class="empty-note">Aucun nouveau pick ne respecte encore les critères aujourd\'hui. Le moteur continue l\'analyse.</div>'+
         '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le prochain pick</button>';
       return;
@@ -2645,39 +2644,6 @@ function tlmMatchHour(m){
 
 </script>
 
-<script>
-/* TLM_DISPLAY_OU25_ONLY_V1 */
-(function(){
-  function allowedBet(text){
-    var t=String(text||"").toLowerCase();
-    if(!t)return true;
-    return t.indexOf("over 2.5")>=0 ||
-           t.indexOf("over 2,5")>=0 ||
-           t.indexOf("under 2.5")>=0 ||
-           t.indexOf("under 2,5")>=0 ||
-           t.indexOf("sélection réservée")>=0 ||
-           t.indexOf("selection reservee")>=0;
-  }
-
-  function cleanOldMarkets(){
-    document.querySelectorAll(
-      ".match-card,.analysis-card,.prediction-card,.item,.tlm-app-live-row"
-    ).forEach(function(el){
-      var t=el.textContent||"";
-
-      var oldMarket=
-        /victoire domicile|victoire extérieur|victoire exterieur|btts|but en 1[eè]re mi-temps|double chance/i.test(t);
-
-      if(oldMarket && !allowedBet(t)){
-        el.style.display="none";
-      }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded",cleanOldMarkets);
-  setInterval(cleanOldMarkets,3000);
-})();
-</script>
 <script id="TLM_EXTRA_COUNTRY_FLAGS_FINAL">
 window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨🇿", "Czechia": "🇨🇿", "Serbia": "🇷🇸", "Croatia": "🇭🇷", "Slovenia": "🇸🇮", "Hungary": "🇭🇺", "Romania": "🇷🇴", "Bulgaria": "🇧🇬", "Ukraine": "🇺🇦", "Georgia": "🇬🇪", "Poland": "🇵🇱", "Austria": "🇦🇹", "Switzerland": "🇨🇭", "Greece": "🇬🇷", "Norway": "🇳🇴", "Sweden": "🇸🇪", "Denmark": "🇩🇰", "Finland": "🇫🇮"};
 </script>
@@ -2767,7 +2733,7 @@ window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨�
 <script>(function(){
 function paint(el,total){if(!el)return;var text=(el.textContent+' '+(total||'')).replace(/\s+/g,' '),good=/\b[45]\s*\/\s*5\b/.test(text)&&!/insuffisant|aucun signal/i.test(text),bad=/consensus insuffisant/i.test(text)||(/\b[1-3]\s*\/\s*5\b/.test(text)&&!good);el.classList.toggle('consensus-valid',good);el.classList.toggle('consensus-insufficient',bad);}
 function refresh(){paint(document.getElementById('hero-consensus-label'),document.getElementById('hero-consensus-current')&&document.getElementById('hero-consensus-current').textContent);paint(document.getElementById('app-ai-result'),document.getElementById('app-ai-total')&&document.getElementById('app-ai-total').textContent);document.querySelectorAll('.mc-vote-verdict').forEach(function(el){var box=el.closest('.mc-vote-details');paint(el,box&&box.querySelector('.mc-vote-count')&&box.querySelector('.mc-vote-count').textContent);});}
-if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
+if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;function goal05Votes(m){var g=m&&(m.goal05_v2||m.goal05)||{};return Number(g.aiVotes||g.ai_votes||g.vote_count||g.consensus_votes||g.yes_votes||m&&m.consensus_votes||0);}compareHeroMatches=function(a,b){var av=goal05Votes(a),bv=goal05Votes(b);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
 new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
 })();</script>
 
@@ -2790,7 +2756,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
  }
 
  function state(match){
-   var o=(match&&match.ou25)||{};
+   var o=(match&&(match.goal05_v2||match.goal05))||{};
    var votes=Number(o.vote_count||0);
    var aligned=Number(o.consensus_count||0);
    var minute=Number(match&&match.minute||o.snapshot_minute||0);
@@ -2838,16 +2804,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
      };
    }
 
-   var trend="";
-   if(aligned>0){
-     var d=o.consensus_direction;
-     if(!d && Array.isArray(o.votes)){
-       var over=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="over"}).length;
-       var under=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="under"}).length;
-       d=over>=under?"over":"under";
-     }
-     trend="Analyse +0,5 ("+aligned+"/5)";
-   }
+   var trend=aligned>0?"Analyse +0,5 ("+aligned+"/5)":"";
 
    return {
      type:"rejected",
@@ -2879,9 +2836,10 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
    if(existing)existing.remove();
 
    var box=document.createElement("div");
-   var official=!!(match&&match.ou25&&match.ou25.official===true);
+   var goal05=(match&&(match.goal05_v2||match.goal05))||{};
+   var official=!!(goal05.official===true||goal05.validated===true||match&&match.goal05_official===true);
    var key=official
-     ? String(match.ou25.official_signal_snapshot_id||match.id||match.fixtureId||"")
+     ? String(goal05.official_signal_snapshot_id||match.official_signal_snapshot_id||match.id||match.fixtureId||"")
      : "";
 
    var isNew=false;
@@ -2908,7 +2866,7 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
 <style id="tlm-goal05-current-product-css">
 .tlm-goal05-current-box{margin-top:16px;padding:16px 18px;border:1px solid rgba(34,211,238,.32);border-radius:16px;background:linear-gradient(145deg,rgba(16,185,129,.12),rgba(34,211,238,.08));display:flex;flex-direction:column;gap:6px}
 .tlm-goal05-current-box strong{font-size:18px;color:#fff}.tlm-goal05-current-box span{font-size:13px;color:#bff7e7;font-weight:850}.tlm-goal05-current-box small{font-size:11px;color:#aeb8df;line-height:1.45}
-.tlm-ou25-current-hidden,.tlm-row-vote-block{display:none!important}
+.tlm-legacy-current-hidden,.tlm-row-vote-block{display:none!important}
 </style>
 </body>
 </html>
