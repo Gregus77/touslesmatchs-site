@@ -56,9 +56,9 @@
 })(typeof globalThis!=='undefined'?globalThis:this);
 
 
-/* TLM_DAILY_MULTISPORT_SCANNER_V2
-   Veille exploratoire multi-sports. Jamais un signal officiel Goal05/Telegram.
-   Données externes datées, pré-match uniquement, expiration automatique.
+/* TLM_DAILY_MULTISPORT_SCANNER_V3
+   Veille exploratoire multi-sports séparée de Goal05/Telegram.
+   Les matchs du jour restent visibles et passent par trois états : À venir / En cours / Terminé.
 */
 (function(){
   if(typeof document==='undefined')return;
@@ -81,8 +81,22 @@
     if(!hero)return;
     var box=document.createElement('div');
     box.className='tlm-product-hierarchy';
-    box.innerHTML='<strong>Produit officiel validé</strong><span>Football uniquement · une équipe ciblée doit marquer au moins un but · minimum 4 IA sur 5.</span><small>Scanner multisport : veille exploratoire pré-match, non validée par le Concile et hors statistiques officielles.</small>';
+    box.innerHTML='<strong>Produit officiel validé</strong><span>Football uniquement · une équipe ciblée doit marquer au moins un but · minimum 4 IA sur 5.</span><small>Scanner multisport : veille exploratoire distincte du Concile et des statistiques officielles.</small>';
     hero.appendChild(box);
+  }
+  function statusLine(m){
+    if(m.status==='Terminé'){
+      var out=m.outcome==='Gagnant'?'✅ Gagnant':m.outcome==='Perdant'?'❌ Perdant':'✅ Terminé';
+      return '<div class="tlm-ms-status done">'+out+(m.result?' · '+esc(m.result):'')+'</div>';
+    }
+    if(m.status==='En cours'){
+      return '<div class="tlm-ms-status live">🔴 En cours'+(m.liveScore?' · '+esc(m.liveScore):'')+'</div>';
+    }
+    var kickoff=Date.parse(m.startsAt||'');
+    if(m.status==='À venir'&&Number.isFinite(kickoff)&&kickoff>Date.now()){
+      return '<div class="tlm-ms-status upcoming">🕒 À venir</div>';
+    }
+    return '<div class="tlm-ms-status stale">⏳ Statut à actualiser</div>';
   }
   function card(m,i){
     var classable=m.classification&&m.classification.status==='valid';
@@ -91,36 +105,35 @@
       ? '<div class="tlm-ms-tags"><span>Top : '+esc(m.top)+'</span><span>Bottom : '+esc(m.bottom)+'</span></div>'
       : '<div class="tlm-ms-tags"><span>Classement : non classable</span></div>';
     var metrics=(m.metrics||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('');
-    return '<article class="tlm-ms-card" data-rank="'+(i+1)+'">'
+    var selection=m.selection?'<div class="tlm-ms-selection">Cible scanner : '+esc(m.selection)+'</div>':'';
+    return '<article class="tlm-ms-card" data-rank="'+(i+1)+'" data-status="'+esc(m.status)+'">'
       +'<div class="tlm-ms-head"><span class="tlm-ms-order">#'+(i+1)+'</span><strong>'+esc(m.sport)+'</strong><span class="tlm-ms-score">'+score+'</span></div>'
       +'<div class="tlm-ms-league">'+esc(m.league)+' · '+esc(m.time)+' Paris</div>'
       +'<div class="tlm-ms-teams"><div><b>'+esc(m.a)+'</b><span>'+esc(m.aRank)+'</span></div><div class="tlm-ms-vs">VS</div><div><b>'+esc(m.b)+'</b><span>'+esc(m.bRank)+'</span></div></div>'
-      +tags
-      +'<div class="tlm-ms-status">À venir · analyse pré-match uniquement</div>'
+      +tags+selection+statusLine(m)
       +(metrics?'<ul>'+metrics+'</ul>':'')
       +'<p>'+esc((m.classification&&m.classification.reason)||m.note||'')+'</p>'
       +'</article>';
   }
   function render(data,today){
-    if(!data||data.date!==today||!Array.isArray(data.matches))return;
-    var now=Date.now();
-    var matches=data.matches.filter(function(m){
-      var kickoff=Date.parse(m.startsAt||'');
-      return m.status==='À venir'&&Number.isFinite(kickoff)&&kickoff>now;
-    });
-    if(!matches.length)return;
-
+    if(!data||data.date!==today||!Array.isArray(data.matches)||!data.matches.length)return;
+    var matches=data.matches.slice().sort(function(a,b){return Date.parse(a.startsAt||0)-Date.parse(b.startsAt||0);});
     addHierarchy();
-    if(document.getElementById('tlm-daily-multisport-scanner'))return;
+    var old=document.getElementById('tlm-daily-multisport-scanner');
+    if(old)old.remove();
     var section=document.createElement('section');
     section.id='tlm-daily-multisport-scanner';
     section.className='tlm-ms-wrap';
-    section.innerHTML='<div class="tlm-ms-title"><div><span class="tlm-ms-kicker">Scanner multisport du jour</span><h2>Veille des matchs à fort potentiel, tous sports</h2><p>Pré-match uniquement. Cette veille exploratoire est séparée du produit officiel football et n’est jamais validée automatiquement par le Concile.</p></div><span class="tlm-ms-count">'+matches.length+' match'+(matches.length>1?'s':'')+' à venir</span></div>'
+    var done=matches.filter(function(m){return m.status==='Terminé';}).length;
+    var live=matches.filter(function(m){return m.status==='En cours';}).length;
+    var upcoming=matches.filter(function(m){return m.status==='À venir'&&Date.parse(m.startsAt||'')>Date.now();}).length;
+    section.innerHTML='<div class="tlm-ms-title"><div><span class="tlm-ms-kicker">Scanner multisport du jour</span><h2>Veille et résultats des matchs suivis</h2><p>Les cartes restent visibles pendant la journée et changent d’état : à venir, en cours, puis terminé avec le résultat vérifié.</p></div><span class="tlm-ms-count">'+upcoming+' à venir · '+live+' en cours · '+done+' terminés</span></div>'
       +'<div class="tlm-ms-grid">'+matches.map(card).join('')+'</div>';
 
     var style=document.createElement('style');
     style.id='tlm-daily-multisport-scanner-css';
-    style.textContent='.tlm-product-hierarchy{position:relative;z-index:5;margin:12px;padding:11px 12px;border:1px solid rgba(34,211,238,.28);border-radius:13px;background:rgba(5,12,30,.86);color:#eef8ff}.tlm-product-hierarchy strong,.tlm-product-hierarchy span,.tlm-product-hierarchy small{display:block}.tlm-product-hierarchy strong{font-size:12px;color:#7de8ff}.tlm-product-hierarchy span{margin-top:3px;font-size:11px;font-weight:850}.tlm-product-hierarchy small{margin-top:4px;color:#aeb8d8;font-size:10px;line-height:1.4}.tlm-ms-wrap{max-width:1180px;margin:18px auto;padding:18px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:rgba(10,14,32,.78);box-shadow:0 18px 42px rgba(0,0,0,.16);color:#f7f8ff}.tlm-ms-title{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}.tlm-ms-title h2{font-size:22px;line-height:1.15;margin:4px 0 7px}.tlm-ms-title p{margin:0;color:#b7bfdc;font-size:12px;line-height:1.5}.tlm-ms-kicker{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#67e8f9}.tlm-ms-count{white-space:nowrap;font-size:11px;font-weight:900;padding:7px 9px;border-radius:999px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.25)}.tlm-ms-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tlm-ms-card{border:1px solid rgba(255,255,255,.09);border-radius:15px;padding:13px;background:rgba(255,255,255,.035)}.tlm-ms-head{display:flex;gap:8px;align-items:center}.tlm-ms-order{font-size:10px;color:#98a2c8}.tlm-ms-score{margin-left:auto;font-weight:950}.tlm-ms-league{font-size:11px;color:#aeb6d5;margin:5px 0 10px}.tlm-ms-teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.tlm-ms-teams>div:not(.tlm-ms-vs){display:flex;flex-direction:column;gap:2px}.tlm-ms-teams>div:last-child{text-align:right}.tlm-ms-teams b{font-size:13px}.tlm-ms-teams span{font-size:10px;color:#9ea8ca}.tlm-ms-vs{font-size:10px;font-weight:900;color:#697395}.tlm-ms-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.tlm-ms-tags span{font-size:10px;border-radius:999px;padding:5px 7px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.24)}.tlm-ms-status{margin-top:9px;font-size:11px;font-weight:850;color:#facc15}.tlm-ms-card ul{margin:8px 0 6px;padding-left:18px}.tlm-ms-card li,.tlm-ms-card p{font-size:11px;line-height:1.45;color:#c8cee3}.tlm-ms-card p{margin:0}@media(max-width:720px){.tlm-ms-wrap{margin:12px 10px;padding:13px}.tlm-ms-title{display:block}.tlm-ms-count{display:inline-block;margin-top:9px}.tlm-ms-grid{grid-template-columns:1fr;max-height:68vh;overflow:auto;padding-right:2px}.tlm-ms-title h2{font-size:18px}}';
+    style.textContent='.tlm-product-hierarchy{position:relative;z-index:5;margin:12px;padding:11px 12px;border:1px solid rgba(34,211,238,.28);border-radius:13px;background:rgba(5,12,30,.86);color:#eef8ff}.tlm-product-hierarchy strong,.tlm-product-hierarchy span,.tlm-product-hierarchy small{display:block}.tlm-product-hierarchy strong{font-size:12px;color:#7de8ff}.tlm-product-hierarchy span{margin-top:3px;font-size:11px;font-weight:850}.tlm-product-hierarchy small{margin-top:4px;color:#aeb8d8;font-size:10px;line-height:1.4}.tlm-ms-wrap{max-width:1180px;margin:18px auto;padding:18px;border:1px solid rgba(255,255,255,.12);border-radius:20px;background:rgba(10,14,32,.78);box-shadow:0 18px 42px rgba(0,0,0,.16);color:#f7f8ff}.tlm-ms-title{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}.tlm-ms-title h2{font-size:22px;line-height:1.15;margin:4px 0 7px}.tlm-ms-title p{margin:0;color:#b7bfdc;font-size:12px;line-height:1.5}.tlm-ms-kicker{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#67e8f9}.tlm-ms-count{white-space:nowrap;font-size:11px;font-weight:900;padding:7px 9px;border-radius:999px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.25)}.tlm-ms-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.tlm-ms-card{border:1px solid rgba(255,255,255,.09);border-radius:15px;padding:13px;background:rgba(255,255,255,.035)}.tlm-ms-head{display:flex;gap:8px;align-items:center}.tlm-ms-order{font-size:10px;color:#98a2c8}.tlm-ms-score{margin-left:auto;font-weight:950}.tlm-ms-league{font-size:11px;color:#aeb6d5;margin:5px 0 10px}.tlm-ms-teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.tlm-ms-teams>div:not(.tlm-ms-vs){display:flex;flex-direction:column;gap:2px}.tlm-ms-teams>div:last-child{text-align:right}.tlm-ms-teams b{font-size:13px}.tlm-ms-teams span{font-size:10px;color:#9ea8ca}.tlm-ms-vs{font-size:10px;font-weight:900;color:#697395}.tlm-ms-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.tlm-ms-tags span{font-size:10px;border-radius:999px;padding:5px 7px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.24)}.tlm-ms-selection{margin-top:8px;font-size:10.5px;color:#dbe4ff}.tlm-ms-status{margin-top:9px;font-size:11px;font-weight:900}.tlm-ms-status.done{color:#6ee7b7}.tlm-ms-status.live{color:#fb7185}.tlm-ms-status.upcoming{color:#67e8f9}.tlm-ms-status.stale{color:#fbbf24}.tlm-ms-card ul{margin:8px 0 6px;padding-left:18px}.tlm-ms-card li,.tlm-ms-card p{font-size:11px;line-height:1.45;color:#c8cee3}.tlm-ms-card p{margin:0}@media(max-width:720px){.tlm-ms-wrap{margin:12px 10px;padding:13px}.tlm-ms-title{display:block}.tlm-ms-count{display:inline-block;margin-top:9px}.tlm-ms-grid{grid-template-columns:1fr;max-height:68vh;overflow:auto;padding-right:2px}.tlm-ms-title h2{font-size:18px}}';
+    var prevStyle=document.getElementById('tlm-daily-multisport-scanner-css');if(prevStyle)prevStyle.remove();
     document.head.appendChild(style);
 
     var appHero=document.querySelector('.tlm-app-stadium-hero');
@@ -128,21 +141,15 @@
     var hero=document.querySelector('.hero-exact-card');
     if(hero){hero.insertAdjacentElement('afterend',section);return;}
     var email=document.getElementById('email-capture-card');
-    if(email){
-      var row=email.closest('.row')||email.parentElement;
-      if(row&&row.parentNode){row.parentNode.insertBefore(section,row);return;}
-    }
+    if(email){var row=email.closest('.row')||email.parentElement;if(row&&row.parentNode){row.parentNode.insertBefore(section,row);return;}}
     var pick=document.getElementById('pick-body');
-    if(pick){
-      var prow=pick.closest('.row')||pick.closest('.card')||pick.parentElement;
-      if(prow&&prow.parentNode){prow.insertAdjacentElement('afterend',section);return;}
-    }
+    if(pick){var prow=pick.closest('.row')||pick.closest('.card')||pick.parentElement;if(prow&&prow.parentNode){prow.insertAdjacentElement('afterend',section);return;}}
     (document.querySelector('main')||document.querySelector('.wrap')||document.body).appendChild(section);
   }
 
   var today=parisDate();
-  fetch('/data/multisport-scanner-'+today+'.json',{cache:'no-store'})
+  fetch('/data/multisport-scanner-'+today+'.json?v=20261007-status-v3',{cache:'no-store'})
     .then(function(r){if(!r.ok)throw new Error('no-scanner');return r.json();})
     .then(function(data){render(data,today);})
-    .catch(function(){/* Expiration/fichier absent : ne rien afficher. */});
+    .catch(function(){});
 })();
