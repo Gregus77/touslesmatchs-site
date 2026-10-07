@@ -73,6 +73,42 @@ function render(kind,data,dest) {
       `🧠 ${ru?'Исходное голосование ИИ':'Vote IA original'} : ${esc(data.votes ?? '?')}/5`,
       `📊 ${ru?'Исходный уровень доверия':'Confiance originale'} : ${esc(data.confidence ?? '?')}/100`
     );
+  } else if(kind==='scanner') {
+    lines=[`🔭 <b>SCANNER MULTISPORT — ${esc(data.label||'MISE À JOUR')}</b>`,
+      `🕒 ${esc(data.updatedAt||'')} · fenêtre ${esc(data.windowHours||18)} h`];
+    const rows=Array.isArray(data.rows)?data.rows:[];
+    if(!rows.length) {
+      lines.push('ℹ️ Aucun candidat suffisamment documenté dans la fenêtre actuelle. Aucun signal forcé.');
+    } else {
+      rows.slice(0,8).forEach(function(row){
+        const light=row.color==='green'?'🟢':row.color==='orange'?'🟠':row.color==='red'?'🔴':'⚪';
+        lines.push(
+          `${light} <b>${esc(row.sport||'Sport')} · ${esc(row.country||'International')} · ${esc(row.competition||'Compétition')}</b>`,
+          `⏰ ${esc(row.kickoffLabel||'Heure à confirmer')} · ${esc(row.home)} — ${esc(row.away)}`
+        );
+        if(row.targetTeam) {
+          lines.push(
+            `🎯 Équipe ciblée : <b>${esc(row.targetTeam)}</b> — ${esc(row.selection||'marque au moins un but')}`,
+            `📊 Classement : ${esc(row.targetTeam)} ${esc(row.targetRank||'?')} · adversaire ${esc(row.opponentRank||'?')}`
+          );
+          if(row.targetMetric!=null||row.opponentMetric!=null)
+            lines.push(`⚽ Moyennes : cible ${esc(row.targetMetric??'?')} but/m · adversaire ${esc(row.opponentMetric??'?')} encaissé/m`);
+          if(row.form)lines.push(`📈 Forme cible : ${esc(row.form)}`);
+          if(row.rating!=null)lines.push(`⭐ Note scanner : ${esc(row.rating)}/10`);
+        } else {
+          lines.push(`🧪 Veille exploratoire : ${esc(row.reason||'règle Top 5 / Bottom 5 non vérifiée pour ce sport ou cette compétition')}`);
+        }
+      });
+    }
+    lines.push('ℹ️ Scanner exploratoire : seuls les critères explicitement vérifiés sont affichés. Aucune cote ou statistique n’est inventée.');
+  } else if(kind==='scanner_result') {
+    const verdict=data.outcome==='win'?'✅ GAGNANT':data.outcome==='loss'?'❌ PERDU':'✅ TERMINÉ';
+    lines=[`${verdict} — <b>RÉSULTAT SCANNER</b>`,
+      `${esc(data.sport||'Sport')} · ${esc(data.country||'')} · ${esc(data.competition||'')}`,
+      `<b>${esc(data.home)} — ${esc(data.away)}</b>`,
+      `🏁 Score final : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`];
+    if(data.targetTeam)lines.push(`🎯 Sélection suivie : ${esc(data.targetTeam)} — ${esc(data.selection||'marque au moins un but')}`);
+    if(data.rating!=null)lines.push(`⭐ Note scanner avant match : ${esc(data.rating)}/10`);
   } else if(kind==='recap') {
     const rows=data.rows,wins=rows.filter(x=>x.outcome==='win').length,losses=rows.filter(x=>x.outcome==='loss').length,pending=rows.length-wins-losses;
     const eurRub=Math.max(1,Number(process.env.EUR_RUB_DISPLAY_RATE||100));
@@ -94,7 +130,7 @@ function render(kind,data,dest) {
   } else if(kind==='reminder'||kind==='nopick') {
     lines=ru?['💎 <b>TousLesMatchs Premium</b>','Бесплатный канал: знакомство с сервисом и руководства.','Premium: все допустимые футбольные сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается. Мы не публикуем сигнал ради количества.']:['💎 <b>TousLesMatchs Premium</b>','Gratuit : présentation du service et guides.','Premium : tous les signaux de football admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum quotidien promis. Aucun signal forcé.'];
   } else throw new Error('Unknown client template');
-  if(free || ['reminder','nopick','guide'].includes(kind)) {
+  if((free && !['scanner','scanner_result'].includes(kind)) || ['reminder','nopick','guide'].includes(kind)) {
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :
       ru ? 'Подписка Premium — 14,90 €/месяц, без обязательств. Новые подписки временно недоступны.' :
       'Premium — 14,90 €/mois, sans engagement. Les nouvelles souscriptions sont temporairement indisponibles.');
@@ -102,7 +138,8 @@ function render(kind,data,dest) {
   lines.push(legal(dest.lang));
   const text=lines.filter(Boolean).join('\n\n');
   if(text.length>4096) throw new Error('Telegram template too long');
-  return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,...(free&&paymentVerified?{reply_markup:{inline_keyboard:[[{text:CTA[dest.lang],url:payment(dest.lang)}]]}}:(free?{}:{reply_markup:{inline_keyboard:buildInlineKeyboard()}}))};
+  const scannerPlain=['scanner','scanner_result'].includes(kind);
+  return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,...(scannerPlain?{}:(free&&paymentVerified?{reply_markup:{inline_keyboard:[[{text:CTA[dest.lang],url:payment(dest.lang)}]]}}:(free?{}:{reply_markup:{inline_keyboard:buildInlineKeyboard()}})))};
 }
 function request(token,payload) {
   return new Promise(resolve=>{
