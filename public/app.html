@@ -1108,7 +1108,7 @@ body{overflow-x:hidden}
     }).join('');
     var summary=hasCurrent
       ?(Number(current.consensus_count||current.yes_votes||0)+'/5 consensus +0,5 · '+appResponseCount(slots)+'/5 IA ont répondu')
-      :(legacy.voteCount>0?'Anciennes réponses O/U masquées · attente des votes +0,5':'En attente des votes +0,5');
+      :(legacy.voteCount>0?'Anciennes réponses masquées · attente des votes +0,5':'En attente des votes +0,5');
     return TLMMatchLifecycle.entryNoticeHtml(m)
       +'<span class="tlm-app-live-vote-summary"><span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+summary+'</span></span>';
   }
