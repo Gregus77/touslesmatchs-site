@@ -189,8 +189,9 @@
   <meta name="theme-color" content="#070a20">
   <meta name="app-card-version" content="goal05-palmeiras-card-20260814c">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+<link rel="stylesheet" href="/css/salle-decision.css?v=20261007">
 </head>
-<body class="tlm-wow tlm-page-app">
+<body class="tlm-wow tlm-page-app tlm-decision">
 
 <header>
   <div class="brand">Tous<span>LesMatchs</span></div>
@@ -204,7 +205,7 @@
 
   <section class="goal05-home" aria-label="Goal plus 0,5 but">
     <div class="goal05-kicker">Goal +0,5 · accès fondateur</div>
-    <div class="goal05-title">L’équipe forte doit marquer.</div>
+    <h1 class="goal05-title">L’équipe forte doit marquer.</h1>
     <p class="goal05-copy">Le moteur +0,5 filtre uniquement les matchs de football où l’équipe historiquement supérieure réunit les conditions pour inscrire au moins un but.</p>
     <div class="goal05-mini">
       <div><b>&#10003;</b> Force 3-5 saisons</div>
@@ -443,7 +444,7 @@
     box.innerHTML = goal05VerdictCard(signal)
       + goal05BetaRow()
       + (locked
-          ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accÃ¨s +0,5</a>'
+          ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accès +0,5</a>'
           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button>');
     var link = box.querySelector('[data-tab-link="me"]');
     if (link) link.addEventListener('click', function(e){ e.preventDefault(); show('me'); });

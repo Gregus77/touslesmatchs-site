@@ -1,5 +1,15 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-07 — Sécurité et Salle de Décision IA 2.0 (branche, non déployé)
+
+- Validation complète du compte administrateur dans isAdminAccess; refus du simple préfixe ELITE-ADMIN.
+- /analyse utilise la frontière d’accès payante et les crédits de /concile-analysis, avec compatibilité legacy, filtres et cache conservés.
+- Sept tests de sécurité, reproduction avant correction, puis revue indépendante.
+- Accueil HTML lisible, cercle des cinq IA explicatif, titre traduit, identité graphite/or/turquoise partagée sur sept surfaces, app Goal +0,5 conservée.
+- Navigation mobile, focus clavier, onglets et états vides testés dans Chrome à 1440/390/360 px; deux anciens accès à des éléments DOM absents corrigés.
+- Les changements préexistants de l’accueil sont repris sans écraser la copie d’origine; prix, paiements, données et production inchangés.
+- Un test de règles sportives reste en échec, déjà dans l’original (1.60 absent du document attendu). Voir docs/design/salle-decision-ia2.md et docs/security/2026-10-07-access-fixes.md.
+
 ## 🔄 EN COURS — À REPRENDRE (toujours maintenir à jour)
 
 **Dernière IA active :** Claude · **Branche :** `claude/tiktok-arjel-automation-hgp1tv`

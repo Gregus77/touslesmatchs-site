@@ -22,8 +22,9 @@ const i18n = (function () {
       lang_label: "Langue",
 
       hero_badge: "Le Concile IA sportif",
-      hero_title: "Plusieurs intelligences artificielles analysent.<br><span class=\"grad\">Le Concile sélectionne les meilleures convergences.</span>",
-      hero_sub: "TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.",
+      decision_apk: "Télécharger l’app Android bêta", decision_note: "Illustration de la méthode · aucun résultat garanti", decision_aria: "Cinq analyses indépendantes convergent vers une synthèse. Illustration de la méthode, pas un signal en cours.", decision_title: "Le cercle des cinq IA indépendantes", decision_strong: "Signal Fort", decision_trend: "Tendance IA",
+      hero_title: "5 IA analysent.<br>Vous voyez la décision.",
+      hero_sub: "Des analyses sportives classées par convergence. Consultez les sélections, leur niveau de confiance et les résultats, gagnés comme perdus.",
       hero_cta1: "Voir les matchs en direct", hero_cta2: "Créer mon compte gratuit",
       hero_r1: "✓ Résultats publics", hero_r2: "✓ Données vérifiées",
       hero_r3: "✓ Sans engagement",
@@ -87,7 +88,8 @@ const i18n = (function () {
       lang_label: "Language",
 
       hero_badge: "The AI Sports Council",
-      hero_title: "Several artificial intelligences analyse.<br><span class=\"grad\">The Council selects the strongest agreements.</span>",
+      decision_apk: "Download the Android beta app", decision_note: "Method illustration · no guaranteed outcome", decision_aria: "Five independent analyses converge into a summary. Method illustration, not a current signal.", decision_title: "The circle of five independent AIs", decision_strong: "Strong signal", decision_trend: "AI trend",
+      hero_title: "5 AIs analyse.<br>You see the decision.",
       hero_sub: "TousLesMatchs combines sports data with the votes of several independent AIs to rank analyses by confidence score.",
       hero_cta1: "See live matches", hero_cta2: "Create free account",
       hero_r1: "✓ Public results", hero_r2: "✓ Verified data",
@@ -152,7 +154,8 @@ const i18n = (function () {
       lang_label: "Idioma",
 
       hero_badge: "El Concilio IA deportivo",
-      hero_title: "Varias inteligencias artificiales analizan.<br><span class=\"grad\">El Concilio selecciona las mejores convergencias.</span>",
+      decision_apk: "Descargar la app Android beta", decision_note: "Ilustración del método · ningún resultado garantizado", decision_aria: "Cinco análisis independientes convergen en una síntesis. Ilustración del método, no una señal actual.", decision_title: "El círculo de cinco IA independientes", decision_strong: "Señal fuerte", decision_trend: "Tendencia IA",
+      hero_title: "5 IA analizan.<br>Ves la decisión.",
       hero_sub: "TousLesMatchs combina los datos deportivos con el voto de varias IA independientes para clasificar los análisis según su puntuación de confianza.",
       hero_cta1: "Ver partidos en directo", hero_cta2: "Crear cuenta gratis",
       hero_r1: "✓ Resultados públicos", hero_r2: "✓ Datos verificados",
@@ -217,7 +220,8 @@ const i18n = (function () {
       lang_label: "Idioma",
 
       hero_badge: "O Concílio IA desportivo",
-      hero_title: "Várias inteligências artificiais analisam.<br><span class=\"grad\">O Concílio seleciona as melhores convergências.</span>",
+      decision_apk: "Baixar o app Android beta", decision_note: "Ilustração do método · nenhum resultado garantido", decision_aria: "Cinco análises independentes convergem em uma síntese. Ilustração do método, não um sinal atual.", decision_title: "O círculo de cinco IA independentes", decision_strong: "Sinal forte", decision_trend: "Tendência IA",
+      hero_title: "5 IA analisam.<br>Você vê a decisão.",
       hero_sub: "O TousLesMatchs cruza os dados desportivos com o voto de várias IA independentes para classificar as análises pela sua pontuação de confiança.",
       hero_cta1: "Ver jogos ao vivo", hero_cta2: "Criar conta grátis",
       hero_r1: "✓ Resultados públicos", hero_r2: "✓ Dados verificados",
@@ -282,7 +286,8 @@ const i18n = (function () {
       lang_label: "Язык",
 
       hero_badge: "Спортивный Совет ИИ",
-      hero_title: "Несколько искусственных интеллектов проводят анализ.<br><span class=\"grad\">Совет отбирает наиболее согласованные решения.</span>",
+      decision_apk: "Скачать бета-приложение Android", decision_note: "Иллюстрация метода · результат не гарантирован", decision_aria: "Пять независимых анализов образуют общий вывод. Иллюстрация метода, а не текущий сигнал.", decision_title: "Круг пяти независимых ИИ", decision_strong: "Сильный сигнал", decision_trend: "Тенденция ИИ",
+      hero_title: "5 ИИ анализируют.<br>Вы видите решение.",
       hero_sub: "TousLesMatchs объединяет спортивные данные и голоса нескольких независимых ИИ, чтобы ранжировать анализы по уровню уверенности.",
       hero_cta1: "Смотреть матчи в прямом эфире", hero_cta2: "Создать бесплатный аккаунт",
       hero_r1: "✓ Открытые результаты", hero_r2: "✓ Проверенные данные",
@@ -347,7 +352,8 @@ const i18n = (function () {
       lang_label: "语言",
 
       hero_badge: "体育 AI 评议会",
-      hero_title: "多个人工智能同时分析。<br><span class=\"grad\">评议会筛选出共识最强的结论。</span>",
+      decision_apk: "下载Android测试版应用", decision_note: "方法示意图 · 结果不保证", decision_aria: "五个独立分析汇成综合结论。这是方法示意，不是当前信号。", decision_title: "五个人工智能独立分析的共识环", decision_strong: "强信号", decision_trend: "人工智能趋势",
+      hero_title: "5个人工智能分析。<br>你看到清晰的结论。",
       hero_sub: "TousLesMatchs 结合体育数据与多个独立 AI 的投票，按置信度对分析结果进行排序。",
       hero_cta1: "查看实时比赛", hero_cta2: "免费注册",
       hero_r1: "✓ 战绩公开", hero_r2: "✓ 数据可核查",
@@ -443,6 +449,11 @@ const i18n = (function () {
       const k = el.getAttribute("data-i18n-ph");
       const v = dict[k] !== undefined ? dict[k] : fallback[k];
       if (v !== undefined) el.setAttribute("placeholder", v);
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach(function (el) {
+      const k = el.getAttribute("data-i18n-aria");
+      const v = dict[k] !== undefined ? dict[k] : fallback[k];
+      if (v !== undefined) el.setAttribute("aria-label", v);
     });
     document.documentElement.setAttribute("lang", lang);
     const cur = document.getElementById("lang-current");

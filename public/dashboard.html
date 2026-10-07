@@ -125,8 +125,9 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+<link rel="stylesheet" href="/css/salle-decision.css?v=20261007">
 </head>
-<body class="tlm-wow tlm-page-dashboard">
+<body class="tlm-decision tlm-wow tlm-page-dashboard">
 
 <nav>
   <a href="/" class="nav-brand">TousLesMatchs</a>
@@ -525,10 +526,7 @@ if (token) {
   document.getElementById('auth-section').style.display = 'block';
 }
 
-// Enter key support
-document.getElementById('auth-pass').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') submitAuth();
-});
+// Enter-key support is registered above on the current auth-code/email fields.
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/cookie-consent.js" defer></script>

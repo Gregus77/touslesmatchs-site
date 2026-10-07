@@ -250,8 +250,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+<link rel="stylesheet" href="/css/salle-decision.css?v=20261007">
 </head>
-<body class="tlm-wow tlm-page-live">
+<body class="tlm-decision tlm-wow tlm-page-live">
 
 <!-- NAV -->
 <nav class="nav">
@@ -672,9 +673,11 @@ function loadMatches(force) {
     } else {
       showEmpty();
     }
-    document.getElementById("loading").style.display = "none";
+    var loading = document.getElementById("loading");
+    if (loading) loading.style.display = "none";
   }).catch(function() {
-    document.getElementById("loading").style.display = "none";
+    var loading = document.getElementById("loading");
+    if (loading) loading.style.display = "none";
     showEmpty();
   });
 }

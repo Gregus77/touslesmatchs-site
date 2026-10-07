@@ -659,11 +659,18 @@ body :where(
 
 
 /* Paliers ayant reellement recu le signal (source : sig_sent_* cote API) */
-.tier-chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;
-  padding:1px 6px;border-radius:999px;background:rgba(255,255,255,.06);white-space:nowrap}
-.tier-recu{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;
-  font-size:10.5px;color:var(--muted);font-weight:600}
-.tier-none{font-style:italic;opacity:.75}
+.tier-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:900;
+  padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.10);white-space:nowrap}
+.tier-recu{display:inline-flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:6px;
+  font-size:10.5px;color:var(--tx2);font-weight:800}
+.tier-recu:before{content:"Recu par";font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:900}
+.tier-none{font-style:normal;opacity:.88;border:1px dashed rgba(255,255,255,.14);border-radius:999px;padding:4px 8px;background:rgba(255,255,255,.035)}
+.match-pro-line{display:flex;align-items:center;gap:8px;min-width:0;font-weight:900;color:var(--tx)}
+.match-pro-line .team-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.match-pro-meta{font-size:10.5px;color:var(--muted);font-weight:800;margin:4px 0 1px;letter-spacing:.01em}
+.mini-crest{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex:0 0 22px;border-radius:8px;
+  background:linear-gradient(145deg,rgba(79,214,242,.22),rgba(138,104,255,.2));border:1px solid rgba(255,255,255,.14);box-shadow:0 6px 16px rgba(0,0,0,.18);font-size:9px;font-weight:1000;color:#fff;overflow:hidden}
+.mini-crest img{width:100%;height:100%;object-fit:contain}
 
 /* Bandeau saisonnier + journees sans selection retenue */
 .saison-note{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:11px 13px;
@@ -698,8 +705,9 @@ body :where(
 @media(max-width:760px){.goal05-founder-inner{grid-template-columns:1fr;padding:20px}.goal05-proof-grid{grid-template-columns:1fr}.goal05-title{font-size:23px}}/* Acces fondateur +0,5 : invitation affichee une seule fois par session. */
 .beta-cycle01-launcher{position:fixed;right:18px;bottom:18px;z-index:180;padding:11px 14px;border:1px solid rgba(166,136,255,.45);border-radius:999px;background:#1e2340;color:#f6f7ff;box-shadow:0 14px 32px rgba(0,0,0,.3);font:800 12px Inter,system-ui;cursor:pointer}.beta-cycle01-launcher b{color:#4fd6f2}.beta-cycle01{max-width:440px}.beta-cycle01 .beta-kicker{color:#4fd6f2;font-size:10px;font-weight:900;letter-spacing:.13em}.beta-cycle01 .beta-meta{margin:13px 0;color:#c4c9e6;font-size:12px}.beta-cycle01 .beta-form{display:grid;gap:10px;margin-top:16px}.beta-cycle01 .beta-check{display:flex;gap:8px;color:#c4c9e6;font-size:11px;line-height:1.45}.beta-cycle01 .beta-check input{margin-top:2px;accent-color:#8a68ff}.beta-cycle01 .beta-status{margin-top:10px;font-size:12px;line-height:1.45}@media(max-width:700px){.beta-cycle01-launcher{right:12px;bottom:12px}}</style>
 
+<link rel="stylesheet" href="/css/salle-decision.css?v=20261007">
 </head>
-<body class="tlm-wow tlm-page-home">
+<body class="tlm-decision tlm-wow tlm-page-home">
 
 <nav>
   <div class="nav-brand">TOUSLES<b>MATCHS</b></div>
@@ -755,52 +763,34 @@ body :where(
 
   <!-- RANGEE 1 : HERO + MATCHS EN DIRECT -->
   <div class="row row-hero">
-    <section class="card hero-exact-card hero" aria-labelledby="hero-title">
-      <div class="hero-exact-wrap" aria-hidden="true">
-        <picture><source srcset="/img/hero-concile-wow.webp" type="image/webp"><img class="hero-exact-img" src="/img/hero-concile-wow.jpg" width="1448" height="1086" loading="eager" decoding="async" alt="Les cinq IA du Concile deliberant sur une analyse"></picture>
-        <svg class="hero-wave-overlay" viewBox="0 0 815 611" preserveAspectRatio="none" aria-hidden="true">
-          <defs>
-            <filter id="glowBlue" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="glowOrange" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="glowPink" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="glowCyan" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="glowPurple" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <filter id="glowCore" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-            <path id="waveDeep" d="M 426 155 C 462 190, 516 240, 557 286"/>
-            <path id="waveMistral" d="M 585 96 C 585 155, 584 226, 584 278"/>
-            <path id="waveCohere" d="M 738 155 C 695 190, 650 240, 612 287"/>
-            <path id="wavePerplexity" d="M 409 408 C 458 378, 515 342, 557 322"/>
-            <path id="waveQwen" d="M 748 409 C 702 378, 651 345, 612 324"/>
-          </defs>
-          <path class="energy-path deep" d="M 426 155 C 462 190, 516 240, 557 286"/>
-          <path class="energy-path mistral" d="M 585 96 C 585 155, 584 226, 584 278"/>
-          <path class="energy-path cohere" d="M 738 155 C 695 190, 650 240, 612 287"/>
-          <path class="energy-path perplexity" d="M 409 408 C 458 378, 515 342, 557 322"/>
-          <path class="energy-path qwen" d="M 748 409 C 702 378, 651 345, 612 324"/>
-          <g class="hero-wave-dot">
-            <circle r="5" fill="#ffffff"><animateMotion dur="1.65s" repeatCount="indefinite"><mpath href="#waveDeep"/></animateMotion></circle>
-            <circle r="5" fill="#fff7de"><animateMotion dur="1.55s" begin="-.4s" repeatCount="indefinite"><mpath href="#waveMistral"/></animateMotion></circle>
-            <circle r="5" fill="#fff0fb"><animateMotion dur="1.7s" begin="-.8s" repeatCount="indefinite"><mpath href="#waveCohere"/></animateMotion></circle>
-            <circle r="5" fill="#e8ffff"><animateMotion dur="1.6s" begin="-.2s" repeatCount="indefinite"><mpath href="#wavePerplexity"/></animateMotion></circle>
-            <circle r="5" fill="#f1e8ff"><animateMotion dur="1.75s" begin="-.65s" repeatCount="indefinite"><mpath href="#waveQwen"/></animateMotion></circle>
-          </g>
-          <circle class="core-pulse" cx="584" cy="312" r="77"/><circle class="core-pulse p2" cx="584" cy="312" r="77"/>
-        </svg>
-        <a class="hero-exact-hotspot live" href="/live-ia">Voir les matchs en direct</a>
-        <a class="hero-exact-hotspot account" href="/dashboard">Créer mon compte gratuit</a>
-        <div class="hero-seo-copy">
-          <div data-i18n="hero_badge">Le Concile IA sportif</div>
-          <h1 id="hero-title" data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent. Le Concile sélectionne les meilleures convergences.</h1>
-          <p data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</p>
+    <section class="decision-hero" aria-labelledby="hero-title">
+      <div class="decision-intro">
+        <div class="decision-signature"><span class="decision-mark" aria-hidden="true">✦</span><span data-i18n="hero_badge">Le Concile IA sportif</span></div>
+        <h1 id="hero-title" data-i18n-html="hero_title">5 IA analysent.<br>Vous voyez la décision.</h1>
+        <p class="decision-copy" data-i18n="hero_sub">Des analyses sportives classées par convergence. Consultez les sélections, leur niveau de confiance et les résultats, gagnés comme perdus.</p>
+        <div class="decision-actions">
+          <a href="/live-ia" class="btn btn-prim" data-i18n="hero_cta1">Voir les matchs en direct</a>
+          <a href="/dashboard" class="btn btn-ghost" data-i18n="hero_cta2">Créer mon compte gratuit</a>
         </div>
+        <a class="decision-app-link" href="/downloads/TousLesMatchs-Goal05-beta.apk" data-i18n="decision_apk" download>Télécharger l’app Android bêta</a>
+        <div class="decision-reassure"><span data-i18n="hero_r1">✓ Résultats publics</span><span data-i18n="hero_r2">✓ Données vérifiées</span><span>18+</span></div>
       </div>
-      <div class="hero-mobile-fallback">
-        <div class="hero-badge" data-i18n="hero_badge">Le Concile IA sportif</div>
-        <h1 data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent.<br><span class="grad">Le Concile sélectionne les meilleures convergences.</span></h1>
-        <div class="hero-sub" data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</div>
-        <div class="hero-cta"><a href="/live-ia" class="btn btn-prim" data-i18n="hero_cta1">Voir les matchs en direct</a><a href="/downloads/TousLesMatchs-Goal05-beta.apk" class="btn btn-ghost" download>📲 Télécharger l’app Android</a><a href="/dashboard" class="btn btn-ghost" data-i18n="hero_cta2">Créer mon compte gratuit</a></div>
-        <div class="hero-reassure"><span data-i18n="hero_r1">✓ Résultats publics</span><span data-i18n="hero_r2">✓ Données vérifiées</span><span data-i18n="hero_r3">✓ Sans engagement</span><span>18+</span></div>
-      </div>
+      <figure class="decision-council" data-i18n-aria="decision_aria" aria-label="Cinq analyses indépendantes convergent vers une synthèse. Illustration de la méthode, pas un signal en cours.">
+        <svg viewBox="0 0 400 340" role="img" aria-labelledby="council-title">
+          <title id="council-title" data-i18n="decision_title">Le cercle des cinq IA indépendantes</title>
+          <circle class="council-orbit" cx="200" cy="162" r="116"/>
+          <circle class="council-inner-orbit" cx="200" cy="162" r="78"/>
+          <path class="council-lines" d="M200 46L200 162M310 126L200 162M268 256L200 162M132 256L200 162M90 126L200 162"/>
+          <g class="council-node"><circle cx="200" cy="46" r="20"/><circle cx="310" cy="126" r="20"/><circle cx="268" cy="256" r="20"/><circle cx="132" cy="256" r="20"/><circle cx="90" cy="126" r="20"/></g>
+          <g class="council-node-label"><text x="200" y="51">IA</text><text x="310" y="131">IA</text><text x="268" y="261">IA</text><text x="132" y="261">IA</text><text x="90" y="131">IA</text></g>
+          <circle class="council-core" cx="200" cy="162" r="55"/>
+          <text class="council-number" x="200" y="169">5</text>
+          <text class="council-caption" x="200" y="190">IA</text>
+        </svg>
+        <figcaption data-i18n="method_2t">Les IA analysent séparément</figcaption>
+        <div class="decision-vote-key"><span><b>5/5</b> Elite</span><span><b>4/5</b> <span data-i18n="decision_strong">Signal Fort</span></span><span><b>3/5</b> <span data-i18n="decision_trend">Tendance IA</span></span></div>
+        <p class="decision-method-note" data-i18n="decision_note">Illustration de la méthode · aucun résultat garanti</p>
+      </figure>
     </section>
 
     <div class="card live-panel" id="live">
@@ -1545,9 +1535,9 @@ async function loadDailyAccordion(){
     }
     if(!rows.length && !banniere){ box.innerHTML='<div class="empty-note">Aucun verdict résolu pour l\'instant.</div>'; return; }
     var TIER_META={
-      standard:{ico:'🥇',nom:'Telegram Standard', court:'Standard', c:'var(--standard)'},
-      premium :{ico:'🥈',nom:'Telegram Premium',  court:'Premium',  c:'var(--premium)'},
-      elite   :{ico:'🥉',nom:'Telegram Elite-VIP',court:'Elite',    c:'var(--elite)'}
+      standard:{ico:'🥇',nom:'Groupe Standard', court:'Standard', c:'var(--standard)'},
+      premium :{ico:'🥈',nom:'Groupe Premium',  court:'Premium',  c:'var(--premium)'},
+      elite   :{ico:'🥉',nom:'Groupe Elite-VIP',court:'Elite',    c:'var(--elite)'}
     };
     var TIER_ORDRE=['standard','premium','elite'];
     box.innerHTML=banniere+order.map(function(day,idx){
@@ -1583,7 +1573,7 @@ async function loadDailyAccordion(){
         var canaux=TIER_ORDRE.filter(function(t){ return envoye[t]; });
         var tierBadge='';
         if(canaux.length){
-          tierBadge='<span class="tier-recu">Reçu par '
+          tierBadge='<span class="tier-recu">'
             + canaux.map(function(t){
                 var m=TIER_META[t];
                 return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
@@ -1606,8 +1596,11 @@ async function loadDailyAccordion(){
             : 'critères de diffusion non atteints';
           tierBadge='<span class="tier-recu tier-none">Observation publique du moteur — '+esc(lisible)+'</span>';
         }
+        var comp=splitComp(a.competition||a.sport||'');
+        var flag=COUNTRY_FLAGS[comp.country]||'';
+        var matchMeta=(flag?flag+' ':'')+(comp.league||a.competition||'Football')+(comp.country?' · '+comp.country:'');
         return '<div class="day-acc-row">'
-          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div>'+tierBadge+'</div>'
+          + '<div class="day-acc-row-teams"><div class="match-pro-line"><span class="mini-crest">'+logo(a.home_logo,a.home)+'</span><span class="team-name">'+esc(a.home)+'</span><span>—</span><span class="mini-crest">'+logo(a.away_logo,a.away)+'</span><span class="team-name">'+esc(a.away)+'</span></div><div class="match-pro-meta">'+esc(matchMeta)+'</div><div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div>'+tierBadge+'</div>'
           + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
           + '</div>';
       }).join('');
