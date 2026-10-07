@@ -304,8 +304,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 }
 </style>
 
-<style id="tlm-live-ou25-votes-css">
-/* TLM_LIVE_OU25_VOTES_V1 */
+<style id="tlm-live-goal05-votes-css">
+/* TLM_LIVE_GOAL05_VOTES_V2 */
 .mc-vote-details{margin:0 18px 14px;border:1px solid rgba(124,92,255,.28);border-radius:13px;background:rgba(10,15,38,.58);overflow:hidden}
 .mc-vote-details summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;cursor:pointer;list-style:none;color:#eef1ff;font-size:12px;font-weight:900}
 .mc-vote-details summary::-webkit-details-marker{display:none}
@@ -319,19 +319,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-vote-reason{margin:-2px 0 9px;color:#9da7cb;font-size:9.5px;line-height:1.4}
 .mc-vote-seats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .mc-vote-seat{min-width:0;padding:8px 5px;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(255,255,255,.035);text-align:center}
-.mc-vote-seat.over{border-color:rgba(34,211,238,.48);background:rgba(34,211,238,.1)}
-.mc-vote-seat.under{border-color:rgba(217,70,239,.48);background:rgba(217,70,239,.1)}
 .mc-vote-seat.old{opacity:.46;filter:grayscale(.8)}
 .mc-vote-seat.old{opacity:1;filter:none}
-.mc-vote-seat.over{border-color:#22d3ee;background:#087b9a}
-.mc-vote-seat.under{border-color:#d946ef;background:#8528d6}
-.mc-vote-seat.over .mc-vote-seat-index,.mc-vote-seat.under .mc-vote-seat-index{background:rgba(0,0,0,.25);color:#fff}
-.mc-vote-seat.over strong,.mc-vote-seat.under strong,.mc-vote-seat.over small,.mc-vote-seat.under small{color:#fff}
 .mc-vote-seat.terminal{border-color:#fbbf24;background:#5f4519}
 .mc-vote-seat.terminal small{color:#fff}
 .mc-vote-seat-index{width:21px;height:21px;margin:0 auto 5px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.08);color:#e6e9ff;font-size:8px;font-weight:950}
-.mc-vote-seat.over .mc-vote-seat-index{background:rgba(34,211,238,.2);color:#dffaff}
-.mc-vote-seat.under .mc-vote-seat-index{background:rgba(217,70,239,.2);color:#fff0ff}
 .mc-vote-seat strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dfe4fb;font-size:8px}
 .mc-vote-seat small{display:block;margin-top:3px;color:#8994ba;font-size:7.5px;line-height:1.25}
 @media(max-width:560px){.mc-vote-details{margin-left:10px;margin-right:10px}.mc-vote-seats{gap:4px}.mc-vote-seat{padding:7px 3px}.mc-vote-seat strong{font-size:7px}.mc-vote-seat small{font-size:6.8px}}
@@ -566,7 +558,7 @@ body{overflow-x:hidden}
 
 <style id="tlm-goal05-current-live-css">
 /* ancien système reste consultable dans l'historique, mais ses panneaux live ne sont plus le produit courant. */
-#tab-live .mc-vote-details,#tab-live .mc-analysis{display:none!important}
+#tab-live .mc-analysis{display:none!important}
 </style>
 </head>
 <body class="tlm-wow tlm-page-live">
@@ -1127,13 +1119,25 @@ function showEmpty() {
 }
 
 // ── Votes réels du Conseil IA (lecture gratuite, sans consommation de crédit) ──
-function liveOu25State(m) {
-  var raw = m && m.ou25 || {};
+function liveGoal05State(m) {
+  var raw = m && (m.goal05_v2 || m.goal05) || {};
   var slots = Array.isArray(raw.votes) ? raw.votes.slice(0, 5) : [];
-  while (slots.length < 5) slots.push({ status: "pending", direction: null });
-  var over = slots.filter(function(v){ return v && v.status === "voted" && v.direction === "over"; }).length;
-  var under = slots.filter(function(v){ return v && v.status === "voted" && v.direction === "under"; }).length;
-  return { slots: slots, voteCount: Number(raw.vote_count)||over+under, overCount: over, underCount: under, windowStatus: String(raw.window_status || "unknown"),locked:raw.locked!==false,official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,statusText:raw.recommendation_status||null,consensusDirection:raw.consensus_direction||null,consensusCount:Number(raw.consensus_count)||Math.max(over,under),confidence:raw.official_confidence,odd:raw.official_odd,outcome:raw.outcome||null };
+  while (slots.length < 5) slots.push({ status: "pending" });
+  var voted = slots.filter(function(v){ return v && v.status === "voted"; }).length;
+  return {
+    raw: raw,
+    slots: slots,
+    voteCount: Number(raw.vote_count || raw.ai_votes || raw.response_count || raw.responded_votes || 0) || voted,
+    consensusCount: Number(raw.consensus_count || raw.yes_votes || raw.consensus_votes || 0),
+    windowStatus: String(raw.window_status || "unknown"),
+    official: raw.official === true || raw.validated === true || !!(m && m.goal05_official === true),
+    officialId: raw.official_signal_snapshot_id || (m && m.official_signal_snapshot_id) || null,
+    statusText: raw.recommendation_status || null,
+    confidence: raw.official_confidence != null ? raw.official_confidence : raw.confidence,
+    odd: raw.official_odd != null ? raw.official_odd : raw.odd,
+    outcome: raw.outcome || null,
+    targetTeam: raw.target_team || raw.targetTeam || raw.team || (m && (m.target_team || m.targetTeam)) || ""
+  };
 }
 
 function renderOwnerShadow(rows) {
@@ -1157,38 +1161,62 @@ function renderOwnerAnalysis(m) {
   return '<div class="mc-owner-analysis" style="font-size:12px;color:#b8c2d8;line-height:1.6;margin:8px 0">'+lines.map(escHtml).join('<br>')+'</div>';
 }
 
-function renderLiveOu25Details(m) {
-  var state = liveOu25State(m);
-  var entryClosed=TLMMatchLifecycle.entryClosed(m);
-  var consensusDirection = !state.locked?(state.consensusDirection === 'over'||state.overCount>=state.underCount&&state.overCount>0 ? "OVER" : state.consensusDirection === 'under'||state.underCount>0 ? "UNDER" : "") : "";
+function renderLiveGoal05Details(m) {
+  var state = liveGoal05State(m);
+  var entryClosed = TLMMatchLifecycle.entryClosed(m);
   var consensusCount = state.consensusCount;
-  var responseCount=state.slots.filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;
-  var minute=Number(m&&m.minute),directionText=consensusDirection?'Analyse +0,5 — '+consensusCount+'/5':'Consensus '+consensusCount+'/5';
-  var verdict=state.official?(m&&m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
-    :state.voteCount&&isFinite(minute)&&minute<30?'Tendance — pas encore de signal'
+  var responseCount = state.slots.filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;
+  var minute = Number(m && m.minute);
+  var verdict = state.official
+    ? (m && m.telegram_delivery_proven === true ? 'Envoyé sur Telegram' : 'Signal validé — livraison en attente')
+    : state.voteCount && isFinite(minute) && minute < 30
+      ? 'Tendance — pas encore de signal'
+      : state.voteCount
+        ? (m && (m.diffusion_block || m.analysis_exclusion_reason) || 'Tendance — autres critères non remplis, aucun signal')
+        : (m && (m.analysis_exclusion_reason || m.block_reason) || 'Aucun vote +0,5 enregistré pour le moment');
+  if (state.voteCount) verdict = (TLMMatchLifecycle.marketText(m) || 'Analyse +0,5') + ' · ' + verdict;
+  if (state.official) verdict += ' · confiance ' + (state.confidence == null ? 'indisponible' : state.confidence + '/100')
+    + ' · ' + (state.odd == null ? 'cote indisponible' : 'cote ' + Number(state.odd).toFixed(2))
+    + (state.outcome === 'win' ? ' · gagné' : state.outcome === 'loss' ? ' · perdu' : '');
+  if (!state.official && state.windowStatus === 'closed' && state.statusText) verdict = state.statusText;
+  if (!state.voteCount) verdict = TLMMatchLifecycle.statusText(m);
 
-    :state.voteCount?(m&&(m.diffusion_block||m.analysis_exclusion_reason)||'Tendance — autres critères non remplis, aucun signal')
-    :(m&&(m.analysis_exclusion_reason||m.block_reason)||'Aucun vote enregistré pour le moment');
-  if(state.voteCount)verdict=TLMMatchLifecycle.marketText(m)+' · '+verdict;
-  if(state.official&&!state.locked)verdict+=' · confiance '+state.confidence+'/100 · '+(state.odd==null?'cote indisponible':'cote '+Number(state.odd).toFixed(2))+(state.outcome==='win'?' · gagné':state.outcome==='loss'?' · perdu':'');
-  if(!state.official&&state.windowStatus==='closed'&&state.statusText)verdict=state.statusText;
-  if(!state.voteCount)verdict=TLMMatchLifecycle.statusText(m);
-  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason || (m.ou25 && m.ou25.attempt && m.ou25.attempt.reason)) || "";
+  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason)
+    || (state.raw.attempt && state.raw.attempt.reason) || '';
   if (!reason && !state.voteCount) {
-    if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre d’analyse débute à la 30e minute.";
-    else if (state.windowStatus === "after_window" || state.windowStatus === "closed") reason = "La fenêtre de vote est terminée : fin de première mi-temps.";
-    else reason = "Les cinq IA n’ont pas encore enregistré de vote exploitable.";
+    if (state.windowStatus === 'before_window' || state.windowStatus === 'waiting') reason = 'La fenêtre d’analyse débute à la 30e minute.';
+    else if (state.windowStatus === 'after_window' || state.windowStatus === 'closed') reason = 'La fenêtre d’analyse +0,5 est terminée.';
+    else reason = 'Les cinq IA n’ont pas encore enregistré de vote +0,5 exploitable.';
   }
+
   var seats = state.slots.map(function(slot, i) {
-    var voted = slot && slot.status === "voted";
-    var dir = voted&&!state.locked ? slot.direction : "";
-    var failure=slot&&slot.status==='excluded'?'Exclu avant Concile':slot&&slot.status==='not_called'?'IA non appelée':slot&&slot.status==='collecting'?'Vérification des données':slot&&slot.status==='abstained'?'Abstention explicite':slot&&slot.status==='empty'?'Réponse sans avis exploitable':slot&&slot.status==='parse_error'?'Réponse invalide':slot&&slot.status==='rejected_statistical'?'Vote écarté':/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé':slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
-    var shortLabel = voted ? (state.locked ? "✓" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : failure==='En attente'?String(i+1):'—';
-    var choice = voted ? (state.locked ? "Vote enregistré · direction Premium" : "Vote enregistré") : failure;
-    var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
-    return '<div class="mc-vote-seat ' + dir + (!voted&&slot&&slot.status!=='pending'?' terminal':'') + (state.official&&!entryClosed?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + escHtml(choice) + confidence + '</small></div>';
-  }).join("");
-  return TLMMatchLifecycle.entryNoticeHtml(m)+'<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Historique · ancien système</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · '+responseCount+'/5 IA ont répondu</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (state.official&&!entryClosed ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
+    var voted = slot && slot.status === 'voted';
+    var failure = slot&&slot.status==='excluded'?'Exclu avant Concile'
+      :slot&&slot.status==='not_called'?'IA non appelée'
+      :slot&&slot.status==='collecting'?'Vérification des données'
+      :slot&&slot.status==='abstained'?'Abstention explicite'
+      :slot&&slot.status==='empty'?'Réponse sans avis exploitable'
+      :slot&&slot.status==='parse_error'?'Réponse invalide'
+      :slot&&slot.status==='rejected_statistical'?'Vote écarté'
+      :/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé'
+      :slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
+    var shortLabel = voted ? '✓' : failure === 'En attente' ? String(i + 1) : '—';
+    var choice = voted ? 'Vote +0,5 enregistré' : failure;
+    var confidence = voted && slot.confidence != null ? ' · ' + escHtml(String(slot.confidence)) + '%' : '';
+    return '<div class="mc-vote-seat' + (!voted&&slot&&slot.status!=='pending'?' terminal':'') + (state.official&&!entryClosed?'':' old')
+      + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ('IA ' + (i + 1)))
+      + '</strong><small>' + escHtml(choice) + confidence + '</small></div>';
+  }).join('');
+
+  var targetLabel = state.targetTeam
+    ? 'Équipe ciblée : ' + escHtml(state.targetTeam)
+    : 'Analyse +0,5 · équipe ciblée à confirmer';
+  return TLMMatchLifecycle.entryNoticeHtml(m)
+    + '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>' + targetLabel
+    + '</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · ' + responseCount + '/5 IA ont répondu</span></span></summary>'
+    + '<div class="mc-vote-panel"><div class="mc-vote-verdict' + (state.official&&!entryClosed ? ' valid' : '') + '">' + escHtml(verdict) + '</div>'
+    + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '')
+    + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
 }
 
 // ── Render ──
@@ -1307,7 +1335,7 @@ function renderMatches() {
     html += '  <div class="mc-score-col"><div class="mc-score">' + scoreH + ' — ' + scoreA + '</div>' + minuteHtml + '</div>';
     html += '  <div class="mc-team away"><div class="mc-name">' + escHtml(m.away) + '</div><div class="mc-logo">' + awayLogo + '</div></div>';
     html += '</div>';
-    html += renderLiveOu25Details(m);
+    html += renderLiveGoal05Details(m);
     html += renderOwnerAnalysis(m);
 
     if (m.pinnedSignal) {
