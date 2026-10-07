@@ -1854,15 +1854,17 @@ function tlmVotesAreOld(m){
   return !!scoreChanged||phase==='closed'||phase==='finished'||phase==='unavailable';
 }
 function tlmVoteCirclesHtml(m){
-  var state=heroOu25(m),old=tlmVotesAreOld(m);
-  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-analysis-market">'+esc(TLMMatchLifecycle.marketText(m))+'</span><div class="tlm-row-votes'+(old?' stale':'')+'"'+(TLMMatchLifecycle.entryClosed(m)?' style="filter:grayscale(1);opacity:.65"':'')+' aria-label="Votes IA">'+state.slots.map(function(slot,index){
-    var voted=slot&&slot.status==='voted',direction=state.locked?null:slot.direction;
-    var terminal=heroTerminalCaption(slot),mark=voted?(state.locked?'✓':direction==='over'?'O':direction==='under'?'U':'?'):terminal?terminal.mark:String(index+1);
-    var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'')+(terminal?' terminal':'');
-    var failure=terminal?terminal.label:'Vote en attente';
-    var detail='IA '+(index+1)+' : '+(voted?(state.locked?'vote enregistré, direction réservée à Premium':direction==='over'?'Over':'Under'):failure);
-    return '<span class="'+cls+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+mark+'</span>';
-  }).join('')+'</div></div>';
+  /* LEGACY_LIVE_VOTES_MASKED: les votes O/U historiques restent en base mais ne sont jamais montrés comme votes +0,5. */
+  var current=m&&m.goal05||{},slots=Array.isArray(current.votes)?current.votes.slice(0,5):[];
+  while(slots.length<5)slots.push({status:'pending'});
+  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)
+    +'<span class="tlm-analysis-market">Analyse +0,5</span><div class="tlm-row-votes" aria-label="Votes IA +0,5">'
+    +slots.map(function(slot,index){
+      var voted=slot&&slot.status==='voted',terminal=heroTerminalCaption(slot),mark=voted?'✓':terminal?terminal.mark:String(index+1);
+      var cls='tlm-row-vote'+(voted?' voted':'')+(terminal?' terminal':'');
+      var detail='IA '+(index+1)+' : '+(voted?'vote +0,5 enregistré':terminal?terminal.label:'en attente du vote +0,5');
+      return '<span class="'+cls+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+mark+'</span>';
+    }).join('')+'</div></div>';
 }
 function renderAnalyzedList(rows){
   var grid=document.getElementById('live-rows');if(!grid)return;

@@ -1091,16 +1091,26 @@ body{overflow-x:hidden}
   function appVotes(m){return appOu25(m).voteCount;}
   function appMatchTrackable(m){return appOu25(m).official===true||TLMMatchLifecycle.canTrack(m);}
   function appMiniVotes(m){
-    var state=appOu25(m);
-    var dots=state.slots.map(function(slot,i){
-      var voted=slot&&slot.status==='voted',dir=voted&&(slot.direction==='over'||slot.direction==='under')?slot.direction:'';
-      var terminal=appTerminalCaption(slot),label=voted?(state.locked?'✓':dir==='over'?'O':dir==='under'?'U':'?'):terminal?terminal.mark:String(i+1);
-      var failure=slot&&slot.reason||({unavailable:'fournisseur indisponible',empty:'réponse sans vote exploitable',parse_error:'réponse illisible',rejected_statistical:'vote écarté statistiquement'}[slot&&slot.status])||'vote en attente';
-      var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente')),voteTime=appVoteTime(slot&&slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;
-      return '<span class="tlm-app-live-mini-vote '+(voted?'voted ':'')+dir+(terminal?' terminal':'')+(state.official&&!TLMMatchLifecycle.entryClosed(m)?'':' old')+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
+    /* LEGACY_LIVE_VOTES_MASKED: les anciennes directions O/U ne sont jamais rendues sur le produit +0,5. */
+    var legacy=appOu25(m);
+    var current=m&&m.goal05||{};
+    var slots=Array.isArray(current.votes)?current.votes.slice(0,5):[];
+    while(slots.length<5)slots.push({status:'pending'});
+    var hasCurrent=slots.some(function(slot){return slot&&slot.status==='voted';});
+    var dots=slots.map(function(slot,i){
+      var voted=slot&&slot.status==='voted';
+      var terminal=appTerminalCaption(slot);
+      var label=voted?'✓':terminal?terminal.mark:String(i+1);
+      var detail=voted
+        ?('IA '+(i+1)+' : vote +0,5 enregistré')
+        :('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente du vote +0,5'));
+      return '<span class="tlm-app-live-mini-vote '+(voted?'voted ':'')+(terminal?' terminal':'')+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
-    var preserved=esc(TLMMatchLifecycle.statusText(m))+' · ';
-    return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+esc(TLMMatchLifecycle.marketText(m))+' · '+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.consensusCount+'/5 consensus · '+appResponseCount(state.slots)+'/5 IA ont répondu</span></span>';
+    var summary=hasCurrent
+      ?(Number(current.consensus_count||current.yes_votes||0)+'/5 consensus +0,5 · '+appResponseCount(slots)+'/5 IA ont répondu')
+      :(legacy.voteCount>0?'Anciennes réponses O/U masquées · attente des votes +0,5':'En attente des votes +0,5');
+    return TLMMatchLifecycle.entryNoticeHtml(m)
+      +'<span class="tlm-app-live-vote-summary"><span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+summary+'</span></span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
@@ -1131,7 +1141,7 @@ body{overflow-x:hidden}
       :votes?(m.diffusion_block||exclusionReason||'Tendance — autres critères non remplis, aucun signal')
       :exclusionReason||m.block_reason||m.data_notice||(analysisWaiting?'Analyse en cours — affichage à partir de la 30e minute':'En attente des IA');
     $("app-vote-explanation").textContent='';
-    Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted',terminal=appTerminalCaption(slot);el.classList.toggle('on',voted);el.classList.toggle('terminal',!!terminal);el.classList.toggle('old',voted&&!voteState.official);el.classList.toggle('over',voted&&!voteState.locked&&dir==='over');el.classList.toggle('under',voted&&!voteState.locked&&dir==='under');el.textContent=voted?(voteState.locked?'✓':dir==='over'?'O':dir==='under'?'U':'?'):terminal?terminal.mark:String(i+1);var detail=voted?(voteState.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente')),voteTime=appVoteTime(slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;el.title=detail;el.dataset.explanation=detail;el.setAttribute('aria-label',detail);});
+    Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},voted=slot.status==='voted',terminal=appTerminalCaption(slot);el.classList.toggle('on',false);el.classList.toggle('terminal',!!terminal);el.classList.toggle('old',false);el.classList.toggle('over',false);el.classList.toggle('under',false);el.textContent=terminal?terminal.mark:String(i+1);var detail=voted?('IA '+(i+1)+' : ancienne réponse O/U masquée — non utilisée pour le +0,5'):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente du vote +0,5'));el.title=detail;el.dataset.explanation=detail;el.setAttribute('aria-label',detail);});
     applyAppEntryClosure(m);
   }
   function applyAppEntryClosure(m){
@@ -2053,3 +2063,8 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
 
 </body>
 </html>
+
+<style id="tlm-goal05-no-legacy-vote-colors">
+/* LEGACY_LIVE_VOTES_MASKED */
+.tlm-app-live-mini-vote.over,.tlm-app-live-mini-vote.under{border-color:rgba(255,255,255,.16)!important;background:rgba(255,255,255,.035)!important;color:#7580a2!important}
+</style>

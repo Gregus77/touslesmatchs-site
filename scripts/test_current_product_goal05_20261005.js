@@ -43,6 +43,13 @@ assert.match(app,/Ancien système/);
 assert.match(app,/Actuel \+0,5/);
 assert.match(app,/min>=30&&min<=85/);
 
+assert.match(app,/LEGACY_LIVE_VOTES_MASKED/);
+assert.match(home,/LEGACY_LIVE_VOTES_MASKED/);
+assert.doesNotMatch(app,/dir==='over'\?'O':dir==='under'\?'U'/);
+assert.doesNotMatch(home,/direction==='over'\?'O':direction==='under'\?'U'/);
+assert.match(lifecycle,/LIVE_CURRENT_GOAL05_ONLY/);
+assert.match(lifecycle,/aucun signal officiel \+0,5/);
+
 assert.match(live,/Stratégie actuelle/);
 assert.match(live,/\+0,5 but de l’équipe favorite/);
 assert.match(live,/Historique · ancien système/);

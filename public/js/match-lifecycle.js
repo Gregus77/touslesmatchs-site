@@ -28,20 +28,22 @@
   function canTrack(m){var p=phase(m);return p==='open'||p==='waiting'||p==='closed';}
   function entryClosed(m){var p=phase(m);return !!m&&(p==='unknown'||p==='closed'||p==='finished'||p==='unavailable');}
   function marketText(m){
-    var r=m&&m.ou25||{},votes=(r.votes||[]).filter(function(v){return v.status==='voted';});
-    if(!votes.length)return '';
-    var count=Number(r.consensus_count||0);
-    var result='Analyse IA · '+count+'/5 consensus';
-    if(r.official&&r.official_confidence!=null)result+=' · confiance '+Number(r.official_confidence)+'/100';
+    /* LIVE_CURRENT_GOAL05_ONLY: l'ancien objet ou25 reste historique et ne pilote jamais l'affichage courant. */
+    var g=m&&m.goal05||{};
+    var count=Number(g.consensus_count||g.yes_votes||0);
+    if(!count)return '';
+    var result='Analyse +0,5 · '+count+'/5 consensus';
+    if(g.confidence!=null)result+=' · confiance '+Number(g.confidence)+'/100';
     return result;
   }
   function statusText(m){
-    var raw=m&&m.ou25||{},state=raw.analysis_state;
-    if(raw.official)return 'Signal +0,5 validé'+(entryClosed(m)?' — suivi terminé':'');
-    if(state==='excluded')return 'Non retenu';
-    if(state==='failed_before_providers'||state==='failed')return raw.recommendation_status || 'Analyse interrompue — statistiques ou données indisponibles';
-    if(entryClosed(m))return 'Analyse terminée — aucun signal validé';
-    if(Number(raw.vote_count)>0)return 'Analysé — '+Number(raw.consensus_count||0)+'/5 consensus';
+    /* LIVE_CURRENT_GOAL05_ONLY: ne jamais rebaptiser un ancien vote O/U en vote +0,5. */
+    var g=m&&m.goal05||{},state=g.analysis_state;
+    if(g.official===true)return 'Signal officiel +0,5 validé'+(entryClosed(m)?' — suivi terminé':'');
+    if(state==='excluded')return 'Non retenu pour le +0,5';
+    if(state==='failed_before_providers'||state==='failed')return g.recommendation_status || 'Analyse +0,5 interrompue — statistiques ou données indisponibles';
+    if(entryClosed(m))return 'Analyse terminée — aucun signal officiel +0,5';
+    if(Number(g.vote_count||g.yes_votes)>0)return 'Analyse +0,5 — '+Number(g.consensus_count||g.yes_votes||0)+'/5 consensus';
     if(phase(m)==='waiting')return 'Analyse en cours — décision à partir de la 30e minute';
     return 'Analyse +0,5 en cours';
   }
