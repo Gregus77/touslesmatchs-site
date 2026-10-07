@@ -1,0 +1,58 @@
+name: Cleanup merged Codex branches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cleanup-merged-codex-branches.yml"
+  pull_request:
+    types: [closed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Delete merged codex branches safely
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          CLOSED_HEAD: ${{ github.event.pull_request.head.ref }}
+          CLOSED_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          set -euo pipefail
+          git fetch --prune origin
+
+          delete_branch() {
+            b="$1"
+            case "$b" in
+              codex/*) ;;
+              *) return 0 ;;
+            esac
+            [ "$b" != "main" ] || return 0
+            if gh pr list --repo "$REPO" --state open --head "$b" --limit 1 --json number --jq 'length' | grep -qx 1; then
+              echo "KEEP_OPEN $b"
+              return 0
+            fi
+            if git ls-remote --exit-code --heads origin "$b" >/dev/null 2>&1; then
+              echo "DELETE_MERGED $b"
+              git push origin --delete "$b"
+            fi
+          }
+
+          if [ "$EVENT" = "pull_request" ] && [ "$CLOSED_HEAD_REPO" = "$REPO" ]; then
+            delete_branch "$CLOSED_HEAD"
+          else
+            gh pr list --repo "$REPO" --state merged --limit 300 --json headRefName --jq '.[].headRefName' |
+              sort -u |
+              while IFS= read -r b; do delete_branch "$b"; done
+          fi
