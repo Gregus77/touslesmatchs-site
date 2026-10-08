@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/tlm_auto_improver.js'
+      - 'scripts/tlm_auto_improver_notify.js'
       - '.claude/skills/tlm-auto-improver/**'
       - '.github/workflows/tlm-auto-improver.yml'
   schedule:
@@ -50,3 +51,12 @@ jobs:
 
             docker exec touslesmatchs-api sh -lc 'test -s /data/auto-improver/latest.json'
             docker exec touslesmatchs-api node -e "const fs=require('fs');const r=JSON.parse(fs.readFileSync('/data/auto-improver/latest.json'));if(!r.generatedAt||!r.global)process.exit(1);console.log('AUTO_IMPROVER_PRODUCTION_OK',JSON.stringify({n:r.global.n,wins:r.global.wins,losses:r.global.losses,winrate:r.global.winrate,decision:r.decision}))"
+
+            test -f scripts/tlm_auto_improver_notify.js
+            node scripts/tlm_auto_improver_notify.js --check
+
+            if [ "${{ github.event_name }}" = "schedule" ]; then
+              node scripts/tlm_auto_improver_notify.js --send
+            else
+              echo "AUTO_IMPROVER_NOTIFY_SKIPPED_NON_SCHEDULE_EVENT"
+            fi
