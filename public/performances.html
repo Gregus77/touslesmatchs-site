@@ -156,6 +156,25 @@ nav{
 .state-box{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px}
 .retry-btn{margin-top:14px;padding:10px 24px;border-radius:9px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer}
 
+.proof-section{margin:24px 0 34px;padding:20px;border:1px solid rgba(16,185,129,.28);border-radius:16px;background:linear-gradient(145deg,rgba(16,185,129,.08),rgba(79,70,229,.05))}
+.proof-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+.proof-title{font-size:20px;font-weight:900;letter-spacing:-.02em}
+.proof-sub{font-size:12px;color:var(--muted2);line-height:1.55;max-width:680px}
+.proof-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.proof-card{padding:15px;border:1px solid var(--b2);border-radius:13px;background:rgba(255,255,255,.035)}
+.proof-match{font-size:14px;font-weight:800;margin-bottom:5px}
+.proof-pick{font-size:13px;color:#9ef4d0;font-weight:800;margin-bottom:10px}
+.proof-row{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted2);margin-top:5px}
+.proof-row strong{color:var(--text)}
+.proof-win{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;color:var(--green);border:1px solid rgba(16,185,129,.3);background:rgba(16,185,129,.1);border-radius:999px;padding:4px 9px}
+.proof-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.proof-kpi{padding:12px;border:1px solid var(--b1);border-radius:11px;text-align:center;background:rgba(0,0,0,.08)}
+.proof-kpi b{display:block;font-size:20px;margin-bottom:3px}
+.proof-kpi span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.proof-note{font-size:11px;color:var(--muted);line-height:1.55;margin-top:12px}
+.legacy-box{margin-top:12px;padding:13px 14px;border:1px solid var(--b1);border-radius:12px;background:rgba(255,255,255,.025);font-size:12px;color:var(--muted2);line-height:1.55}
+@media(max-width:640px){.proof-summary{grid-template-columns:repeat(2,1fr)}}
+
 .disclaimer{margin-top:48px;padding:20px;background:rgba(244,63,94,.04);border:1px solid rgba(244,63,94,.15);border-radius:14px;font-size:12px;color:var(--muted);line-height:1.7;text-align:center}
 
 footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin-top:60px}
@@ -301,6 +320,46 @@ async function doLogin(){
     </div>
     <div id="goal05-scanner-recent" style="font-size:12px;color:var(--muted2);margin-top:11px"></div>
     <div style="font-size:11px;color:var(--muted);margin-top:10px">Les observations du scanner ne sont jamais comptées comme des signaux Telegram officiels. Une cote absente reste absente et n’entre pas dans le ROI.</div>
+  </section>
+
+  <section class="proof-section" id="preuves-reelles">
+    <div class="proof-head">
+      <div>
+        <div class="proof-title">✅ Preuves réelles — stratégie actuelle +0,5 but</div>
+        <div class="proof-sub">Tickets réels transmis par le propriétaire. Les doublons d’un même pronostic ne comptent qu’une seule fois dans les statistiques sportives. Les montants ci-dessous décrivent uniquement les tickets vérifiés affichés ici, pas un rendement global ni une promesse de gain.</div>
+      </div>
+      <span class="proof-win">Vérifié sur captures Unibet</span>
+    </div>
+
+    <div class="proof-grid">
+      <article class="proof-card">
+        <div class="proof-match">🇦🇷 Vélez Sarsfield — CA Platense</div>
+        <div class="proof-pick">🎯 Vélez Sarsfield +0,5 but · ✅ WIN</div>
+        <div class="proof-row"><span>Mise visible</span><strong>15,00 €</strong></div>
+        <div class="proof-row"><span>Cote totale visible</span><strong>1,56</strong></div>
+        <div class="proof-row"><span>Retour visible</span><strong>23,40 €</strong></div>
+        <div class="proof-row"><span>Gain net ticket</span><strong>+8,40 €</strong></div>
+      </article>
+
+      <article class="proof-card">
+        <div class="proof-match">🇦🇷 CA Banfield — Rosario Central</div>
+        <div class="proof-pick">🎯 Rosario Central +0,5 but · ✅ WIN</div>
+        <div class="proof-row"><span>Ticket 1</span><strong>5 € @1,60 → 8,00 €</strong></div>
+        <div class="proof-row"><span>Ticket 2</span><strong>5 € @2,65 → 13,25 €</strong></div>
+        <div class="proof-row"><span>Mises visibles</span><strong>10,00 €</strong></div>
+        <div class="proof-row"><span>Gain net cumulé</span><strong>+11,25 €</strong></div>
+      </article>
+    </div>
+
+    <div class="proof-summary">
+      <div class="proof-kpi"><b>2</b><span>Pronostics distincts</span></div>
+      <div class="proof-kpi"><b>2</b><span>Gagnants</span></div>
+      <div class="proof-kpi"><b>25 €</b><span>Mises visibles</span></div>
+      <div class="proof-kpi"><b>+19,65 €</b><span>Net sur ces tickets</span></div>
+    </div>
+
+    <div class="legacy-box"><strong>🗂 Ancien système O/U 2,5 :</strong> 523 matchs analysés sont conservés comme archive historique séparée. Ils ne sont jamais additionnés aux statistiques de la stratégie actuelle +0,5 but.</div>
+    <div class="proof-note">Transparence : cette section montre des preuves de paris réels disponibles, gagnants comme perdants lorsqu’ils sont vérifiés. Elle ne sélectionne pas rétroactivement uniquement les gains et ne remplace pas l’historique complet des pronostics.</div>
   </section>
 
   <div class="tier-tabs" id="tier-tabs">
