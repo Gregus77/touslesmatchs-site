@@ -131,7 +131,7 @@ function render(kind,data,dest) {
     const rows=(Array.isArray(data.rows)?data.rows:[]).filter(function(row){
       return !!row.targetTeam && (row.color==='green' || Number(row.rating)>=8);
     }).slice(0,8);
-    lines=['🎯 <b>MATCHS À JOUER / SURVEILLER</b>'];
+    lines=['🔎 <b>CANDIDATS À SURVEILLER — SANS SIGNAL OFFICIEL</b>'];
     if(!rows.length) {
       lines.push('❌ <b>Aucun match à jouer pour le moment.</b>');
     } else {
@@ -141,8 +141,10 @@ function render(kind,data,dest) {
           `🕒 <b>${esc(row.kickoffLabel||'Heure à confirmer')}</b> — heure de Paris`,
           `🏟 <b>${esc(row.home)} — ${esc(row.away)}</b>`,
           `📊 Classement : ${esc(row.targetTeam)} ${esc(row.targetRank||'?')} · adversaire ${esc(row.opponentRank||'?')}`,
-          `✅ <b>À jouer : ${esc(row.targetTeam)} +0,5 but</b>`,
-          row.rating!=null?`⭐ Confiance scanner : ${esc(row.rating)}/10`:''
+          `👀 <b>À surveiller : ${esc(row.targetTeam)} +0,5 but</b>`,
+          row.rating!=null?`⭐ Confiance scanner : ${esc(row.rating)}/10`:'',
+          ...(String(row.sport||'football').toLowerCase().includes('football')?goal05PriceLines(row,ru):[]),
+          '⚠️ Aucun feu vert du scanner seul. Il faut les critères live et 4 IA sur 5.'
         );
       });
     }
@@ -178,7 +180,7 @@ function render(kind,data,dest) {
   if((free && !['scanner','scanner_result'].includes(kind)) || ['reminder','nopick','guide'].includes(kind)) {
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :
       ru ? 'Подписка Premium — 14,90 €/месяц, без обязательств. Новые подписки временно недоступны.' :
-      'Premium — 14,90 €/mois, sans engagement. Les nouvelles souscriptions sont temporairement indisponibles.');
+      'Premium — 14,90 €/mois, sans engagement. Paiement indisponible temporairement ; voir les détails de l’offre sur le site.');
   }
   lines.push(legal(dest.lang));
   const text=lines.filter(Boolean).join('\n\n');
@@ -186,7 +188,8 @@ function render(kind,data,dest) {
   const scannerPlain=['scanner','scanner_result'].includes(kind);
   const partnerRows=buildInlineKeyboard();
   // Le lien Stripe n'est jamais actif tant que le tarif et la session LIVE ne sont pas confirmés.
-  const linkRows=paymentVerified?[ [{text:CTA[dest.lang],url:payment(dest.lang)}], ...partnerRows ]:partnerRows;
+  const infoRow=[{text:ru?'💎 Premium — детали':'💎 Premium — 14,90 €/mois',url:'https://www.touslesmatchs.com/#plans'}];
+  const linkRows=paymentVerified?[ [{text:CTA[dest.lang],url:payment(dest.lang)}], ...partnerRows ]:[infoRow,...partnerRows];
   return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,
     ...(scannerPlain?{}:{reply_markup:{inline_keyboard:linkRows}})};
 }
