@@ -109,6 +109,8 @@ jobs:
             docker exec touslesmatchs-api grep -q 'goal05_v2_20261006' /app/server.js
             test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_ENABLED"')" = "1"
             test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$GOAL05_PUSH_ENABLED"')" = "1"
+            test "$(docker exec touslesmatchs-api sh -lc 'printf %s "$TLM_LAUNCH_ALL_ACCESS"')" = "1"
+            echo LAUNCH_ALL_ACCESS_RUNTIME_OK
 
             # Reconstitue l'historique des pronostics +0,5 donnés dans le scanner ChatGPT.
             # Idempotent : chaque ligne possède un ID stable et est remplacée à l'identique aux déploiements suivants.
