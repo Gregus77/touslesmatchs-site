@@ -20,15 +20,14 @@
 - Run **37726429829** — déploiement public UI : réussi.
 - Run **37726429833** — affichage cycle de vie : réussi.
 - Run **37726429959** — protection produit courant/historique : réussi.
-- Run **37726429913** — déploiement i18n exécuté ; audit navigateur des langues à vérifier et terminer selon la dernière exécution.
+- Run **37726429913** — déploiement i18n et audit navigateur dans cinq langues, répété deux fois : **réussi** (`conclusion=success`).
 
 ## Ce qui reste VRAIMENT à contrôler / faire
-1. Vérifier le statut final du workflow i18n **37726429913**, corriger seulement en cas d'échec.
-2. Vérifier les notifications `goal05` lors du **prochain vrai signal**, avec preuve d'envoi `telegram_message_id`, cote fraîche, et contenu Gratuit/Premium ; ne pas créer un faux signal de test.
-3. Vérifier que les liens partenaires sont bien des URL d'affiliation actives, en particulier Betclic (copié depuis la page d'accueil).
-4. Ne mettre une date dans `public/data/free-offer-status.json` et les variables `TLM_FREE_OFFER_CONFIRMED=1`, `TLM_FREE_OFFER_ENDS_AT` que lorsqu'une **vraie fin d'opération** a été décidée (le compteur est actuellement inactif).
-5. Vérifier le paiement Stripe **LIVE à 14,90 €/mois** avant d'affirmer que Checkout fonctionne.
-6. Pour proposer de VRAIS combinés à deux matchs, développer un moteur dédié avec deux dossiers et deux cotes réelles indépendantes, vote IA et preuve ; ne pas déroger silencieusement au plancher **1,60 individuel** de la stratégie officielle.
+1. Vérifier les notifications `goal05` lors du **prochain vrai signal**, avec preuve d'envoi `telegram_message_id`, cote fraîche, et contenu Gratuit/Premium ; ne pas créer un faux signal de test.
+2. Vérifier que les liens partenaires sont bien des URL d'affiliation actives, en particulier Betclic (copié depuis la page d'accueil).
+3. Ne mettre une date dans `public/data/free-offer-status.json` et les variables `TLM_FREE_OFFER_CONFIRMED=1`, `TLM_FREE_OFFER_ENDS_AT` que lorsqu'une **vraie fin d'opération** a été décidée (le compteur est actuellement inactif).
+4. Vérifier le paiement Stripe **LIVE à 14,90 €/mois** avant d'affirmer que Checkout fonctionne.
+5. Pour proposer de VRAIS combinés à deux matchs, développer un moteur dédié avec deux dossiers et deux cotes réelles indépendantes, vote IA et preuve ; ne pas déroger silencieusement au plancher **1,60 individuel** de la stratégie officielle.
 
 ## Sécurité / limites
 - Pas d'envoi Telegram prouvé pour un nouveau match durant cette intervention.
@@ -36,4 +35,4 @@
 - Ce skill permet de reprendre au prochain échange, pas d'exécuter ChatGPT hors connexion.
 - Pas de secret ou de donnée personnelle stockés dans le checkpoint.
 
-**Prochaine action automatique lors d'une reprise :** rechercher l'état de l'audit i18n et des livraisons Goal05 depuis le dernier contrôle, puis avancer uniquement sur les points ouverts.
+**Prochaine action automatique lors d'une reprise :** vérifier les preuves des prochaines livraisons officielles Goal05 et le statut Stripe LIVE, puis avancer uniquement sur les points ouverts.
