@@ -1205,8 +1205,11 @@ function renderLiveGoal05Details(m) {
       :slot&&slot.status==='rejected_statistical'?'Vote écarté'
       :/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé'
       :slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
-    var shortLabel = voted ? '✓' : failure === 'En attente' ? String(i + 1) : '—';
-    var choice = voted ? 'Vote +0,5 enregistré' : failure;
+    var rawVote=String(slot&&(slot.decision||slot.choice||slot.direction||slot.label||slot.vote)||'').toLowerCase();
+    var positive=voted&&/^(yes|oui|go|approve|approved|valid|validated|pour|goal05|\+0[.,]5)$/.test(rawVote);
+    var negative=voted&&/^(no|non|stop|reject|rejected|contre|abstain)$/.test(rawVote);
+    var shortLabel = positive ? '✓' : negative ? '×' : voted ? '•' : failure === 'En attente' ? '…' : '—';
+    var choice = positive ? 'POUR le +0,5' : negative ? 'CONTRE le +0,5' : voted ? 'Réponse reçue' : failure;
     var confidence = voted && slot.confidence != null ? ' · ' + escHtml(String(slot.confidence)) + '%' : '';
     return '<div class="mc-vote-seat' + (!voted&&slot&&slot.status!=='pending'?' terminal':'') + (state.official&&!entryClosed?'':' old')
       + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ('IA ' + (i + 1)))
