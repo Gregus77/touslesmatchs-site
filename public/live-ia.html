@@ -1217,9 +1217,9 @@ function renderLiveGoal05Details(m) {
   }).join('');
 
   var targetLabel = state.official
-    ? '🎯 À jouer : ' + escHtml(state.targetTeam) + ' +0,5 but'
+    ? '🎯 Équipe ciblée — À jouer : ' + escHtml(state.targetTeam) + ' +0,5 but'
     : state.targetTeam
-      ? 'Équipe surveillée : ' + escHtml(state.targetTeam) + ' · signal non validé'
+      ? 'Équipe ciblée surveillée : ' + escHtml(state.targetTeam) + ' · signal non validé'
       : 'Aucune équipe ciblée · signal non validé';
   return TLMMatchLifecycle.entryNoticeHtml(m)
     + '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>' + targetLabel
