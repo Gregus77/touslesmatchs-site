@@ -7,18 +7,23 @@ const targets=client.destinations(env);
 assert.deepEqual(targets.map(x=>x.channel),['free','premium','ru_free','ru_premium']);
 assert.throws(()=>client.destinations({...env,TELEGRAM_PREMIUM_CHANNEL_ID:'-1'}));
 assert.throws(()=>client.destinations({...env,TELEGRAM_CHANNEL_ID:'-7'}));
+process.env.TLM_LAUNCH_ALL_ACCESS='1';
 const data={matchKey:'match:1',home:'Under United & FC',away:'Over City',competition:'Example',minute:45,scoreHome:1,scoreAway:0,votes:4,confidence:81,market:'Under 2.5 buts',odd:'1.65',reason:'Justification française secrète',outcome:'loss'};
 for(const dest of targets){
  const signal=client.render('signal',data,{...dest,paymentVerified:true});
  assert(signal.text.includes('Under United &amp; FC'));assert(signal.text.includes('Over City'));
  assert(signal.text.includes('45'));assert(signal.text.includes('81'));assert(signal.text.includes('18+'));assert(signal.text.includes('joueurs-info-service.fr'));
  if(dest.tier==='free'){
-  assert(!signal.text.includes(data.market));assert(!signal.text.includes(data.reason));assert(!signal.text.includes('1.65'));
-  assert.equal(signal.reply_markup.inline_keyboard[0][0].text,client.CTA[dest.lang]);
+  assert(signal.text.includes('1.65'));assert(signal.text.includes('Lancement')||signal.text.includes('Запуск'));
+  if(dest.lang==='fr')assert(signal.text.includes(data.reason));
+  if(dest.lang==='ru'){assert(!signal.text.includes(data.reason));assert(signal.text.includes('Тотал меньше 2.5 голов'));}
  } else {assert(signal.text.includes('1.65'));if(dest.lang==='ru'){assert(!signal.text.includes(data.reason));assert(signal.text.includes('Тотал меньше 2.5 голов'));}}
+ const goal05=client.render('goal05',{...data,targetTeam:'Under United & FC',rating:8.8,color:'green',oddFetchedAt:new Date().toISOString()},{...dest,paymentVerified:true});
+ if(dest.tier==='free')assert(goal05.text.includes('Under United &amp; FC'));
  for(const kind of ['result','recap','guide','reminder','nopick']){
   const msg=client.render(kind,{...data,day:'2026-09-11',rows:[{...data,best_bet:data.market,final_score_home:1,final_score_away:0}]},dest);
   assert(!/(?<!1)4[,.]90|Standard|Elite|🇬🇧|STRONG SIGNAL/.test(msg.text));
+  if(kind==='recap'&&dest.tier==='free')assert(msg.text.includes(dest.lang==='ru'?'Тотал меньше 2.5 голов':data.market)); // launch full recap
   if(dest.lang==='ru')assert(!/Gagnés|Perdus|sélection|confiance|Jeu responsable/.test(msg.text));
  }
 }
@@ -78,7 +83,7 @@ async function main(){
   const freeBefore=calls.length;await pub.flush();assert.equal(calls.length-freeBefore,22);
   db.close();
  }
- console.log('PASS Telegram FR/RU, teaser, destinations, monthly checkout, '+(process.env.TEST_SQLITE_MODULE?'SQLite retries/restart/dedup/proofs/expiry':'templates (SQLite suite requires TEST_SQLITE_MODULE)'));
+ console.log('PASS Telegram FR/RU, launch all-access, destinations, monthly checkout, '+(process.env.TEST_SQLITE_MODULE?'SQLite retries/restart/dedup/proofs/expiry':'templates (SQLite suite requires TEST_SQLITE_MODULE)'));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
 
