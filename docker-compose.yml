@@ -156,6 +156,7 @@ services:
       - TELEGRAM_ELITE_CHANNEL_ID=${TELEGRAM_ELITE_CHANNEL_ID}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
       - TELEGRAM_SUPPORT_CHAT_ID=${TELEGRAM_SUPPORT_CHAT_ID}
+      - TLM_LAUNCH_ALL_ACCESS=${TLM_LAUNCH_ALL_ACCESS:-1}
       # Le middleware /admin/* et les routes internes Hermes utilisent ce secret.
       # Sans transmission au conteneur API, la supervision recoit 403 malgré une
       # valeur correcte dans .env (constaté pendant la preuve du 09/09/2026).
