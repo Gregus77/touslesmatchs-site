@@ -975,11 +975,13 @@ body{overflow-x:hidden}
 
 
   function goal05VerdictCard(signal) {
-    var hasSignal = !!signal;
-    var badge = hasSignal ? 'SIGNAL VALIDÉ' : 'SIGNAL EN ATTENTE';
+    var targetTeam = signal && (signal.target_team || signal.targetTeam || signal.team);
+    var consensus = Number(signal && (signal.consensus_count || signal.yes_votes || signal.consensus_votes || signal.votes) || 0);
+    var oddValue = Number(signal && (signal.official_odd != null ? signal.official_odd : signal.odd));
+    var hasSignal = !!(signal && targetTeam && consensus >= 4 && Number.isFinite(oddValue) && oddValue >= 1.60);
+    var badge = hasSignal ? 'SIGNAL VALIDÉ' : 'SIGNAL NON VALIDÉ';
     var badgeClass = hasSignal ? 'goal05-verdict-badge ok' : 'goal05-verdict-badge';
-    var odd = hasSignal && signal.odd ? '@' + esc(signal.odd) : '@—';
-    var targetTeam = hasSignal && (signal.target_team || signal.targetTeam || signal.team);
+    var odd = hasSignal ? '@' + esc(oddValue.toFixed(2)) : '@—';
     var team = hasSignal && targetTeam ? 'Équipe ciblée : ' + esc(targetTeam) + ' — doit marquer au moins un but (+0,5 but équipe)' : 'Aucun signal +0,5 avec équipe ciblée nommée n’est validé';
     var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Football uniquement · moteur en surveillance';
     var checks = hasSignal && signal.checks ? signal.checks : [
@@ -1089,12 +1091,15 @@ body{overflow-x:hidden}
     var voted=slots.filter(function(v){return v&&v.status==='voted';}).length;
     var voteCount=Number(raw.vote_count||raw.ai_votes||raw.response_count||raw.responded_votes||0)||voted;
     var consensusCount=Number(raw.consensus_count||raw.yes_votes||raw.consensus_votes||0);
-    var official=raw.official===true||raw.validated===true||!!(m&&m.goal05_official===true);
+    var targetTeam=raw.target_team||raw.targetTeam||raw.team||(m&&(m.target_team||m.targetTeam))||'';
+    var officialOdd=raw.official_odd!=null?Number(raw.official_odd):Number(raw.odd);
+    var backendOfficial=raw.official===true||raw.validated===true||!!(m&&m.goal05_official===true);
+    var official=!!(backendOfficial&&targetTeam&&consensusCount>=4&&Number.isFinite(officialOdd)&&officialOdd>=1.60);
     return{raw:raw,slots:slots,voteCount:voteCount,consensusCount:consensusCount,
       windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?(m&&m.minute==null?null:Number(m.minute)):Number(raw.snapshot_minute),snapshotScore:raw.snapshot_score||null,consensusAt:raw.consensus_at||null,
       official:official,officialId:raw.official_signal_snapshot_id||(m&&m.official_signal_snapshot_id)||null,recommendationStatus:raw.recommendation_status||null,
-      officialConfidence:raw.official_confidence!=null?raw.official_confidence:raw.confidence,officialOdd:raw.official_odd!=null?raw.official_odd:raw.odd,outcome:raw.outcome||null,
-      targetTeam:raw.target_team||raw.targetTeam||raw.team||(m&&(m.target_team||m.targetTeam))||''};
+      officialConfidence:raw.official_confidence!=null?raw.official_confidence:raw.confidence,officialOdd:Number.isFinite(officialOdd)?officialOdd:null,outcome:raw.outcome||null,
+      targetTeam:targetTeam};
   }
   function appVoteTime(value){var raw=String(value||'').trim();if(!raw)return '';var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
   function appResponseCount(slots){return(slots||[]).filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;}
@@ -1128,7 +1133,9 @@ body{overflow-x:hidden}
     $("app-home-name").textContent=m.home||'Équipe à domicile';$("app-away-name").textContent=m.away||"Équipe à l'extérieur";$("app-home-country").textContent=country;$("app-away-country").textContent=country;
     appLogo($("app-home-logo"),appHomeLogo(m),m.home||'équipe à domicile');appLogo($("app-away-logo"),appAwayLogo(m),m.away||"équipe à l'extérieur");
     [$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(!img)return;if(!flag){img.hidden=true;return;}img.hidden=false;img.src=flag;img.alt='Drapeau '+country;img.onerror=function(){this.hidden=true;};});
-    var hs=appHomeScore(m),as=appAwayScore(m);$("app-live-score").textContent=(hs===''?'—':hs)+' - '+(as===''?'—':as);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
+    var hs=appHomeScore(m),as=appAwayScore(m);$("app-live-score").textContent=(hs===''?'—':hs)+' - '+(as===''?'—':as);
+    var rawPeriod=String(m.period||m.status||'1ère période');
+    $("app-live-period").textContent=/official_signal/i.test(rawPeriod)?(voteState.targetTeam?'🎯 '+voteState.targetTeam+' +0,5':'Analyse +0,5 en cours'):rawPeriod;
     var minute=Number(String(m.minute||'').replace(/[^0-9.]/g,''));
     var lifecyclePhase=TLMMatchLifecycle.phase(m);
     var analysisClosed=TLMMatchLifecycle.entryClosed(m);
@@ -1142,7 +1149,7 @@ body{overflow-x:hidden}
     $("app-ai-label").textContent=voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':liveMinuteUnavailable?'En direct — minute indisponible':votes?'Analyse IA +0,5':exclusionReason?'Analyse non lancée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
     var preservedAt=voteState.snapshotMinute!=null?(" · enregistré à "+voteState.snapshotMinute+"'"):'';var preservedClock=appVoteTime(voteState.consensusAt);if(preservedClock)preservedAt+=' à '+preservedClock;
     if(TLMMatchLifecycle.entryClosed(m))$("app-ai-label").textContent='Analyse historique — entrée fermée';
-    $("app-ai-result").textContent=voteState.official?(m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
+    $("app-ai-result").textContent=voteState.official?('🎯 '+voteState.targetTeam+' +0,5 but · '+(m.telegram_delivery_proven===true?'envoyé sur Telegram':'signal validé — livraison en attente'))
       :votes&&analysisClosed?'Anciennes tendances — aucun signal officiel'
       :votes&&isFinite(minute)&&minute<30?'Tendance — pas encore de signal'
       :votes?(m.diffusion_block||exclusionReason||'Tendance — autres critères non remplis, aucun signal')
@@ -2042,8 +2049,10 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
      4/5 ou 5/5 n'est JAMAIS suffisant pour afficher vert.
      Vert = snapshot officiel validé par le backend uniquement.
    */
-   if(o.official===true){
-     var direction="ANALYSE +0,5";
+   var target=o.target_team||o.targetTeam||o.team||(match&&(match.target_team||match.targetTeam))||"";
+   var oddValue=Number(o.official_odd!=null?o.official_odd:o.odd);
+   if(o.official===true && target && aligned>=4 && Number.isFinite(oddValue) && oddValue>=1.60){
+     var direction=target+" +0,5 but";
      var confidence=o.official_confidence;
      var odd=o.official_odd;
 
