@@ -36,6 +36,16 @@ for(const dest of [frFree,frPremium,ruFree,ruPremium]){
     assert(msg.text.includes('<b>Equipe A</b>'),'premium must display target team');
   }
 }
+const flag=process.env.TLM_FREE_OFFER_CONFIRMED, deadline=process.env.TLM_FREE_OFFER_ENDS_AT;
+delete process.env.TLM_FREE_OFFER_CONFIRMED;
+assert(!client.render('goal05',base,frFree).text.includes('Offre gratuite de lancement : fin annoncée'));
+process.env.TLM_FREE_OFFER_CONFIRMED='1';
+process.env.TLM_FREE_OFFER_ENDS_AT=new Date(Date.now()+5*86400000).toISOString();
+assert.match(client.render('goal05',base,frFree).text,/Offre gratuite de lancement : fin annoncée/);
+if(flag===undefined)delete process.env.TLM_FREE_OFFER_CONFIRMED;
+else process.env.TLM_FREE_OFFER_CONFIRMED=flag;
+if(deadline===undefined)delete process.env.TLM_FREE_OFFER_ENDS_AT;
+else process.env.TLM_FREE_OFFER_ENDS_AT=deadline;
 const poor=client.render('goal05',{...base,odd:1.20},frPremium).text;
 assert.match(poor,/Cote insuffisante/);
 assert.match(poor,/1,60/);
