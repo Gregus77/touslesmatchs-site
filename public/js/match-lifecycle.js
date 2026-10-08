@@ -42,7 +42,11 @@
   function statusText(m){
     /* LIVE_CURRENT_GOAL05_ONLY: ne jamais rebaptiser un ancien vote O/U en vote +0,5. */
     var g=m&&m.goal05||{},state=g.analysis_state;
-    if(g.official===true)return 'Signal officiel +0,5 validé'+(entryClosed(m)?' — suivi terminé':'');
+    var target=g.target_team||g.targetTeam||(m&&(m.target_team||m.targetTeam))||'';
+    var consensus=Number(g.consensus_count||g.yes_votes||g.consensus_votes||0);
+    var odd=Number(g.official_odd!=null?g.official_odd:g.odd);
+    if(g.official===true&&target&&consensus>=4&&Number.isFinite(odd)&&odd>=1.60)return 'Signal officiel : '+target+' +0,5 but'+(entryClosed(m)?' — suivi terminé':'');
+    if(g.official===true)return 'Signal non validé — équipe/cote/consensus incomplet';
     if(state==='excluded')return 'Non retenu pour le +0,5';
     if(state==='failed_before_providers'||state==='failed')return g.recommendation_status || 'Analyse +0,5 interrompue — statistiques ou données indisponibles';
     if(entryClosed(m))return 'Analyse terminée — aucun signal officiel +0,5';
