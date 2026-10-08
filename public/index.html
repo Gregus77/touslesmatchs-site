@@ -1810,13 +1810,17 @@ function heroGoal05State(m){
   var voted=slots.filter(function(v){return v&&v.status==='voted';}).length;
   var voteCount=Number(raw.vote_count||raw.ai_votes||raw.response_count||raw.responded_votes||0)||voted;
   var consensusCount=Number(raw.consensus_count||raw.yes_votes||raw.consensus_votes||0);
+  var targetTeam=raw.target_team||raw.targetTeam||raw.team||(m&&(m.target_team||m.targetTeam))||'';
+  var officialOdd=raw.official_odd!=null?Number(raw.official_odd):Number(raw.odd);
+  var backendOfficial=raw.official===true||raw.validated===true||!!(m&&m.goal05_official===true);
+  var official=!!(backendOfficial&&targetTeam&&consensusCount>=4&&Number.isFinite(officialOdd)&&officialOdd>=1.60);
   return {raw:raw,slots:slots,voteCount:voteCount,consensusCount:consensusCount,
     windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?(m&&m.minute==null?null:Number(m.minute)):Number(raw.snapshot_minute),snapshotScore:raw.snapshot_score||null,consensusAt:raw.consensus_at||null,
-    official:raw.official===true||raw.validated===true||!!(m&&m.goal05_official===true),
+    official:official,
     officialId:raw.official_signal_snapshot_id||(m&&m.official_signal_snapshot_id)||null,recommendationStatus:raw.recommendation_status||null,
     officialConfidence:raw.official_confidence!=null?raw.official_confidence:raw.confidence,
-    officialOdd:raw.official_odd!=null?raw.official_odd:raw.odd,outcome:raw.outcome||null,
-    targetTeam:raw.target_team||raw.targetTeam||raw.team||(m&&(m.target_team||m.targetTeam))||''};
+    officialOdd:Number.isFinite(officialOdd)?officialOdd:null,outcome:raw.outcome||null,
+    targetTeam:targetTeam};
 }
 function heroResponseCount(slots){
   return (slots||[]).filter(function(slot){return slot&&['voted','empty','parse_error','rejected_statistical'].indexOf(slot.status)!==-1;}).length;
@@ -1973,8 +1977,8 @@ function renderHeroLive(m){
     paidExplanation+=heroH2hText(m);
   }
   var deliveryProven=heroWasSent(m);
-  var decisionText=deliveryProven&&voteState.official?'Envoyé sur Telegram'
-    :voteState.official?'Signal validé — livraison en attente'
+  var decisionText=deliveryProven&&voteState.official?'🎯 '+voteState.targetTeam+' +0,5 but · Envoyé sur Telegram'
+    :voteState.official?'🎯 '+voteState.targetTeam+' +0,5 but · Signal validé — livraison en attente'
     :votes&&tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel'
     :votes&&isFinite(minute)&&minute<30?'Tendance — pas encore de signal'
     :votes?(m.diffusion_block||m.analysis_exclusion_reason||'Tendance — autres critères non remplis, aucun signal')
