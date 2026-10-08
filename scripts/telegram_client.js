@@ -64,7 +64,7 @@ function render(kind,data,dest) {
   const match=()=>`⚽ <b>${esc(data.home)} — ${esc(data.away)}</b>`;
   let lines=[];
   if (kind==='signal') {
-    lines=[`🚨 <b>${ru?'СИГНАЛ ИИ':'SIGNAL CONSEIL IA'}${free?(ru?' ОБНАРУЖЕН':' DÉTECTÉ'):''}</b>`,match(),`🏆 ${esc(data.competition)}`,
+    lines=[`🚨 <b>${ru?'СИГНАЛ ИИ':'SIGNAL CONSEIL IA'}${effectiveFree?(ru?' ОБНАРУЖЕН':' DÉTECTÉ'):''}</b>`,match(),`🏆 ${esc(data.competition)}`,
       `⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,
       `🧠 ${ru?'Голосование ИИ':'Vote IA'} : ${esc(data.votes)}/5`,
       `📊 ${ru?'Уровень доверия':'Score de confiance'} : ${esc(data.confidence)}/100`];
@@ -77,7 +77,7 @@ function render(kind,data,dest) {
   } else if(kind==='goal05') {
     const target=esc(data.targetTeam || '');
     lines=[
-      `🚨 <b>${ru?'СИГНАЛ +0,5 ГОЛА КОМАНДЫ':'SIGNAL +0,5 BUT ÉQUIPE'}${free?(ru?' ОБНАРУЖЕН':' DÉTECTÉ'):''}</b>`,
+      `🚨 <b>${ru?'СИГНАЛ +0,5 ГОЛА КОМАНДЫ':'SIGNAL +0,5 BUT ÉQUIPE'}${effectiveFree?(ru?' ОБНАРУЖЕН':' DÉTECTÉ'):''}</b>`,
       match(),
       `🏆 ${esc(data.competition)}`,
       `⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,
@@ -189,7 +189,7 @@ function render(kind,data,dest) {
         ru?`💰 Условная ставка: ${stakeRub} ₽ на сигнал · Чистый результат: ${netRub>=0?'+':''}${netRub} ₽`:`💰 Mise théorique : 10 € par signal · Résultat net : ${netEur>=0?'+':''}${netEur.toFixed(2)} €`,
         ru?'Расчёт является прозрачной симуляцией на основе исходных коэффициентов.':'Simulation transparente calculée avec les cotes originales.',
         ru?'Только сигналы с подтверждённой доставкой в этот канал.':'Uniquement les signaux dont la livraison dans ce canal est prouvée.');
-      for(const row of rows) lines.push(`• ${esc(row.home)} — ${esc(row.away)} : ${row.outcome==='pending'?(ru?'ожидает результата':'en attente'):`${esc(row.final_score_home)}-${esc(row.final_score_away)}`}${free?'':` · ${esc(ru?marketRu(row.best_bet):row.best_bet)}`}`);
+      for(const row of rows) lines.push(`• ${esc(row.home)} — ${esc(row.away)} : ${row.outcome==='pending'?(ru?'ожидает результата':'en attente'):`${esc(row.final_score_home)}-${esc(row.final_score_away)}`}${effectiveFree?'':` · ${esc(ru?marketRu(row.best_bet):row.best_bet)}`}`);
     }
   } else if(kind==='guide') {
     lines=ru?['📘 <b>Как читать сигналы TousLesMatchs</b>','Футбол: тотал больше 2,5 означает минимум 3 гола; тотал меньше 2,5 — максимум 2 гола за основное время.','Прогноз публикуется только при соблюдении действующих критериев качества. Голосование ИИ не гарантирует результат.','Бесплатный канал: знакомство с сервисом, руководства и анонсы. Premium: все допустимые сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается.']:['📘 <b>Lire les signaux TousLesMatchs</b>','Football : Over 2,5 signifie au moins 3 buts ; Under 2,5 signifie au maximum 2 buts dans le temps réglementaire.','Un signal doit respecter les critères qualité actifs. Le vote IA ne garantit aucun résultat.','Gratuit : présentation, guides et aperçus. Premium : tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum de signaux par jour n’est promis.'];
