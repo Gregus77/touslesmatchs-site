@@ -19,7 +19,11 @@ function pick(row,names){
   }
   return null;
 }
-function num(v){ const n=Number(v); return Number.isFinite(n)?n:null; }
+function num(v){
+  if(v===null||v===undefined||v==='') return null;
+  const n=Number(v);
+  return Number.isFinite(n)?n:null;
+}
 function outcome(v){
   const s=String(v??'').toLowerCase().trim();
   if(['win','won','gagne','gagné','1','true','success'].includes(s)) return 'win';
