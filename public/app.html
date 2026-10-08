@@ -1107,7 +1107,7 @@ body{overflow-x:hidden}
   var appVoteButtons=document.getElementById('app-ai-votes');
   if(appVoteButtons)appVoteButtons.addEventListener('click',function(event){var button=event.target.closest('button.tlm-app-vote');if(button)$("app-vote-explanation").textContent=button.dataset.explanation||button.getAttribute('aria-label')||'';});
   function appVotes(m){return appGoal05State(m).voteCount;}
-  function appMatchTrackable(m){return appGoal05State(m).official===true||TLMMatchLifecycle.canTrack(m);}
+  function appMatchTrackable(m){return appGoal05State(m).official===true||TLMMatchLifecycle.canFeature(m)||TLMMatchLifecycle.canTrack(m);}
   function appMiniVotes(m){
     var state=appGoal05State(m),target=state.targetTeam,slots=state.slots;
     var dots=slots.map(function(slot,i){
