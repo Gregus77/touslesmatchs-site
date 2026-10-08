@@ -42,6 +42,20 @@ function goal05PriceLines(data,ru) {
   else lines.push(ru?'✅ Порог 1,60 соблюдён. Проверьте коэффициент у букмекера перед решением.':'✅ Seuil 1,60 atteint. Revérifiez la cote chez le bookmaker avant toute décision.');
   return lines;
 }
+// Campagne de lancement : la date et la confirmation viennent de la configuration de production.
+// Aucune date artificielle et aucun compte à rebours réinitialisé à chaque ouverture.
+function freeOfferClock(ru,at=Date.now()) {
+  if(process.env.TLM_FREE_OFFER_CONFIRMED!=='1')return null;
+  const raw=String(process.env.TLM_FREE_OFFER_ENDS_AT||'');
+  if(!/Z$|[+-]\\d\\d:\\d\\d$/.test(raw))return null;
+  const end=Date.parse(raw);
+  if(!Number.isFinite(end)||end<=at)return null;
+  const days=Math.floor((end-at)/86400000);
+  const hours=Math.floor((end-at)%86400000/3600000);
+  return ru
+    ? `⏳ Подтверждённый конец ознакомительной акции через ${days} д. ${hours} ч. Условия бесплатного доступа доступны на сайте.`
+    : `⏳ Offre gratuite de lancement : fin annoncée dans ${days} j ${hours} h. Conditions de l'accès Gratuit disponibles sur le site.`;
+}
 function render(kind,data,dest) {
   const ru=dest.lang==='ru',free=dest.tier==='free',paymentVerified=dest.paymentVerified===true;
   const market=()=>esc(ru?marketRu(data.market):data.market);
@@ -184,6 +198,10 @@ function render(kind,data,dest) {
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :
       ru ? 'Подписка Premium — 14,90 €/месяц, без обязательств. Новые подписки временно недоступны.' :
       'Premium — 14,90 €/mois, sans engagement. Paiement indisponible temporairement ; voir les détails de l’offre sur le site.');
+  }
+  if(free && (kind==='goal05'||kind==='signal'||kind==='reminder'||kind==='nopick')) {
+    const promo=freeOfferClock(ru);
+    if(promo)lines.push(promo);
   }
   lines.push(legal(dest.lang));
   const text=lines.filter(Boolean).join('\n\n');
