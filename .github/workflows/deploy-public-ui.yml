@@ -48,7 +48,7 @@ jobs:
             sleep 5
             test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-site)" = "true"
             curl -fsSL --max-time 20 "https://www.touslesmatchs.com/app.html?t=$(date +%s)" -o /tmp/tlm-public-ui-app.html
-grep -q "Surveillance live" /tmp/tlm-public-ui-app.html
+            grep -q "Surveillance live" /tmp/tlm-public-ui-app.html
 
             # Nettoyage sûr : jamais de volumes ni de données.
             git branch --merged main | sed 's/^[* ]*//' | grep -v '^main$' | xargs -r git branch -d || true
