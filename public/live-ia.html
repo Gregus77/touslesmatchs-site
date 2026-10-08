@@ -1124,19 +1124,24 @@ function liveGoal05State(m) {
   var slots = Array.isArray(raw.votes) ? raw.votes.slice(0, 5) : [];
   while (slots.length < 5) slots.push({ status: "pending" });
   var voted = slots.filter(function(v){ return v && v.status === "voted"; }).length;
+  var consensusCount = Number(raw.consensus_count || raw.yes_votes || raw.consensus_votes || 0);
+  var targetTeam = raw.target_team || raw.targetTeam || raw.team || (m && (m.target_team || m.targetTeam)) || "";
+  var officialOdd = raw.official_odd != null ? Number(raw.official_odd) : Number(raw.odd);
+  var backendOfficial = raw.official === true || raw.validated === true || !!(m && m.goal05_official === true);
+  var official = !!(backendOfficial && targetTeam && consensusCount >= 4 && Number.isFinite(officialOdd) && officialOdd >= 1.60);
   return {
     raw: raw,
     slots: slots,
     voteCount: Number(raw.vote_count || raw.ai_votes || raw.response_count || raw.responded_votes || 0) || voted,
-    consensusCount: Number(raw.consensus_count || raw.yes_votes || raw.consensus_votes || 0),
+    consensusCount: consensusCount,
     windowStatus: String(raw.window_status || "unknown"),
-    official: raw.official === true || raw.validated === true || !!(m && m.goal05_official === true),
+    official: official,
     officialId: raw.official_signal_snapshot_id || (m && m.official_signal_snapshot_id) || null,
     statusText: raw.recommendation_status || null,
     confidence: raw.official_confidence != null ? raw.official_confidence : raw.confidence,
-    odd: raw.official_odd != null ? raw.official_odd : raw.odd,
+    odd: Number.isFinite(officialOdd) ? officialOdd : null,
     outcome: raw.outcome || null,
-    targetTeam: raw.target_team || raw.targetTeam || raw.team || (m && (m.target_team || m.targetTeam)) || ""
+    targetTeam: targetTeam
   };
 }
 
@@ -1168,7 +1173,7 @@ function renderLiveGoal05Details(m) {
   var responseCount = state.slots.filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;
   var minute = Number(m && m.minute);
   var verdict = state.official
-    ? (m && m.telegram_delivery_proven === true ? 'Envoyé sur Telegram' : 'Signal validé — livraison en attente')
+    ? ('🎯 '+state.targetTeam+' +0,5 but · '+(m && m.telegram_delivery_proven === true ? 'Envoyé sur Telegram' : 'Signal validé — livraison en attente'))
     : state.voteCount && isFinite(minute) && minute < 30
       ? 'Tendance — pas encore de signal'
       : state.voteCount
@@ -1208,9 +1213,11 @@ function renderLiveGoal05Details(m) {
       + '</strong><small>' + escHtml(choice) + confidence + '</small></div>';
   }).join('');
 
-  var targetLabel = state.targetTeam
-    ? 'Équipe ciblée : ' + escHtml(state.targetTeam)
-    : 'Analyse +0,5 · équipe ciblée à confirmer';
+  var targetLabel = state.official
+    ? '🎯 À jouer : ' + escHtml(state.targetTeam) + ' +0,5 but'
+    : state.targetTeam
+      ? 'Équipe surveillée : ' + escHtml(state.targetTeam) + ' · signal non validé'
+      : 'Aucune équipe ciblée · signal non validé';
   return TLMMatchLifecycle.entryNoticeHtml(m)
     + '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>' + targetLabel
     + '</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · ' + responseCount + '/5 IA ont répondu</span></span></summary>'
