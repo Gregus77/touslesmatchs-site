@@ -163,3 +163,49 @@
     .then(function(data){render(data,today);})
     .catch(function(){});
 })();
+
+
+/* TLM_GROWTH_ACQUISITION_V1
+   Acquisition organique : résultats vérifiés + partage + Telegram.
+   Aucun taux de gain ni promesse de résultat n'est fabriqué.
+*/
+(function(){
+  if(typeof document==='undefined') return;
+  var p=(location&&location.pathname)||'/';
+  if(!(p==='/'||p==='/index.html'||p==='/app.html')) return;
+  function txt(fr,ru){return String(document.documentElement.lang||'fr').toLowerCase().startsWith('ru')?ru:fr;}
+  function render(){
+    if(document.getElementById('tlm-growth-acquisition'))return;
+    var wrap=document.createElement('section');
+    wrap.id='tlm-growth-acquisition';
+    wrap.className='tlm-growth-box';
+    wrap.innerHTML=
+      '<div class="tlm-growth-kicker">'+txt('FAITES GRANDIR LA COMMUNAUTÉ','РАЗВИВАЙТЕ СООБЩЕСТВО')+'</div>'+
+      '<h2>'+txt('Suivez les analyses, vérifiez les résultats, partagez.','Следите за анализами, проверяйте результаты и делитесь.')+'</h2>'+
+      '<p>'+txt('Historique public, résultats gagnés et perdus conservés, analyses IA et accès Telegram pendant la phase de lancement.','Публичная история, сохранённые победы и поражения, ИИ-анализ и доступ в Telegram на этапе запуска.')+'</p>'+
+      '<div class="tlm-growth-actions">'+
+        '<a href="/performances.html" class="tlm-growth-btn primary">'+txt('📊 Résultats vérifiés','📊 Проверенные результаты')+'</a>'+
+        '<a href="/go/tiktok?v=organic-site" class="tlm-growth-btn">'+txt('✈️ Telegram gratuit','✈️ Бесплатный Telegram')+'</a>'+
+        '<button type="button" id="tlm-growth-share" class="tlm-growth-btn">'+txt('↗️ Inviter un ami','↗️ Пригласить друга')+'</button>'+
+      '</div>'+
+      '<small>'+txt('18+ · Analyse sportive · Aucun gain garanti.','18+ · Спортивный анализ · Выигрыш не гарантирован.')+'</small>';
+    var style=document.createElement('style');
+    style.textContent='.tlm-growth-box{max-width:1180px;margin:14px auto;padding:18px;border:1px solid rgba(34,211,238,.22);border-radius:18px;background:linear-gradient(145deg,rgba(34,211,238,.07),rgba(124,58,237,.08));color:#f7f8ff}.tlm-growth-kicker{font-size:10px;letter-spacing:.14em;font-weight:900;color:#67e8f9}.tlm-growth-box h2{font-size:20px;margin:6px 0}.tlm-growth-box p{font-size:12px;line-height:1.5;color:#bcc5df}.tlm-growth-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.tlm-growth-btn{appearance:none;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;text-decoration:none;padding:10px 12px;border-radius:11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.tlm-growth-btn.primary{background:rgba(34,211,238,.15);border-color:rgba(34,211,238,.3)}.tlm-growth-box small{color:#8f99b8;font-size:10px}@media(max-width:720px){.tlm-growth-box{margin:10px;padding:14px}.tlm-growth-actions{display:grid}.tlm-growth-btn{text-align:center}}';
+    document.head.appendChild(style);
+    var ms=document.getElementById('tlm-daily-multisport-scanner');
+    if(ms){ms.insertAdjacentElement('afterend',wrap);} else {
+      var main=document.querySelector('main')||document.querySelector('.wrap')||document.body;
+      main.appendChild(wrap);
+    }
+    var b=document.getElementById('tlm-growth-share');
+    if(b)b.addEventListener('click',async function(){
+      var data={title:'TousLesMatchs',text:txt('Analyses sportives IA et résultats vérifiés','ИИ-анализ спорта и проверенные результаты'),url:location.origin+'/?utm_source=share&utm_medium=organic'};
+      try{
+        if(navigator.share){await navigator.share(data);return;}
+        await navigator.clipboard.writeText(data.url);
+        b.textContent=txt('✅ Lien copié','✅ Ссылка скопирована');
+      }catch(e){}
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true}); else render();
+})();

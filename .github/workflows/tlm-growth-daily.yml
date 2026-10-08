@@ -1,0 +1,64 @@
+name: Daily Growth TLM
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 10:30 Europe/Paris : 08:30 UTC en été, 09:30 UTC en hiver.
+    - cron: '30 8 * * *'
+    - cron: '30 9 * * *'
+  push:
+    branches: [main]
+    paths:
+      - "scripts/tlm_growth_engine.js"
+      - ".github/workflows/tlm-growth-daily.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-growth-daily
+  cancel-in-progress: false
+
+jobs:
+  growth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Run Hermes Growth engine on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 6m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            ROOT=/opt/touslesmatchs
+            cd "$ROOT"
+            NOW_PARIS="$(TZ=Europe/Paris date +%H:%M)"
+            EVENT="${{ github.event_name }}"
+            if [ "$EVENT" = "schedule" ]; then
+              HOUR="$(TZ=Europe/Paris date +%H)"
+              MIN="$(TZ=Europe/Paris date +%M)"
+              if [ "$HOUR" != "10" ] || [ "$MIN" -lt 25 ] || [ "$MIN" -gt 40 ]; then
+                echo "GROWTH_SKIP_PARIS_TIME=$NOW_PARIS"
+                exit 0
+              fi
+            fi
+
+            git fetch origin main
+            git show origin/main:scripts/tlm_growth_engine.js > /tmp/tlm_growth_engine.js
+            node --check /tmp/tlm_growth_engine.js
+            TLM_ROOT="$ROOT" node /tmp/tlm_growth_engine.js --notify
+
+            test -s "$ROOT/data/growth/latest.json"
+            test -s "$ROOT/data/growth/social-fr.txt"
+            test -s "$ROOT/data/growth/social-ru.txt"
+            test -s "$ROOT/data/growth/brevo-draft.html"
+            node -e "const x=require('$ROOT/data/growth/latest.json');if(!x.generated_at||!x.drafts?.fr||!x.drafts?.ru)process.exit(1);console.log('GROWTH_DATA_OK',x.candidates.length,x.proofs.length)"
+            curl -fsSL "https://www.touslesmatchs.com/sitemap-pronostics.xml?growth=$(date +%s)" >/tmp/tlm-growth-sitemap.xml
+            grep -q '<urlset' /tmp/tlm-growth-sitemap.xml
+            curl -fsSL "https://www.touslesmatchs.com/performances.html?growth=$(date +%s)" | grep -qi '+0,5'
+            echo "TLM_GROWTH_DAILY_OK"
