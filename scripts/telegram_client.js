@@ -58,6 +58,8 @@ function freeOfferClock(ru,at=Date.now()) {
 }
 function render(kind,data,dest) {
   const ru=dest.lang==='ru',free=dest.tier==='free',paymentVerified=dest.paymentVerified===true;
+  const launchAllAccess=process.env.TLM_LAUNCH_ALL_ACCESS==='1';
+  const effectiveFree=free&&!launchAllAccess;
   const market=()=>esc(ru?marketRu(data.market):data.market);
   const match=()=>`⚽ <b>${esc(data.home)} — ${esc(data.away)}</b>`;
   let lines=[];
@@ -66,7 +68,7 @@ function render(kind,data,dest) {
       `⏱ ${ru?'Минута':'Minute'} : ${esc(data.minute)} · ${ru?'Счёт':'Score'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,
       `🧠 ${ru?'Голосование ИИ':'Vote IA'} : ${esc(data.votes)}/5`,
       `📊 ${ru?'Уровень доверия':'Score de confiance'} : ${esc(data.confidence)}/100`];
-    if (free) lines.push(ru?'🔒 Точный прогноз и обоснование доступны только подписчикам Premium.':'🔒 La sélection exacte et la raison sont réservées aux membres Premium.');
+    if (effectiveFree) lines.push(ru?'🔒 Точный прогноз и обоснование доступны только подписчикам Premium.':'🔒 La sélection exacte et la raison sont réservées aux membres Premium.');
     else {
       lines.push(`💡 ${ru?'Прогноз':'Sélection'} : <b>${market()}</b>`, `💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`);
       // Résumé RU déterministe fondé uniquement sur les votes observés ; aucune justification FR copiée.
@@ -83,7 +85,7 @@ function render(kind,data,dest) {
       data.rating ? `📊 ${ru?'Оценка V2':'Note V2'} : ${esc(data.rating)}/10 ${data.color==='green'?'🟢':data.color==='orange'?'🟠':data.color==='red'?'🔴':'⚪'}` : null
     ].filter(Boolean);
     lines.push(...goal05PriceLines(data,ru));
-    if (free) {
+    if (effectiveFree) {
       lines.push(ru
         ? '🔒 Название команды и обоснование доступны участникам Premium. Коэффициент сам по себе не является сигналом.'
         : '🔒 Le nom de l’équipe et la justification restent réservés à Premium. La cote seule n’est pas un signal.');
@@ -194,14 +196,19 @@ function render(kind,data,dest) {
   } else if(kind==='reminder'||kind==='nopick') {
     lines=ru?['💎 <b>TousLesMatchs Premium</b>','Бесплатный канал: знакомство с сервисом и руководства.','Premium: все допустимые футбольные сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается. Мы не публикуем сигнал ради количества.']:['💎 <b>TousLesMatchs Premium</b>','Gratuit : présentation du service et guides.','Premium : tous les signaux de football admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum quotidien promis. Aucun signal forcé.'];
   } else throw new Error('Unknown client template');
-  if((free && !['scanner','scanner_result'].includes(kind)) || ['reminder','nopick','guide'].includes(kind)) {
+  if(((effectiveFree) && !['scanner','scanner_result'].includes(kind)) || ['reminder','nopick','guide'].includes(kind)) {
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :
       ru ? 'Подписка Premium — 14,90 €/месяц, без обязательств. Новые подписки временно недоступны.' :
       'Premium — 14,90 €/mois, sans engagement. Paiement indisponible temporairement ; voir les détails de l’offre sur le site.');
   }
-  if(free && (kind==='goal05'||kind==='signal'||kind==='reminder'||kind==='nopick')) {
+  if(effectiveFree && (kind==='goal05'||kind==='signal'||kind==='reminder'||kind==='nopick')) {
     const promo=freeOfferClock(ru);
     if(promo)lines.push(promo);
+  }
+  if(launchAllAccess && free && ['signal','goal05','scanner','scanner_result','recap'].includes(kind)) {
+    lines.push(ru
+      ? '🎁 Запуск: полный доступ временно открыт всем участникам. Позже Бесплатный и Premium снова будут разделены.'
+      : '🎁 Lancement : accès intégral temporairement offert à tous. Gratuit et Premium seront séparés plus tard.');
   }
   lines.push(legal(dest.lang));
   const text=lines.filter(Boolean).join('\n\n');
