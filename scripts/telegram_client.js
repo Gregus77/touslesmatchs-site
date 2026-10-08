@@ -74,33 +74,55 @@ function render(kind,data,dest) {
       `📊 ${ru?'Исходный уровень доверия':'Confiance originale'} : ${esc(data.confidence ?? '?')}/100`
     );
   } else if(kind==='scanner') {
-    lines=[`🔭 <b>SCANNER MULTISPORT — ${esc(data.label||'MISE À JOUR')}</b>`,
-      `🕒 ${esc(data.updatedAt||'')} · fenêtre ${esc(data.windowHours||18)} h`];
-    const rows=Array.isArray(data.rows)?data.rows:[];
+    function flag(country){
+      const x=String(country||'').toLowerCase();
+      if(x.includes('ireland'))return '🇮🇪';
+      if(x.includes('france'))return '🇫🇷';
+      if(x.includes('england'))return '🏴';
+      if(x.includes('scotland'))return '🏴';
+      if(x.includes('spain'))return '🇪🇸';
+      if(x.includes('italy'))return '🇮🇹';
+      if(x.includes('netherlands'))return '🇳🇱';
+      if(x.includes('belgium'))return '🇧🇪';
+      if(x.includes('denmark'))return '🇩🇰';
+      if(x.includes('norway'))return '🇳🇴';
+      if(x.includes('brazil'))return '🇧🇷';
+      if(x.includes('argentina'))return '🇦🇷';
+      if(x.includes('japan'))return '🇯🇵';
+      if(x.includes('south korea')||x.includes('korea'))return '🇰🇷';
+      if(x.includes('usa')||x.includes('united states'))return '🇺🇸';
+      if(x.includes('chile'))return '🇨🇱';
+      if(x.includes('uruguay'))return '🇺🇾';
+      if(x.includes('paraguay'))return '🇵🇾';
+      if(x.includes('colombia'))return '🇨🇴';
+      return '🌍';
+    }
+    function sportIcon(sport){
+      const x=String(sport||'').toLowerCase();
+      if(x.includes('football'))return '⚽';
+      if(x.includes('basket'))return '🏀';
+      if(x.includes('baseball'))return '⚾';
+      if(x.includes('hockey'))return '🏒';
+      return '🎯';
+    }
+    const rows=(Array.isArray(data.rows)?data.rows:[]).filter(function(row){
+      return !!row.targetTeam && (row.color==='green' || Number(row.rating)>=8);
+    }).slice(0,8);
+    lines=['🎯 <b>MATCHS À JOUER / SURVEILLER</b>'];
     if(!rows.length) {
-      lines.push('ℹ️ Aucun candidat suffisamment documenté dans la fenêtre actuelle. Aucun signal forcé.');
+      lines.push('❌ <b>Aucun match à jouer pour le moment.</b>');
     } else {
-      rows.slice(0,8).forEach(function(row){
-        const light=row.color==='green'?'🟢':row.color==='orange'?'🟠':row.color==='red'?'🔴':'⚪';
+      rows.forEach(function(row){
         lines.push(
-          `${light} <b>${esc(row.sport||'Sport')} · ${esc(row.country||'International')} · ${esc(row.competition||'Compétition')}</b>`,
-          `⏰ ${esc(row.kickoffLabel||'Heure à confirmer')} · ${esc(row.home)} — ${esc(row.away)}`
+          `${flag(row.country)} ${sportIcon(row.sport)} <b>${esc(row.country||'International')} · ${esc(row.sport||'Sport')}</b>`,
+          `🕒 <b>${esc(row.kickoffLabel||'Heure à confirmer')}</b> — heure de Paris`,
+          `🏟 <b>${esc(row.home)} — ${esc(row.away)}</b>`,
+          `📊 Classement : ${esc(row.targetTeam)} ${esc(row.targetRank||'?')} · adversaire ${esc(row.opponentRank||'?')}`,
+          `✅ <b>À jouer : ${esc(row.targetTeam)} +0,5 but</b>`,
+          row.rating!=null?`⭐ Confiance scanner : ${esc(row.rating)}/10`:''
         );
-        if(row.targetTeam) {
-          lines.push(
-            `🎯 Équipe ciblée : <b>${esc(row.targetTeam)}</b> — ${esc(row.selection||'marque au moins un but')}`,
-            `📊 Classement : ${esc(row.targetTeam)} ${esc(row.targetRank||'?')} · adversaire ${esc(row.opponentRank||'?')}`
-          );
-          if(row.targetMetric!=null||row.opponentMetric!=null)
-            lines.push(`⚽ Moyennes : cible ${esc(row.targetMetric??'?')} but/m · adversaire ${esc(row.opponentMetric??'?')} encaissé/m`);
-          if(row.form)lines.push(`📈 Forme cible : ${esc(row.form)}`);
-          if(row.rating!=null)lines.push(`⭐ Note scanner : ${esc(row.rating)}/10`);
-        } else {
-          lines.push(`🧪 Veille exploratoire : ${esc(row.reason||'règle Top 5 / Bottom 5 non vérifiée pour ce sport ou cette compétition')}`);
-        }
       });
     }
-    lines.push('ℹ️ Scanner exploratoire : seuls les critères explicitement vérifiés sont affichés. Aucune cote ou statistique n’est inventée.');
   } else if(kind==='scanner_result') {
     const verdict=data.outcome==='win'?'✅ GAGNANT':data.outcome==='loss'?'❌ PERDU':'✅ TERMINÉ';
     lines=[`${verdict} — <b>RÉSULTAT SCANNER</b>`,
