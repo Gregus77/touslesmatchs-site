@@ -22,6 +22,26 @@ function marketRu(value) {
   if (!m) throw new Error('Unsupported client market');
   return `Тотал ${m[1].toLowerCase()==='over'?'больше':'меньше'} ${m[2]} голов`;
 }
+// La cote seule ne suffit pas : affiche aussi l'horodatage réel, sinon alerte.
+function goal05PriceLines(data,ru) {
+  const odd=Number(data.odd);
+  const validOdd=Number.isFinite(odd)&&odd>1;
+  const observedAt=Date.parse(String(data.oddFetchedAt||''));
+  const hasTime=Number.isFinite(observedAt);
+  const maxAge=Math.max(30000,Number(process.env.GOAL05_ODD_MAX_AGE_MS||120000));
+  const age=hasTime?Date.now()-observedAt:Infinity;
+  const fresh=hasTime&&age>=0&&age<=maxAge;
+  const time=hasTime?new Intl.DateTimeFormat(ru?'ru-RU':'fr-FR',{
+    timeZone:'Europe/Paris',hour:'2-digit',minute:'2-digit',hour12:false
+  }).format(new Date(observedAt)):null;
+  const quote=validOdd?odd.toFixed(2).replace('.',','):(ru?'недоступен':'indisponible');
+  const lines=[`💰 ${ru?'Реальный коэффициент':'Cote réelle'} : <b>${quote}</b>${time?' · '+time+' (Paris)':''}`];
+  if(!validOdd) lines.push(ru?'⛔ Нет подтверждённого коэффициента. Ставка не рекомендована.':'⛔ Cote réelle indisponible : aucune sélection jouable.');
+  else if(odd<1.60) lines.push(ru?'🔴 Коэффициент ниже 1,60. Не ставьте на +0,5 гола команды до достижения 1,60.':'🔴 Cote insuffisante : ne misez sur +0,5 but équipe que si la cote réelle atteint au moins 1,60.');
+  else if(!fresh) lines.push(ru?'⚠️ Коэффициент устарел или время неизвестно : не играть без обновления.':'⚠️ Cote non datée ou périmée : ne misez pas sans une nouvelle vérification.');
+  else lines.push(ru?'✅ Порог 1,60 соблюдён. Проверьте коэффициент у букмекера перед решением.':'✅ Seuil 1,60 atteint. Revérifiez la cote chez le bookmaker avant toute décision.');
+  return lines;
+}
 function render(kind,data,dest) {
   const ru=dest.lang==='ru',free=dest.tier==='free',paymentVerified=dest.paymentVerified===true;
   const market=()=>esc(ru?marketRu(data.market):data.market);
@@ -48,22 +68,25 @@ function render(kind,data,dest) {
       `🧠 ${ru?'Голосование ИИ':'Vote IA'} : ${esc(data.votes)}/5`,
       data.rating ? `📊 ${ru?'Оценка V2':'Note V2'} : ${esc(data.rating)}/10 ${data.color==='green'?'🟢':data.color==='orange'?'🟠':data.color==='red'?'🔴':'⚪'}` : null
     ].filter(Boolean);
+    lines.push(...goal05PriceLines(data,ru));
     if (free) {
       lines.push(ru
-        ? '🔒 Команда, коэффициент и точный прогноз доступны участникам Premium.'
-        : '🔒 L’équipe ciblée, la cote et la sélection exacte sont réservées aux membres Premium.');
+        ? '🔒 Название команды и обоснование доступны участникам Premium. Коэффициент сам по себе не является сигналом.'
+        : '🔒 Le nom de l’équipe et la justification restent réservés à Premium. La cote seule n’est pas un signal.');
     } else {
       lines.push(
         `🎯 ${ru?'Команда должна забить минимум 1 гол':'Équipe ciblée — marque au moins 1 but'} : <b>${target}</b>`,
-        `💰 ${ru?'Коэффициент':'Cote'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`,
         data.historicalSeasons ? `📚 ${ru?'История':'Historique'} : Top ${esc(data.historicalTop||0)}/${esc(data.historicalSeasons)} ${ru?'сезонов':'saisons'}` : null,
         data.historyScore ? `📈 ${ru?'Историческая сила':'Force historique'} : ${esc(data.historyScore)}/100` : null
       );
       lines=lines.filter(Boolean);
       if (data.reason) lines.push(ru
-        ? `Условия подтверждены: Top 5 против Bottom 5, реальные live-данные и ${esc(data.votes)}/5 голосов ИИ.`
+        ? `Условия проверены: Top 5 против Bottom 5, live и ${esc(data.votes)}/5 голосов ИИ.`
         : esc(data.reason));
     }
+    lines.push(ru
+      ? '🔗 Партнёрские ссылки на букмекеров — кнопки ниже. 18+.'
+      : '🔗 Comparer chez nos partenaires : boutons affiliés ci-dessous. 18+.');
   } else if(kind==='result') {
     lines=[`${data.outcome==='win'?'✅':'❌'} <b>${ru?(data.outcome==='win'?'ВЫИГРЫШ':'ПРОИГРЫШ'):(data.outcome==='win'?'SIGNAL GAGNÉ':'SIGNAL PERDU')}</b>`,match(),`⚽ ${ru?'Итоговый счёт':'Score final'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`];
     lines.push(
@@ -161,7 +184,11 @@ function render(kind,data,dest) {
   const text=lines.filter(Boolean).join('\n\n');
   if(text.length>4096) throw new Error('Telegram template too long');
   const scannerPlain=['scanner','scanner_result'].includes(kind);
-  return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,...(scannerPlain?{}:(free&&paymentVerified?{reply_markup:{inline_keyboard:[[{text:CTA[dest.lang],url:payment(dest.lang)}]]}}:(free?{}:{reply_markup:{inline_keyboard:buildInlineKeyboard()}})))};
+  const partnerRows=buildInlineKeyboard();
+  // Le lien Stripe n'est jamais actif tant que le tarif et la session LIVE ne sont pas confirmés.
+  const linkRows=paymentVerified?[ [{text:CTA[dest.lang],url:payment(dest.lang)}], ...partnerRows ]:partnerRows;
+  return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,
+    ...(scannerPlain?{}:{reply_markup:{inline_keyboard:linkRows}})};
 }
 function request(token,payload) {
   return new Promise(resolve=>{
