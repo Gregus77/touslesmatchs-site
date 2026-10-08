@@ -36,3 +36,19 @@
 - Pas de secret ou de donnée personnelle stockés dans le checkpoint.
 
 **Prochaine action automatique lors d'une reprise :** vérifier les preuves des prochaines livraisons officielles Goal05 et le statut Stripe LIVE, puis avancer uniquement sur les points ouverts.
+
+## Reprise propriétaire — 8 octobre 2026, mission 3992
+
+- **Objectif :** poursuivre les vérifications en conservant la continuité du code et les résultats précédents ; aucune modification de stratégie.
+- **Branche de cette mission :** `codex/telegram-owner-3992-20261008-233852`, déjà fournie par le runner. Aucune nouvelle branche créée, aucun changement de branche, aucune suppression.
+- **Base locale vérifiée :** `a51fa3b`, identique à `main` et `origin/main` locaux au démarrage. Le commit Goal05 `f10f02e` est bien un ancêtre de HEAD. Ces références locales ne constituent pas une vérification du SHA GitHub actuel ni de la production.
+- **Dernière étape terminée :** contrôle de continuité Git et exécution des cinq tests locaux ci-dessous, tous terminés avec le code 0 :
+  - `node scripts/test_goal05_v2_20261006.js`
+  - `node scripts/test_goal05_v2_integration_20261006.js`
+  - `node scripts/test_goal05_policy_20261005.js`
+  - `node scripts/test_current_product_goal05_20261005.js`
+  - `node scripts/test_goal05_telegram_odds_20261008.js`
+- **Conservation :** aucun fichier métier, aucune base de résultats ni aucun historique sportif modifié. Le test de produit courant et de conservation historique passe ; les résultats réels en base de production n'ont pas été consultés.
+- **Branches concurrentes :** leur présence ne suffit pas à établir un risque. Aucun conflit actif constaté dans ce worktree propre au démarrage ; ne pas supprimer de branche sur la seule base de son nom ou de son ancienneté.
+- **Prochaine action :** le runner sécurisé prend en charge Git. Lors d'une reprise disposant des preuves autorisées de production, vérifier les livraisons réelles Goal05 et leur résolution, sans générer de faux signal ni modifier les résultats précédents.
+- **Limites / sécurité :** aucun push, merge, déploiement, paiement ou suppression. Cette mission locale ne prouve ni la poursuite du scanner en production ni une nouvelle livraison Telegram. Les vérifications de paiement et les accès aux secrets restent hors périmètre de cette mission.
