@@ -1,6 +1,9 @@
 # AGENTS.md — Fichier partage entre TOUTES les IA (Claude, Codex, Hermes, GPT, etc.)
 # Derniere mise a jour : 2026-07-23 par Claude
 
+## Reprise de connexion / mission en cours (2026-10-08)
+En cas d'interruption, ne jamais repartir de zéro : consulter `.claude/skills/tlm-reprise-connexion/SKILL.md` et `docs/handoff/reprise-session-active.md`, comparer au SHA GitHub et poursuivre l'étape suivante. Cette reprise nécessite une nouvelle invocation après coupure et n'est pas une exécution ChatGPT autonome en arrière-plan.
+
 ## ⚡ HANDOFF RAPIDE — POUR TOUTE IA QUI REPREND (lis d'abord ceci)
 
 - **Repo GitHub** : `Gregus77/touslesmatchs-site`
