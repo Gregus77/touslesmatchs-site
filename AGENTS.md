@@ -100,6 +100,20 @@ Chaque IA qui travaille sur ce projet DOIT :
 - **Stripe** : webhook verifie la signature (`constructEvent`) SI `STRIPE_WEBHOOK_SECRET` est defini → le garder en prod.
 - **A FAIRE** : restreindre CORS (`*`) au domaine (P3). Voir `RAPPORT-AUDIT-2026-07-23.md`.
 
+## Skill d'auto-amélioration TLM
+
+- Pour toute analyse de performances, gains/pertes, WIN/LOSS, ligues, équipes,
+  cotes, minutes, votes IA, ROI ou optimisation des pronostics, utiliser
+  systématiquement le skill `.claude/skills/tlm-auto-improver/SKILL.md`.
+- Aucune amélioration sportive ne doit être auto-promue sans backtest
+  chronologique, taille d'échantillon suffisante, mode shadow et rollback.
+- La stratégie officielle reste **+0,5 but équipe favorite V2**. Le skill peut
+  améliorer la sélection des dossiers mais ne peut pas changer le marché
+  principal ni abaisser un garde-fou dur sans décision explicite du fondateur.
+- Telegram = signaux conformes immédiats. Brevo = résumé quotidien par défaut.
+- Toute affirmation de mise en production doit ensuite passer par le skill
+  `commissaire`.
+
 ## Regles metier OBLIGATOIRES
 
 ### ANJ (Autorite Nationale des Jeux) — LEGAL
