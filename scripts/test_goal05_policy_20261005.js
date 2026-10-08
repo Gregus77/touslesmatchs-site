@@ -37,7 +37,8 @@ for(const marker of [
   "kind==='goal05'",
   "row.kind==='signal'||row.kind==='goal05'",
   "SIGNAL +0,5 BUT ÉQUIPE",
-  "L’équipe ciblée, la cote et la sélection exacte sont réservées aux membres Premium."
+  "goal05PriceLines(data,ru)",
+  "Le nom de l’équipe et la justification restent réservés à Premium."
 ]) assert(tg.includes(marker), 'missing Telegram marker: '+marker);
 
 console.log('GOAL05_POLICY_REPAIR_OK');
