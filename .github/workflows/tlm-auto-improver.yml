@@ -1,0 +1,52 @@
+name: TLM Auto Improver Real DB
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/tlm_auto_improver.js'
+      - '.claude/skills/tlm-auto-improver/**'
+      - '.github/workflows/tlm-auto-improver.yml'
+  schedule:
+    - cron: '20 4 * * *'
+
+concurrency:
+  group: tlm-auto-improver-production
+  cancel-in-progress: false
+
+jobs:
+  analyze-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run against production SQLite
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            exec 9>/tmp/tlm-auto-improver.lock
+            flock -w 600 9
+
+            git fetch origin main
+            if test -n "$(git status --porcelain --untracked-files=no)"; then
+              echo "TRACKED_VPS_CHANGES_PRESENT"
+              git status --short
+              exit 41
+            fi
+            git switch main
+            git pull --ff-only origin main
+
+            test -f scripts/tlm_auto_improver.js
+            docker inspect touslesmatchs-api >/dev/null
+
+            docker exec -i               -e TLM_DB_PATH=/data/tlm.db               -e TLM_AUTO_IMPROVER_DIR=/data/auto-improver               touslesmatchs-api node - < scripts/tlm_auto_improver.js | tee /tmp/tlm-auto-improver-first.jsonlog
+
+            docker exec touslesmatchs-api sh -lc 'test -s /data/auto-improver/latest.json'
+            docker exec touslesmatchs-api node -e "const fs=require('fs');const r=JSON.parse(fs.readFileSync('/data/auto-improver/latest.json'));if(!r.generatedAt||!r.global)process.exit(1);console.log('AUTO_IMPROVER_PRODUCTION_OK',JSON.stringify({n:r.global.n,wins:r.global.wins,losses:r.global.losses,winrate:r.global.winrate,decision:r.decision}))"
