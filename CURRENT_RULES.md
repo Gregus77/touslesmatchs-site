@@ -1,6 +1,6 @@
 # CURRENT_RULES.md — Règles actives TousLesMatchs
 
-**Dernière mise à jour : 6 octobre 2026**
+**Dernière mise à jour : 8 octobre 2026**
 **Priorité absolue : ce fichier prévaut sur toute règle historique contradictoire présente ailleurs dans le dépôt.**
 **Principe : la décision la plus récente du fondateur remplace l'ancienne.**
 
@@ -76,6 +76,15 @@ Affichage :
 La couleur ne remplace jamais la cote réelle, la fenêtre live ni le consensus 4/5.
 
 ### Statistiques et apprentissage
+
+#### Règle de comptabilisation des pronostics propriétaire
+
+- Un match n'entre dans l'historique public des pronostics que s'il a été **explicitement conseillé comme jouable** au propriétaire ou s'il est devenu un **signal officiel conforme**.
+- Tout pronostic conseillé est conservé jusqu'à résolution puis obligatoirement marqué **WIN** ou **LOSS** avec le score final vérifié dès qu'il est disponible.
+- Les simples candidats de surveillance, matchs exploratoires, matchs écartés et toute rencontre présentée comme **« je ne le jouerais pas » / « à éviter » / « surveillance uniquement »** ne doivent jamais être ajoutés aux statistiques de pronostics joués.
+- Un résultat gagnant ne doit jamais être ajouté rétroactivement uniquement parce que le match a gagné : la décision de jouer doit avoir été enregistrée **avant** le résultat.
+- Les entrées manuelles/ChatGPT restent séparées des signaux Telegram officiels par leur provenance ; elles peuvent apparaître dans l'historique propriétaire mais ne doivent jamais gonfler les KPI des signaux officiels.
+- Cette règle vaut de la même manière pour les **WIN et les LOSS** afin d'éviter tout biais de sélection.
 
 Les signaux officiels et les observations du scanner propriétaire sont séparés. Un ancien conseil manuel/scanner ne doit jamais être transformé en faux signal Telegram officiel. Les statistiques conservent la provenance, la cote réellement observée lorsqu'elle existe, la note/couleur, les données disponibles au moment de la décision et le résultat vérifié.
 
