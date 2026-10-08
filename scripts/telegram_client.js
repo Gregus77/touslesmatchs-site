@@ -47,7 +47,7 @@ function goal05PriceLines(data,ru) {
 function freeOfferClock(ru,at=Date.now()) {
   if(process.env.TLM_FREE_OFFER_CONFIRMED!=='1')return null;
   const raw=String(process.env.TLM_FREE_OFFER_ENDS_AT||'');
-  if(!/Z$|[+-]\\d\\d:\\d\\d$/.test(raw))return null;
+  if(!/Z$|[+-]\d\d:\d\d$/.test(raw))return null;
   const end=Date.parse(raw);
   if(!Number.isFinite(end)||end<=at)return null;
   const days=Math.floor((end-at)/86400000);
