@@ -48,8 +48,7 @@ jobs:
               fi
             fi
 
-            git fetch origin +refs/heads/main:refs/remotes/origin/main
-            git show origin/main:scripts/tlm_growth_engine.js > /tmp/tlm_growth_engine.js
+            curl -fsSL --max-time 30 "https://raw.githubusercontent.com/Gregus77/touslesmatchs-site/main/scripts/tlm_growth_engine.js?sha=${{ github.sha }}" -o /tmp/tlm_growth_engine.js
             node --check /tmp/tlm_growth_engine.js
             TLM_ROOT="$ROOT" node /tmp/tlm_growth_engine.js --notify
 
