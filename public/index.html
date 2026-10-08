@@ -1278,6 +1278,33 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     </div>
   </div>
 
+  <!-- Offre de lancement : affichage d'une échéance UNIQUEMENT si elle est publiée et confirmée. -->
+  <div id="tlm-free-offer-bar" style="max-width:1120px;margin:8px auto 15px;padding:15px 18px;border:1px solid rgba(155,123,255,.35);border-radius:14px;background:rgba(155,123,255,.06);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px" aria-live="off">
+    <div>
+      <strong style="display:block;font-size:14px">🎁 Accès Gratuit actuellement ouvert</strong>
+      <span id="tlm-free-offer-status" style="display:block;font-size:12px;color:var(--muted);margin-top:3px">Découvre les aperçus et les résultats publics sans carte bancaire.</span>
+    </div>
+    <a href="#plans" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:9px;padding:10px 14px;background:rgba(155,123,255,.18);color:inherit;font-weight:800;font-size:12px">Voir Premium — 14,90 €/mois</a>
+  </div>
+  <script>
+  (function(){
+    'use strict';
+    var box=document.getElementById('tlm-free-offer-bar'), status=document.getElementById('tlm-free-offer-status');
+    if(!box||!status)return;
+    fetch('/data/free-offer-status.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw Error('unavailable');return r.json()}).then(function(p){
+      // Une vraie date de fin, approuvée et publiée, est indispensable : pas d'urgence fictive.
+      if(p.confirmed!==true || typeof p.ends_at!=='string' || !/Z$|[+-]\d\d:\d\d$/.test(p.ends_at))return;
+      var end=Date.parse(p.ends_at);if(!Number.isFinite(end))return;
+      function update(){
+        var remaining=end-Date.now();
+        if(remaining<=0){status.textContent='La période annoncée pour cette offre de lancement est terminée.';return;}
+        var days=Math.floor(remaining/86400000),hours=Math.floor(remaining/3600000)%24;
+        status.textContent='Fin annoncée de l’offre de lancement dans '+days+' j '+hours+' h. Les conditions du compte gratuit restent consultables.';
+      }
+      update();setInterval(update,60000);
+    }).catch(function(){});
+  })();
+  </script>
   <!-- RANGEE 4 : FORMULES (parcours principal : hero -> preuve -> pick gratuit -> formules) -->
   <div class="row row-4" id="plans">
     <div class="card plan">

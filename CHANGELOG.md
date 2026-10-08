@@ -1,5 +1,14 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-08 — Telegram Goal05 : cotes, partenaires et reprise de connexion
+
+- Ajout de la cote réelle horodatée dans les notifications +0,5 Gratuites et Premium (FR/RU), des alertes sous 1,60 ou lorsque la cote est absente/périmée, et d'un rappel qu'un combiné de deux rencontres est plus risqué.
+- Les quatre liens de partenaires (Betclic, Unibet, PMU, Winamax) apparaissent dans Telegram et les fiches de l'application. Betclic est restauré à partir du lien déjà existant sur le site.
+- L'API transmet l'horodatage fournisseur et revérifie la fraîcheur avant livraison Telegram. Les messages scanner ne sont plus présentés comme des sélections jouables sans validation live.
+- Bandeau Gratuit/Premium sur l'accueil ; compte à rebours uniquement avec une date de fin confirmée, sans urgence artificielle. Paiement Premium direct uniquement après validation Stripe LIVE 14,90 €/mois ; lien d'information toujours accessible.
+- Skill de reprise réseau et checkpoint GitHub persistant, tests Telegram et workflow CI dédiés. Aucun déploiement de production implicite.
+
+
 ## 2026-10-07 — Signal +0,5 sur une équipe explicitement ciblée
 
 - Clarifie dans l’application, les pages actives, le SEO et l’API publique que chaque signal nomme une seule équipe, qui doit marquer au moins un but.

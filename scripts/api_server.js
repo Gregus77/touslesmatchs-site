@@ -431,6 +431,9 @@ function validateGoal05TelegramDelivery(row) {
       Number(proof.odd)>=GOAL05_POLICY_MIN_ODD &&
       Number(proof.votes)>=GOAL05_POLICY_MIN_VOTES &&
       criteria.oddFreshVerified===true &&
+      Number.isFinite(Date.parse(String(criteria.oddFetchedAt||''))) &&
+      Date.now()-Date.parse(String(criteria.oddFetchedAt))>=0 &&
+      Date.now()-Date.parse(String(criteria.oddFetchedAt))<=GOAL05_ODD_MAX_AGE_MS &&
       criteria.aiConsensusVerified===true;
     return {ok,terminal:!ok};
   } catch(error) {
@@ -12413,7 +12416,8 @@ async function publishStrictGoal05Signals(matches) {
       matchKey:signalKey,home:match.home,away:match.away,competition:match.competition||"",
       minute:signal.minute,scoreHome:signal.score_home,scoreAway:signal.score_away,
       targetTeam:team,market:signal.bet,votes:Number(criteria.aiVotes||0),
-      confidence:Number(criteria.aiConfidence||0),odd:signal.odd,reason:signal.reason,
+      confidence:Number(criteria.aiConfidence||0),odd:signal.odd,
+      oddFetchedAt:criteria.oddFetchedAt,oddSource:criteria.oddSource||null,reason:signal.reason,
       rating:criteria.rating,color:criteria.color,historicalTop:criteria.topHistoricalSeasons,
       historicalSeasons:criteria.historySeasonsAvailable,historyScore:criteria.historicalStrengthScore,
       qualityScore:criteria.qualityScore
