@@ -90,6 +90,18 @@ Les signaux officiels et les observations du scanner propriétaire sont séparé
 
 La règle historique proposant **30 % de bankroll** est interdite dans le produit actuel.
 
+## Scanner multisport propriétaire — règle de présentation et combinés
+
+- Sports suivis : **football, basketball et baseball** en priorité.
+- Fréquence de revue : **toutes les 4 heures**.
+- Les messages destinés au propriétaire doivent être lisibles par un novice : **drapeau/pays, sport, heure de Paris, match, classement si pertinent, pari exact, cote réelle si disponible, niveau de confiance**.
+- Ne jamais afficher au propriétaire les libellés techniques comme « exploratoire », « critère spécifique non vérifié », « couverture fournisseur » ou autres détails internes dans le message principal.
+- Si aucune sélection n'est suffisamment solide : afficher seulement **« Aucun match à jouer pour le moment »**.
+- Une cote faible **1,10–1,20** peut être retenue si les éléments sportifs la rendent réellement robuste. Elle peut être associée à une seconde sélection indépendante et solide afin de viser une **cote combinée totale d'environ 1,40 à 1,60**.
+- Ne jamais ajouter une deuxième sélection uniquement pour atteindre une cote cible. **La qualité prime sur la cote.**
+- Aucune sélection n'est présentée comme certaine ou garantie.
+- Tout pari explicitement conseillé comme jouable est enregistré avant le résultat, puis clôturé **WIN ou LOSS** avec le score/résultat vérifié. Les matchs écartés ou seulement surveillés ne sont pas comptabilisés.
+
 ## Publication
 
 - Un candidat pré-match peut être remonté au propriétaire avec match, équipe ciblée, rangs, heure et niveau de risque.
