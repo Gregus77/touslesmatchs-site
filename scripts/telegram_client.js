@@ -85,6 +85,9 @@ function render(kind,data,dest) {
         : esc(data.reason));
     }
     lines.push(ru
+      ? '🔀 Комбинация двух разных матчей — отдельная стратегия повышенного риска. Общий коэффициент вычисляется только по двум свежим реальным котировкам; выигрывают оба исхода, гарантии нет.'
+      : '🔀 Profil plus risqué : combiner 2 matchs distincts peut viser une cote totale ≥ 1,60, mais les 2 sélections doivent réussir. Aucun combiné sans 2 cotes réelles fraîches et 2 dossiers validés.');
+    lines.push(ru
       ? '🔗 Партнёрские ссылки на букмекеров — кнопки ниже. 18+.'
       : '🔗 Comparer chez nos partenaires : boutons affiliés ci-dessous. 18+.');
   } else if(kind==='result') {
