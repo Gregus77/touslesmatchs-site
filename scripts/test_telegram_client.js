@@ -18,9 +18,12 @@ for(const dest of targets){
   if(dest.lang==='fr')assert(signal.text.includes(data.reason));
   if(dest.lang==='ru'){assert(!signal.text.includes(data.reason));assert(signal.text.includes('Тотал меньше 2.5 голов'));}
  } else {assert(signal.text.includes('1.65'));if(dest.lang==='ru'){assert(!signal.text.includes(data.reason));assert(signal.text.includes('Тотал меньше 2.5 голов'));}}
+ const goal05=client.render('goal05',{...data,targetTeam:'Under United & FC',rating:8.8,color:'green',oddFetchedAt:new Date().toISOString()},{...dest,paymentVerified:true});
+ if(dest.tier==='free')assert(goal05.text.includes('Under United &amp; FC'));
  for(const kind of ['result','recap','guide','reminder','nopick']){
   const msg=client.render(kind,{...data,day:'2026-09-11',rows:[{...data,best_bet:data.market,final_score_home:1,final_score_away:0}]},dest);
   assert(!/(?<!1)4[,.]90|Standard|Elite|🇬🇧|STRONG SIGNAL/.test(msg.text));
+  if(kind==='recap'&&dest.tier==='free')assert(msg.text.includes(dest.lang==='ru'?'Тотал меньше 2.5 голов':data.market)); // launch full recap
   if(dest.lang==='ru')assert(!/Gagnés|Perdus|sélection|confiance|Jeu responsable/.test(msg.text));
  }
 }
