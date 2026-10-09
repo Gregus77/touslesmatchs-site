@@ -1,0 +1,14 @@
+[Unit]
+Description=TousLesMatchs publication and resolution review (Paris)
+
+[Timer]
+# Read existing results every five minutes. New candidate review once per four-hour Paris slot.
+# No extra sports/AI scheduler: this only consumes the canonical export.
+OnCalendar=*-*-* *:00/5:00 Europe/Paris
+Persistent=true
+AccuracySec=30s
+RandomizedDelaySec=10
+Unit=tlm-social-publication.service
+
+[Install]
+WantedBy=timers.target

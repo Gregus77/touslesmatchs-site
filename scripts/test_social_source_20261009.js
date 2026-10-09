@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const api=fs.readFileSync(__dirname+'/api_server.js','utf8');
+const source=fs.readFileSync(__dirname+'/social/export-source.inc.js','utf8');
+assert(api.includes(source),'inline exporter and tested source must match');
+let files=new Map([['/data/social-publication.enabled','']]);
+const mock={existsSync:p=>files.has(p),readFileSync:p=>files.get(p),writeFileSync:(p,d)=>files.set(p,d),renameSync:(a,b)=>{files.set(b,files.get(a));files.delete(a);}};
+const context={fs:mock,process:{pid:1},console};vm.createContext(context);vm.runInContext(source,context);
+const row={sport:'Football',socialWhitelist:true,targetTeam:'TEST A',home:'TEST A',away:'TEST B',sourceId:'999',targetSide:'home',targetRank:'1e/12',opponentRank:'12e/12',country:'France',competition:'TEST League',kickoff:'2030-01-01T15:00:00Z',socialVerifiedAt:Date.parse('2030-01-01T11:00:00Z')};
+context.tlmSocialExport([{...row,socialWhitelist:false}]);assert.equal(Object.keys(JSON.parse(files.get('/data/social-source.json')).matches).length,0);
+context.tlmSocialExport([row]);let data=JSON.parse(files.get('/data/social-source.json'));assert.equal(data.matches['999'].verifiedAt,'2030-01-01T11:00:00.000Z');assert(!('rating' in data.matches['999']));
+const result={fixture:{id:999,status:{short:'FT'}},teams:{home:{name:'TEST A'},away:{name:'TEST B'}},goals:{home:0,away:1}};
+context.tlmSocialExport([],result);data=JSON.parse(files.get('/data/social-source.json'));assert.equal(data.matches['999'].result.home,0);assert.equal(data.matches['999'].result.source,'api-sports');
+result.fixture.id=998;context.tlmSocialExport([],result);assert.equal(Object.keys(JSON.parse(files.get('/data/social-source.json')).matches).length,1);
+console.log('social source: whitelist, cache timestamp, final provider score and identity PASS');

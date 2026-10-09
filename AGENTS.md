@@ -431,3 +431,18 @@ La stratégie client actuelle est **+0,5 but de l’équipe favorite** — V2, t
 - Les lignes historiques doivent distinguer clairement `Ancien système — O/U 2,5` et `Stratégie actuelle — +0,5 but` lorsqu’elles coexistent.
 - Aucune donnée statistique ni aucun vote ne doit être inventé. Une couverture fournisseur absente est un blocage de collecte, jamais un accord IA.
 - Exécuter `scripts/test_goal05_v2_20261006.js`, `scripts/test_goal05_v2_integration_20261006.js`, `scripts/test_goal05_policy_20261005.js` et `scripts/test_current_product_goal05_20261005.js` avant toute livraison affectant le produit ou les surfaces publiques.
+
+## Autorisation ciblée propriétaire — publication serveur du 09/10/2026
+
+Greg autorise le composant `scripts/social/pipeline.py`, l'export factuel
+`tlmSocialExport` dans l'API et les unités `tlm-social-publication` à produire les
+nouveaux contenus de surveillance/bilan dans `public/social/` et les cartes dans
+`public/media/social/`, après installation et validation opérateur. Hermès peut
+exécuter ce composant configuré et lire son rapport ; cela n'autorise aucune
+modification arbitraire du moteur, des secrets, des règles sportives ou des KPI.
+
+La surveillance Top5/Bottom5 pré-match n'exige pas la cote live 1,60. Elle reste
+explicitement non jouable ; tous les garde-fous Goal05 V2 continuent de s'appliquer
+au vrai signal. Observations et ancien O/U restent hors statistiques officielles.
+Conditions et procédure serveur : `docs/social/README.md`. Ce composant est livré
+inactif ; sa présence dans Git ne prouve ni installation VPS ni diffusion.

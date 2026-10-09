@@ -5994,6 +5994,7 @@ async function tlmScannerFootballRow(f){
   const c=tlmScannerComp(f);
   const base={key:"Football:"+(f.sourceId||f.fixtureId||f.id||f.home+"|"+f.away+"|"+f.kickoff),
     sourceId:String(f.sourceId||f.fixtureId||""),sport:"Football",home:f.home,away:f.away,
+    socialWhitelist: f.source==="api-sports"&&!isWomenMatch(f)&&!isCategoryBanned(f)&&!isUsaOrCanadaMatch(f)&&!isLowTrustCompetition(f)&&!isBlacklistedForLiveDisplay(f)&&["trusted_major","trusted_secondary"].includes(leagueTier(f)),
     competition:c.league,country:c.country,kickoff:f.kickoff,kickoffLabel:tlmScannerKickoff(f.kickoff),
     targetTeam:null,targetSide:null,targetRank:null,opponentRank:null,targetMetric:null,opponentMetric:null,
     form:null,rating:null,color:"gray",selection:null,reason:"Top 5 / Bottom 5 non vérifié"};
@@ -6015,6 +6016,7 @@ async function tlmScannerFootballRow(f){
     const rating=tlmScannerRating(Number(opponent.rank)-Number(target.rank),Number.isFinite(gf)?gf:0,Number.isFinite(ga)?ga:0,stats[0]&&stats[0].form);
     return Object.assign({},base,{
       targetTeam:side==="home"?f.home:f.away,targetSide:side,
+      socialVerifiedAt:standingsCache.get(`stand_${f.leagueId}_${f.season}`)?.ts||null,
       targetRank:target.rank+"e/"+total,opponentRank:opponent.rank+"e/"+total,
       targetMetric:Number.isFinite(gf)?gf:null,opponentMetric:Number.isFinite(ga)?ga:null,
       form:stats[0]&&stats[0].form||null,rating:rating,color:tlmScannerColor(rating),
@@ -6034,6 +6036,40 @@ function tlmScannerExploratoryRow(f){
     opponentRank:null,targetMetric:null,opponentMetric:null,form:null,rating:null,color:"gray",selection:null,
     reason:"veille exploratoire : critère spécifique au sport non vérifié, aucune sélection forcée"};
 }
+// TLM_SOCIAL_SOURCE_BEGIN — included inline in api_server.js; no new scheduler/API calls.
+function tlmSocialExport(rows = [], resolved = null) {
+  if (!fs.existsSync('/data/social-publication.enabled')) return;
+  try {
+    const file='/data/social-source.json';
+    let state={schema:1,matches:{}};
+    if(fs.existsSync(file))state=JSON.parse(fs.readFileSync(file,'utf8'));
+    for(const row of rows) {
+      if(row.sport!=='Football'||row.socialWhitelist!==true||!row.targetTeam)continue;
+      const tr=String(row.targetRank||'').match(/^(\d+)e\/(\d+)$/);
+      const op=String(row.opponentRank||'').match(/^(\d+)e\/(\d+)$/);
+      if(!tr||!op||tr[2]!==op[2]||!/^\d+$/.test(String(row.sourceId)))continue;
+      const id=String(row.sourceId),old=state.matches[id]||{};
+      state.matches[id]={...old,fixtureId:id,home:row.home,away:row.away,targetTeam:row.targetTeam,
+        targetSide:row.targetSide,targetRank:Number(tr[1]),opponentRank:Number(op[1]),total:Number(tr[2]),
+        country:row.country,competition:row.competition,kickoff:row.kickoff,
+        verifiedAt:row.socialVerifiedAt?new Date(row.socialVerifiedAt).toISOString():null,whitelist:true,source:'canonical_scanner'};
+    }
+    if(resolved) {
+      const id=String(resolved.fixture?.id||'');
+      const prior=state.matches[id];
+      if(prior&&['FT','AET','PEN'].includes(resolved.fixture?.status?.short)&&
+        resolved.teams?.home?.name===prior.home&&resolved.teams?.away?.name===prior.away&&
+        Number.isInteger(resolved.goals?.home)&&Number.isInteger(resolved.goals?.away)) {
+        prior.result={fixtureId:id,status:resolved.fixture.status.short,home:resolved.goals.home,
+          away:resolved.goals.away,source:'api-sports',verifiedAt:new Date().toISOString()};
+      }
+    }
+    state.updatedAt=new Date().toISOString();
+    const temp=file+'.'+process.pid+'.tmp';fs.writeFileSync(temp,JSON.stringify(state),{mode:0o644});fs.renameSync(temp,file);
+  } catch (_) {console.error('[social-source] export_failed');}
+}
+// TLM_SOCIAL_SOURCE_END
+
 function tlmScannerSchema(){
   db.exec("CREATE TABLE IF NOT EXISTS hourly_scanner_tracking(scanner_key TEXT PRIMARY KEY,source_id TEXT,sport TEXT,home TEXT,away TEXT,competition TEXT,country TEXT,kickoff TEXT,target_team TEXT,target_side TEXT,rating REAL,color TEXT,status TEXT NOT NULL DEFAULT 'pending',result_sent INTEGER NOT NULL DEFAULT 0,data_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT (datetime('now')),updated_at TEXT NOT NULL DEFAULT (datetime('now')));CREATE INDEX IF NOT EXISTS idx_hourly_scanner_pending ON hourly_scanner_tracking(status,result_sent,kickoff);");
 }
@@ -6041,6 +6077,7 @@ function tlmScannerTrack(rows){
   tlmScannerSchema();
   const q=db.prepare("INSERT INTO hourly_scanner_tracking(scanner_key,source_id,sport,home,away,competition,country,kickoff,target_team,target_side,rating,color,data_json) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(scanner_key) DO UPDATE SET source_id=excluded.source_id,sport=excluded.sport,home=excluded.home,away=excluded.away,competition=excluded.competition,country=excluded.country,kickoff=excluded.kickoff,target_team=excluded.target_team,target_side=excluded.target_side,rating=excluded.rating,color=excluded.color,data_json=excluded.data_json,updated_at=datetime('now')");
   db.transaction(function(list){list.forEach(function(r){q.run(r.key,r.sourceId||null,r.sport,r.home,r.away,r.competition,r.country,r.kickoff,r.targetTeam||null,r.targetSide||null,r.rating==null?null:r.rating,r.color||"gray",JSON.stringify(r));});})(rows);
+  tlmSocialExport(rows);
 }
 function tlmOpenRouterGet(path){
   return new Promise(function(resolve){
@@ -6110,6 +6147,7 @@ async function tlmScannerResults(){
       if(["FT","AET","PEN"].indexOf(st)<0)continue;
       const data=JSON.parse(tr.data_json),sh=g.goals&&g.goals.home,sa=g.goals&&g.goals.away;
       if(sh==null||sa==null)continue;
+      tlmSocialExport([],g);
       const outcome=data.targetSide==="home"?(Number(sh)>=1?"win":"loss"):(Number(sa)>=1?"win":"loss");
       const payload=Object.assign({},data,{outcome:outcome,scoreHome:sh,scoreAway:sa});
       tlmScannerTargets().forEach(function(dest){clientTelegramPublisher.enqueue("scanner_result",payload,dest,tr.scanner_key+":"+sh+"-"+sa);});
@@ -12480,6 +12518,7 @@ async function resolveGoal05SignalResults() {
       );
       const fixture=(raw?.response||[]).find(f=>String(f?.fixture?.id||"")===String(row.fixture_id));
       const short=String(fixture?.fixture?.status?.short||"").toUpperCase();
+      tlmSocialExport([],fixture);
       if(!["FT","AET","PEN"].includes(short)) continue;
       const homeGoals=goal05Number(fixture?.goals?.home),awayGoals=goal05Number(fixture?.goals?.away);
       if(homeGoals===null||awayGoals===null) continue;

@@ -1,0 +1,29 @@
+[Unit]
+Description=TousLesMatchs factual social publication (no sports decisions)
+After=network-online.target docker.service
+Wants=network-online.target
+ConditionPathExists=/opt/touslesmatchs/data/social-publication.enabled
+ConditionPathExists=/opt/touslesmatchs/data/social-source.json
+
+[Service]
+Type=oneshot
+User=tlm-social
+Group=tlm-social
+WorkingDirectory=/opt/touslesmatchs
+# The service manager injects existing canonical runtime variables. No dotenv parser.
+EnvironmentFile=/opt/touslesmatchs/.env
+# Optional server API bindings, provisioned by the operator, never by this package.
+EnvironmentFile=-/etc/tlm-social-runtime.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=TZ=Europe/Paris
+ExecStart=/usr/bin/python3 /opt/touslesmatchs/scripts/social/pipeline.py once --publish --config /opt/touslesmatchs/config/social-publication.json
+TimeoutStartSec=900
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/touslesmatchs/data/social-publication /opt/touslesmatchs/public/social /opt/touslesmatchs/public/media/social
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+StandardOutput=journal
+StandardError=journal

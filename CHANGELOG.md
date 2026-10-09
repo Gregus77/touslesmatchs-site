@@ -512,3 +512,20 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Shadow vainqueur multisport séparé du registre officiel, sous quotas existants, sans diffusion client.
 - Supervision en lecture seule et rapport propriétaire ; télécommande préparée mais inactive sans utilisateur explicitement autorisé.
 - Tests hors réseau Football, Jev, budgets, Shadow, résolution et contrôle d’accès.
+
+## 2026-10-09 — [Codex] Publication sociale serveur préparée, non installée
+
+- Export factuel atomique branché sur scanner/résolution existants, sans nouvel appel
+  sportif et sans mutation des règles, quotas ou KPI. Activation par marqueur local.
+- Worker Python/SQLite séparé : cartes AVANT/APRÈS FR/EN, observations distinctes des
+  signaux prouvés, fond OpenAI configurable et budget/coupe-circuit persistants,
+  sendPhoto Telegram, adaptateur bilans Metricool, reçus transactionnels et arrêt
+  des retries incertains. Reçus FR du 9 octobre importables sans doublon.
+- Source et pages SEO FR/EN publiées atomiquement ; liens footer accueil/PWA ciblés,
+  version SW renouvelée. Service/timer Paris et procédure migration/rollback fournis.
+- Tests locaux réussis : suites sociales Python, export JS et cinq suites Goal05 ;
+  HTTP local testé. Test React global bloqué par dépendance react-scripts absente.
+- Aucune diffusion, aucun appel image payant, aucun push/déploiement. Metricool
+  prématch reste bloqué faute de garantie d'expiration avant kickoff ; accès API
+  serveur, modèle/budget image, droits, autres drapeaux et preuves VPS à compléter.
+  Audit des plafonds et conflits commerciaux historiques : `docs/social/README.md`.

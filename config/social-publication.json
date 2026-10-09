@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "sourceFile": "/opt/touslesmatchs/data/social-source.json",
+  "officialDb": "/opt/touslesmatchs/data/tlm.db",
+  "stateDir": "/opt/touslesmatchs/data/social-publication",
+  "webroot": "/opt/touslesmatchs/public",
+  "imageModel": null,
+  "imageReservationCents": 0,
+  "imageDailyCapCents": 0,
+  "metricoolEnabled": false,
+  "metricoolVerifiedNetworks": {"instagram": false, "facebook": false},
+  "instagramBioVerified": false,
+  "countryCodes": {"France": "FR", "Denmark": "DK", "Danemark": "DK", "Kuwait": "KW", "Koweït": "KW"}
+}

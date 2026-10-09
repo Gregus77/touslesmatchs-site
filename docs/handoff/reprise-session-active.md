@@ -36,3 +36,32 @@
 - Pas de secret ou de donnée personnelle stockés dans le checkpoint.
 
 **Prochaine action automatique lors d'une reprise :** vérifier les preuves des prochaines livraisons officielles Goal05 et le statut Stripe LIVE, puis avancer uniquement sur les points ouverts.
+
+---
+
+## Checkpoint mission sociale — 09/10/2026, worktree uniquement
+
+- **Objectif** : préparer une pipeline serveur de surveillance/bilan, ordinateur
+  propriétaire éteint, sans modifier les décisions sportives.
+- **Branche / PR** : `codex/telegram-owner-codex-owner-social-autonomy-20261009-20261009-021821` ;
+  base locale `a51fa3bdebab0dd77a90d46e6e15d399fd3fb2c3`. Aucune PR/push/installation
+  effectuée ici ; comparaison GitHub/VPS laissée au runner/opérateur, pas prétendue.
+- **Dernière étape** : export additionnel API, worker/test/config/systemd, liens
+  visibles site/PWA et documentation opérateur préparés. Instructions persistées
+  ≠ automatisation installée. Voir `docs/social/README.md` pour le périmètre exact.
+- **Preuves** : tests Python hors réseau avec quatre PNG TEST et serveur HTTP local ;
+  test JS de l'export réel ; cinq scripts Goal05 réussis. Aucun reçu nouveau réel.
+  Reçus FR connus du 09/10 fournis par Greg importés idempotemment seulement au
+  lancement production. EN non envoyée, aucune validation d'autres jours.
+- **Prochaine action** : appliquer le diff ciblé après comparaison aux travaux
+  concurrents, installer dépendances/permissions, activer l'export seul, vérifier
+  les données naturelles et l'image privée, puis activer la diffusion par opérateur.
+  Pré-match Metricool bloqué ; aucune garantie d'expiration documentée.
+- **Tests / limites** : `python3 -m unittest discover -s tests/social -v`,
+  `node scripts/test_social_source_20261009.js`, quatre suites produit obligatoires
+  et `test_goal05_telegram_odds_20261008.js`. Test React global non exécutable :
+  `react-scripts` absent. Unités systemd validées syntaxiquement, avertissements
+  étrangers au dépôt signalés dans README. HTTP VPS / Docker non vérifiés.
+- **Sécurité** : aucun secret ouvert/affiché/modifié, aucun paiement, aucune sortie
+  client de test, aucune modification de stratégie, aucun push/merge/déploiement.
+- **Horodatage** : 2026-10-09 (date de mission, non preuve d'activation).
