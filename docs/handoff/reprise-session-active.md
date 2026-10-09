@@ -65,3 +65,7 @@
 - **Sécurité** : aucun secret ouvert/affiché/modifié, aucun paiement, aucune sortie
   client de test, aucune modification de stratégie, aucun push/merge/déploiement.
 - **Horodatage** : 2026-10-09 (date de mission, non preuve d'activation).
+
+
+## Préférence visuelle confirmée le 9 octobre
+La génération OpenAI doit rester **prioritaire et obligatoire** pour les affiches sociales. Modèle visé : `gpt-image-2.5-flare`, qualité medium. Aucun visuel de secours simpliste ne doit être publié. Clé API VPS actuellement invalide (401), budget images à 0 ; publication externe désactivée en attendant une configuration vérifiée. Ne pas transformer l'abonnement ChatGPT en prétendu crédit API. PR #173, tests GitHub à valider, pas de déploiement confirmé de ces changements.
