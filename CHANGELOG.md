@@ -512,3 +512,7 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Shadow vainqueur multisport séparé du registre officiel, sous quotas existants, sans diffusion client.
 - Supervision en lecture seule et rapport propriétaire ; télécommande préparée mais inactive sans utilisateur explicitement autorisé.
 - Tests hors réseau Football, Jev, budgets, Shadow, résolution et contrôle d’accès.
+
+## 2026-10-09 — Visuel Premium et diffusion Metricool
+- Visuel original imagegen pour Instagram/Facebook avec tarif Premium Stripe LIVE verifie 14,90 EUR/mois et lien public checkout teste (303).
+- Publication Metricool 391671338 programmee pour 03h32 Paris ; statut final a verifier. YouTube non connecte, TikTok en attente eSIM ; @parrainagebanque exclu.

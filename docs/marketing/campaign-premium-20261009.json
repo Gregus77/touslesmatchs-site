@@ -1,0 +1,24 @@
+{
+  "created": "2026-10-09",
+  "brandId": "7314226",
+  "caption": "⚽ LE FOOTBALL. LES FAITS. L’IA.\n\nDécouvrez TousLesMatchs : une méthode d’analyse +0,5 but de l’équipe ciblée, un vote de 5 IA et un historique public qui conserve les gains comme les pertes.\n\nPas de sélection forcée : un signal officiel nécessite les critères live, une cote réelle fraîche ≥ 1,60 et au moins 4 IA sur 5.\n\n⭐ Premium : 14,90 €/mois.\n👉 Abonnement — paiement sécurisé Stripe :\nhttps://www.touslesmatchs.com/api/premium-checkout?lang=fr\n\n📊 Découvrez le site et l’historique : https://www.touslesmatchs.com\nSur Instagram, copiez le lien Premium dans votre navigateur.\n\n18+ · Aucun gain garanti. Jouer comporte des risques : endettement, isolement, dépendance. Besoin d’aide : joueurs-info-service.fr — 09 74 75 13 13.\n\n#TousLesMatchs #Football #AnalyseSportive #IntelligenceArtificielle",
+  "image": "https://www.touslesmatchs.com/media/social/tlm-premium-20261009.png",
+  "metricoolPostId": 391671338,
+  "uuid": "437002276994237473",
+  "plannerUrl": "https://app.metricool.com/planner/calendar?blogId=7314226&openWithPostUuid=437002276994237473",
+  "scheduledAt": "2026-10-09T03:32:00+02:00",
+  "state": "PENDING",
+  "channels": [
+    "facebook",
+    "instagram"
+  ],
+  "excluded": "@parrainagebanque",
+  "stripe": {
+    "verifiedLive": true,
+    "monthlyEur": 14.9,
+    "checkoutHttp": 303,
+    "url": "https://www.touslesmatchs.com/api/premium-checkout?lang=fr"
+  },
+  "youtube": "not connected",
+  "tiktok": "awaiting eSIM"
+}
