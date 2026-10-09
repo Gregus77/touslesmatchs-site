@@ -1,5 +1,14 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-09 — Compteur privé de trafic Facebook / Instagram / YouTube / TikTok
+
+- Réutilise l'analytics interne existant (pixel /api/t et table page_views) pour attribuer les chargements de pages aux réseaux par UTM ou domaine référent, sans nouveau stockage d'IP ni cookie.
+- Ajoute des estimations de visiteurs distincts et le total des pages vues sur aujourd'hui / 7 jours / 30 jours (heure de Paris), plus les principales campagnes dans le tableau de bord administrateur.
+- Ne confond pas les clics /go/tiktok vers Telegram avec les visiteurs du site ; chiffres partiels si UTM et référents absents. Aucun résultat inventé.
+- Étend le pixel existant à app.html et performances.html, avec uniquement le domaine d'origine comme référent pour ces nouvelles pages.
+- Ajoute les quatre URL UTM des campagnes à utiliser dans les prochaines publications, tests d'attribution et module copié dans l'image API Docker.
+
+
 ## 2026-10-08 — Telegram Goal05 : cotes, partenaires et reprise de connexion
 
 - Ajout de la cote réelle horodatée dans les notifications +0,5 Gratuites et Premium (FR/RU), des alertes sous 1,60 ou lorsque la cote est absente/périmée, et d'un rappel qu'un combiné de deux rencontres est plus risqué.
