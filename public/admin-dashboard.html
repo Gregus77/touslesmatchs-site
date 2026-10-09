@@ -189,6 +189,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
+  <!-- Sources socials: private first-party counters (visitors are estimates, not people). -->
+  <div class="grid" id="tlm-social-traffic-section">
+    <div class="card">
+      <h2>Réseaux sociaux → Visites du site</h2>
+      <div id="socialTrafficContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
   <!-- ROW 3: Pronostics -->
   <div class="grid">
     <div class="card">
@@ -410,6 +418,39 @@ function renderDashboard(d) {
     ${a.topSources?.length ? `<div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Top sources :</div>
     ${a.topSources.slice(0, 5).map(([s, c]) => `<div class="stat-row"><span class="stat-label">${esc(s)}</span><span class="stat-value">${c}</span></div>`).join("")}` : ""}
   `;
+
+  // Sources de trafic : statistiques depuis les pages reellement chargees.
+  // Pas de multiplication des comptes pour une même visite estimée.
+  const social=d.socialTraffic||{};
+  const socialBox=document.getElementById('socialTrafficContent');
+  if(social.error||!social.channels){
+    socialBox.textContent=social.error||'Données sociales indisponibles';
+  } else {
+    const sum=social.periods||{};
+    const periodCard=(key,label)=>'<div class="big-item"><div class="big-number green">'+Number(sum[key]?.estimatedVisitors||0)
+      +'</div><div class="big-label">'+label+' · visiteurs estimés</div><div class="big-label">'
+      +Number(sum[key]?.pageViews||0)+' pages vues</div></div>';
+    const names={facebook:'Facebook',instagram:'Instagram',youtube:'YouTube',tiktok:'TikTok'};
+    const rows=Object.keys(names).map(k=>{
+      const t=social.channels[k]||{}, a=t.today||{}, w=t.last7||{}, m=t.last30||{};
+      return '<div class="stat-row"><span class="stat-label">'+names[k]+'</span><span class="stat-value">'
+        +Number(a.estimatedVisitors||0)+' auj. · '+Number(w.estimatedVisitors||0)+' / 7j · '+Number(m.estimatedVisitors||0)+' / 30j</span></div>';
+    }).join('');
+    const campaigns=(social.campaigns||[]).slice(0,5).map(c=>'<div class="stat-row"><span class="stat-label">'
+      +esc(String(c.source||''))+' / '+esc(String(c.campaign||''))+'</span><span class="stat-value">'
+      +Number(c.estimatedVisitors||0)+' estimés · '+Number(c.pageViews||0)+' vues</span></div>').join('');
+    const buildLink=network=>'https://www.touslesmatchs.com/?utm_source='+network
+      +'&utm_medium=social&utm_campaign=tlm_organic';
+    socialBox.innerHTML='<div class="big-row">'+periodCard('today',"Aujourd’hui")+periodCard('last7','7 jours')
+      +periodCard('last30','30 jours')+'</div>'+rows
+      +(campaigns?'<div style="margin-top:14px;font-weight:700">Campagnes suivies</div>'+campaigns:'')
+      +'<div style="font-size:.77rem;color:var(--muted);margin-top:12px">'
+      +'Visiteurs estimés = adresses IP pseudonymisées distinctes (une adresse peut servir à plusieurs personnes). '
+      +'Les pages vues ne sont pas des visiteurs. Liens non marqués ou navigateurs masquant la provenance : trafic parfois non attribuable.</div>'
+      +'<div style="font-size:.78rem;color:var(--muted);margin-top:8px">Liens à utiliser dans les prochaines publications : '
+      +Object.keys(names).map(k=>'<a style="margin-right:8px" target="_blank" rel="noopener" href="'
+        +buildLink(k)+'">'+names[k]+'</a>').join('')+'</div>';
+  }
 
   // Pronostics — Signal Fort
   const sf = d.pronostics.signalFort;
