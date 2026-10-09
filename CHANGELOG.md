@@ -526,3 +526,6 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Shadow vainqueur multisport séparé du registre officiel, sous quotas existants, sans diffusion client.
 - Supervision en lecture seule et rapport propriétaire ; télécommande préparée mais inactive sans utilisateur explicitement autorisé.
 - Tests hors réseau Football, Jev, budgets, Shadow, résolution et contrôle d’accès.
+
+## 2026-10-09 — Audit Codex Hermes
+- Rapport phase21 branche sur la base API ; confirmation Telegram avec message_id ; hash enregistre apres livraison confirmee.
