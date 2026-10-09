@@ -189,6 +189,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
+  <!-- Source mesurée, sans exposition publique des statistiques commerciales -->
+  <div class="grid">
+    <div class="card" style="grid-column:1/-1">
+      <h2>Acquisition — visiteurs venus des réseaux sociaux</h2>
+      <div id="socialTrafficContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
   <!-- ROW 3: Pronostics -->
   <div class="grid">
     <div class="card">
@@ -411,6 +419,8 @@ function renderDashboard(d) {
     ${a.topSources.slice(0, 5).map(([s, c]) => `<div class="stat-row"><span class="stat-label">${esc(s)}</span><span class="stat-value">${c}</span></div>`).join("")}` : ""}
   `;
 
+  renderSocialTraffic(a.socialTraffic);
+
   // Pronostics — Signal Fort
   const sf = d.pronostics.signalFort;
   document.getElementById("pronoContent").innerHTML = `
@@ -506,6 +516,43 @@ function renderDashboard(d) {
 function formatSvcName(key) {
   const names = { api_sports: "API-Sports", football_data: "Football-Data", stripe: "Stripe", telegram: "Telegram", brevo: "Brevo", groq: "Groq", deepseek: "DeepSeek" };
   return names[key] || key;
+}
+
+function renderSocialTraffic(data) {
+  const el=document.getElementById('socialTrafficContent');
+  if(!el)return;
+  if(!data || data.error || !Array.isArray(data.networks)) {
+    el.textContent='Statistiques sociales indisponibles. Vérifier la collecte de visites et le serveur.';
+    return;
+  }
+  const names={facebook:'Facebook',instagram:'Instagram',youtube:'YouTube',tiktok:'TikTok',telegram:'Telegram'};
+  const number=v=>Number(v||0).toLocaleString('fr-FR');
+  const rows=data.networks.map(n=>'<tr>'
+    +'<td style="padding:9px 8px;border-bottom:1px solid rgba(255,255,255,.08)">'+esc(names[n.network]||n.network)+'</td>'
+    +'<td style="padding:9px;text-align:right">'+number(n.eventsToday)+'</td>'
+    +'<td style="padding:9px;text-align:right">'+number(n.events7d)+'</td>'
+    +'<td style="padding:9px;text-align:right">'+number(n.events30d)+'</td>'
+    +'<td style="padding:9px;text-align:right">'+number(n.visitors7dEstimated)+'</td></tr>').join('');
+  el.innerHTML='<div class="big-row">'
+    +'<div class="big-item"><div class="big-number green">'+number(data.total?.arrivalsToday)+'</div><div class="big-label">Visites sociales aujourd’hui</div></div>'
+    +'<div class="big-item"><div class="big-number">'+number(data.total?.arrivals7d)+'</div><div class="big-label">7 derniers jours</div></div>'
+    +'<div class="big-item"><div class="big-number">'+number(data.total?.arrivals30d)+'</div><div class="big-label">30 derniers jours</div></div>'
+    +'</div><div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse;font-size:.85rem;white-space:nowrap">'
+    +'<thead><tr><th style="text-align:left;padding:9px">Réseau</th><th>Aujourd’hui</th><th>7 jours</th><th>30 jours</th><th>Visiteurs estimés (7j)</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +'<p style="font-size:.75rem;color:var(--muted);margin-top:12px">'+esc(data.note||'Mesure indicative, non exhaustive.')+'</p>'
+    +'<div style="font-size:.83rem;margin-top:12px;font-weight:700">Liens de suivi à utiliser dans chaque réseau :</div>'
+    +'<div id="tlm-social-links" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">'
+    +Object.keys(names).map(network=>'<button type="button" data-social-copy="'+network+'" style="border:1px solid #65718a;border-radius:9px;background:transparent;color:inherit;padding:8px 11px;cursor:pointer">Copier lien '+names[network]+'</button>').join('')
+    +'</div><p style="font-size:.75rem;color:var(--muted);margin-top:10px">Les liens identifient les arrivées sur le site, pas les vues ni les impressions des publications.</p>';
+  el.querySelectorAll('[data-social-copy]').forEach(btn=>btn.addEventListener('click',async()=>{
+    const network=btn.getAttribute('data-social-copy');
+    if(!Object.prototype.hasOwnProperty.call(names,network))return;
+    const url='https://www.touslesmatchs.com/?utm_source='+encodeURIComponent(network)
+      +'&utm_medium=organic_social&utm_campaign=tlm_social';
+    try { await navigator.clipboard.writeText(url);btn.textContent='Lien copié : '+names[network]; }
+    catch (_) { window.prompt('Copiez ce lien',url); }
+  }));
 }
 
 function esc(s) {

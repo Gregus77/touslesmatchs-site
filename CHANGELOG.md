@@ -1,5 +1,13 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-09 — Compteur d'acquisition des réseaux sociaux
+- Réutilise la table de visites et les balises existantes pour distinguer les arrivées estimées depuis Facebook, Instagram, YouTube, TikTok et Telegram.
+- Ajoute au tableau de bord administrateur des comptes sur aujourd'hui, 7 jours et 30 jours, par source, et des liens UTM à copier.
+- Active la balise existante sur l'application et les performances, sans doublonner Accueil/Live IA.
+- La mesure approximative est explicitement identifiée ; aucun chiffre n'est inventé, aucun cookie ou identifiant supplémentaire n'est créé et aucun rapport brut n'est rendu public.
+- Ajoute des tests d'attribution, de dédoublonnage, d'authentification et de confidentialité.
+
+
 ## 2026-10-08 — Telegram Goal05 : cotes, partenaires et reprise de connexion
 
 - Ajout de la cote réelle horodatée dans les notifications +0,5 Gratuites et Premium (FR/RU), des alertes sous 1,60 ou lorsque la cote est absente/périmée, et d'un rappel qu'un combiné de deux rencontres est plus risqué.
