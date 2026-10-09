@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-09",
+  "type": "pre_match_watchlist",
+  "played": false,
+  "official": false,
+  "brandId": 7314226,
+  "metricoolPostId": 391683938,
+  "uuid": "-2877566937453147405",
+  "caption": "⚽ MATCHS À SURVEILLER — VENDREDI 9 OCTOBRE 2026\nHeures de Paris · Sélections de surveillance avant match\n\n🇩🇰 19h00 — FC Nordsjælland–Odense\nClassements : 4e contre 9e, sur 12 équipes.\nÉquipe ciblée : Nordsjælland — marque au moins un but (+0,5 but équipe).\n\n🇰🇼 19h05 — Kazma–Al Arabi\nClassements : 1er contre 10e, sur 12 équipes.\nÉquipe ciblée : Kazma — marque au moins un but (+0,5 but équipe).\n\n⏳ NE JOUEZ PAS À L’AVANCE : ATTENDEZ UNE COTE LIVE RÉELLE ≥ 1,60.\n1,60 est le seuil à attendre, pas une cote actuellement annoncée.\n\nLe feu vert nécessite aussi : équipe ciblée encore à 0 but, entre la 30e et la 85e minute, et signal officiel validé avec au moins 4 IA sur 5. La cote seule ne suffit pas. Sans validation, on passe.\n\nCes deux affiches sont à surveiller, pas des signaux déjà validés. Aucun but ni gain n’est garanti.\n\n📊 Méthode et historique : https://www.touslesmatchs.com\n⭐ Premium 14,90 €/mois — paiement Stripe : https://www.touslesmatchs.com/api/premium-checkout?lang=fr\nSur Instagram, copiez le lien dans votre navigateur.\n\n18+ · Jouer comporte des risques : endettement, isolement, dépendance. joueurs-info-service.fr — 09 74 75 13 13.\n\n#TousLesMatchs #Football #AnalyseSportive",
+  "image": "public/media/social/tlm-watchlist-20261009.png",
+  "generation": {
+    "tool": "built-in image_gen",
+    "prompt": "Create a professional square French social media sports watchlist graphic for TousLesMatchs, original cinematic dark blue football stadium atmosphere with a subtle ball in a corner, cyan and violet accents, crisp mobile-readable typography, two spacious match cards. This is a PRE-MATCH WATCHLIST, not a validated betting signal. Render only these exact French texts, carefully spelling names and accents: brand 'TOUSLESMATCHS'; title 'MATCHS À SURVEILLER'; date 'VENDREDI 9 OCTOBRE 2026'; small subtitle 'Heures de Paris • Top 5 contre Bottom 5'; first card country 'DANEMARK', time '19H00', fixture 'NORDSJÆLLAND — ODENSE', target 'Équipe ciblée : Nordsjælland', market '+0,5 but équipe'; second card country 'KOWEÏT', time '19H05', fixture 'KAZMA — AL ARABI', target 'Équipe ciblée : Kazma', market '+0,5 but équipe'; strong bottom instructional block 'ATTENDRE UNE COTE LIVE ≥ 1,60'; directly below prominently 'Surveillance uniquement • Attendre le signal validé'; small line 'Équipe encore à 0 but • 30–85 minutes • 4 IA sur 5'; footer 'TOUSLESMATCHS.COM'; legal footer '18+ • Aucun gain garanti • joueurs-info-service.fr'. Absolutely no current odds, no winrate, no certainty claims, no green check saying validated, no fabricated match scores, no club crests or logos, no faces, no tiny illegible text. All text within wide safe margins. Emphasize the 1,60 number as a THRESHOLD TO WAIT FOR, not a live available price. The images depict an atmospheric real football pitch, not a technical report."
+  },
+  "threshold": {
+    "liveOddMin": 1.6,
+    "observedLiveOdd": null,
+    "observedVotes": null,
+    "requiredVotes": 4,
+    "minuteFrom": 30,
+    "minuteTo": 85,
+    "targetGoalsRequired": 0
+  },
+  "fixtures": [
+    {
+      "id": 1549031,
+      "home": "FC Nordsjaelland",
+      "away": "Odense",
+      "target": "FC Nordsjaelland",
+      "homeRank": 4,
+      "awayRank": 9,
+      "tableSize": 12,
+      "kickoff": "2026-10-09T17:00:00Z",
+      "source": "API-Sports",
+      "verifiedAt": "2026-10-09T01:45:05Z"
+    },
+    {
+      "id": 1622650,
+      "home": "Kazma",
+      "away": "Al Arabi",
+      "target": "Kazma",
+      "homeRank": 1,
+      "awayRank": 10,
+      "tableSize": 12,
+      "kickoff": "2026-10-09T17:05:00Z",
+      "source": "API-Sports",
+      "verifiedAt": "2026-10-09T01:45:05Z"
+    }
+  ],
+  "status": "PENDING",
+  "excludedAccount": "@parrainagebanque",
+  "youtube": "not connected",
+  "tiktok": "awaiting eSIM"
+}

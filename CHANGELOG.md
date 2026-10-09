@@ -518,3 +518,8 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Publication Metricool 391671338 programmee pour 03h32 Paris ; statut final a verifier. YouTube non connecte, TikTok en attente eSIM ; @parrainagebanque exclu.
 
 - Livraison confirmee Metricool le 9 octobre : Facebook 122103518433500089 et Instagram DeQVhfIHxgD, statuts PUBLISHED et URLs publiques conservees dans le dossier campagne.
+
+## 2026-10-09 — Surveillance prematch publique
+- Decision utilisateur : annoncer les affiches Top5/Bottom5 avant match sur les reseaux, puis attendre une cote live >=1,60 et la validation officielle avant de jouer. Surveillance et signal jouable restent separes.
+- Nordsjaelland/Odense et Kazma/Al Arabi reverifies via fixtures + standings API-Sports a 03h45 Paris ; horaires 19h00/19h05, classements 4e/9e et 1er/10e sur 12.
+- Publication Metricool 391683938 ; image et texte archives sans vote ni cote invente, aucune entree dans les statistiques de pronostics joues.
