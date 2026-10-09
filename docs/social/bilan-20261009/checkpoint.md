@@ -1,0 +1,1 @@
+API-Sports vérifié 19:21 UTC. Aucun registre Goal05 pour les deux fixtures. Metricool FR392333140 et EN392333293 programmés 21:32 Paris, reçus à vérifier. Telegram en cours. YouTube non publié à ce checkpoint ; TikTok/Snapchat accès non confirmé. Les dépenses API image restent désactivées.
