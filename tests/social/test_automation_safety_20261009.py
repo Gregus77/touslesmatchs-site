@@ -26,7 +26,8 @@ class AutomatedPublicationGuards(unittest.TestCase):
     def test_deterministic_mode_skips_openai(self):
         f={'fixtureId':'99993','phase':'before','facts':{'fixtureId':'99993'}}
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertIsNone(m.background(None,f,{'imageMode':'deterministic'},pathlib.Path(tmp)))
+            with self.assertRaises(ValueError):
+                m.background(None,f,{'imageMode':'deterministic'},pathlib.Path(tmp))
 
     def test_public_cards_contain_facts_not_tips(self):
         facts=dict(fixtureId='99993',home='Alpha',away='Beta',targetTeam='Alpha',
@@ -42,8 +43,10 @@ class AutomatedPublicationGuards(unittest.TestCase):
 
     def test_live_configuration_does_not_push_automatically_without_approval(self):
         cfg=json.loads((ROOT/'config/social-publication.json').read_text())
-        self.assertEqual(cfg['imageMode'],'deterministic')
+        self.assertEqual(cfg['imageMode'],'openai_required')
         self.assertEqual(cfg['publicationMode'],'facts_only')
+        self.assertEqual(cfg['imageModel'],'gpt-image-2.5-flare')
+        self.assertEqual(cfg['imageDailyCapCents'],0)
         self.assertIs(cfg['telegramEnabled'],False)
         self.assertIs(cfg['metricoolEnabled'],False)
         self.assertTrue(cfg['enabled'])
