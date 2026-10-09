@@ -89,7 +89,7 @@ def after(f,result,before,now):
     goals=result[f['targetSide']]
     return {**f,'result':result,'classification':'observation_positive' if goals>=1 else 'observation_negative'}
 
-def content(f,phase,lang,test=False):
+def content(f,phase,lang,test=False,facts_only=False):
     if phase not in ['before','after'] or lang not in ['fr','en']:raise ValueError('content_type')
     fr=lang=='fr';flag=''.join(chr(127397+ord(c)) for c in f['countryCode'])
     at=datetime.fromtimestamp(stamp(f['kickoff']),PARIS).strftime('%d/%m/%Y %H:%M')
@@ -97,6 +97,16 @@ def content(f,phase,lang,test=False):
     label=('Observation positive' if fr else 'Positive observation') if f.get('classification')=='observation_positive' else ('Observation négative' if fr else 'Negative observation')
     if f.get('classification') in ['WIN','LOSS']:label=f['classification']+' · '+('signal officiel diffusé' if fr else 'delivered official signal')
     country={'DK':('Danemark','Denmark'),'KW':('Koweït','Kuwait'),'FR':('France','France')}.get(f['countryCode'],(f['country'],f['country']))[0 if fr else 1]
+    if facts_only:
+        info='Informations sportives vérifiées · aucun conseil de mise' if fr else 'Verified sports information · no wagering advice'
+        lines=[('AVANT-MATCH' if fr else 'MATCH PREVIEW') if phase=='before' else ('RÉSULTAT' if fr else 'FINAL SCORE'),
+               f['home']+' — '+f['away'],flag+' '+country+' · '+f['competition'],at+' Paris',
+               ('Classements : ' if fr else 'League positions: ')+str(f['targetRank'])+' / '+str(f['total'])+' — '+str(f['opponentRank'])+' / '+str(f['total'])]
+        if phase=='after':lines.append(('Score final : ' if fr else 'Full time: ')+str(f['result']['home'])+' — '+str(f['result']['away']))
+        lines.extend([info,'TousLesMatchs · 18+ · Aucun résultat garanti' if fr else 'TousLesMatchs · 18+ · No outcome guaranteed'])
+        if test:lines.insert(0,'TEST NE PAS DIFFUSER')
+        return {'fixtureId':f['fixtureId'],'phase':phase,'lang':lang,'facts':f,'test':test,'layout':'tlm-mobile-v1',
+                'lines':lines,'caption':'\n\n'.join(lines),'cta':None}
     lines=[title,f['targetTeam'],f['home']+' — '+f['away'],flag+' '+country+' · '+f['competition'],at+' Paris',
            ('Cible : +0,5 but — au moins 1 but' if fr else 'Target: +0.5 team goals — at least 1 goal'),
            f"Top {f['targetRank']} / {f['total']} · {f['opponentRank']} / {f['total']}"]
@@ -289,7 +299,7 @@ def telegram(c,png,target,buttons):
     parts.append(f'--{boundary}--\r\n'.encode())
     return request('https://api.telegram.org/bot'+token+'/sendPhoto',b''.join(parts),{'Content-Type':'multipart/form-data; boundary='+boundary},30)
 
-def site(store,webroot,test=False):
+def site(store,webroot,test=False,facts_only=False):
     cards=[json.loads(r[0]) for r in store.db.execute('SELECT body FROM cards ORDER BY created DESC')]
     visible_before=[]
     if not test:
@@ -302,6 +312,9 @@ def site(store,webroot,test=False):
             if not published and time.time()+30>=stamp(c['facts']['kickoff']):continue
             if c['phase']=='before':visible_before.append(before_key)
             cards.append(c)
+    if facts_only:
+        cards=[{**content(c['facts'],c['phase'],c['lang'],c['test'],facts_only=True),
+                **({'imageUrl':c['imageUrl']} if c.get('imageUrl') else {})} for c in cards]
     root=Path(webroot)/'social';root.mkdir(parents=True,exist_ok=True)
     # One complete version contains source JSON and both languages; pointer replacement is atomic.
     version='v-'+str(time.time_ns());out=root/version;out.mkdir()
@@ -315,7 +328,7 @@ def site(store,webroot,test=False):
             visual=''; asset=c.get('imageUrl','')
             if asset.startswith('/media/social/') and (Path(webroot)/asset.lstrip('/')).is_file():visual='<img style="max-width:100%;height:auto;border-radius:12px" src="'+html.escape(asset,quote=True)+'" alt="'+html.escape(c['facts']['home']+' — '+c['facts']['away'],quote=True)+'">'
             articles.append(archive+'<article id="'+c['fixtureId']+'-'+c['phase']+'"><h2>'+html.escape(c['facts']['targetTeam'])+'</h2>'+visual+''.join('<p>'+html.escape(x)+'</p>' for x in c['lines'])+'</article>')
-        page='<!doctype html><html lang="'+lang+'"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+' | TousLesMatchs</title><meta name="description" content="'+title+' — observations datées, séparées des résultats officiels."><link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/social/current/fr.html"><link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/social/current/en.html"><style>body{font:18px/1.6 system-ui;background:#0b1426;color:#f5f7fa;max-width:720px;margin:auto;padding:20px}article{border:1px solid #506080;border-radius:16px;padding:20px;margin:24px 0}a{color:#ffdc80}</style><nav><a href="fr.html">Français</a> · <a href="en.html">English</a> · <a href="/app">App</a></nav><h1>'+title+'</h1><p>'+iso()+'</p>'+(''.join(articles) or '<p>Aucune publication vérifiée / No verified publication.</p>')+'<a href="'+CTA+'">Premium · 14,90 EUR/mois</a><p>18+ · joueurs-info-service.fr</p></html>'
+        page='<!doctype html><html lang="'+lang+'"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+' | TousLesMatchs</title><meta name="description" content="'+title+' — observations datées, séparées des résultats officiels."><link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/social/current/fr.html"><link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/social/current/en.html"><style>body{font:18px/1.6 system-ui;background:#0b1426;color:#f5f7fa;max-width:720px;margin:auto;padding:20px}article{border:1px solid #506080;border-radius:16px;padding:20px;margin:24px 0}a{color:#ffdc80}</style><nav><a href="fr.html">Français</a> · <a href="en.html">English</a> · <a href="/app">App</a></nav><h1>'+title+'</h1><p>'+iso()+'</p>'+(''.join(articles) or '<p>Aucune publication vérifiée / No verified publication.</p>')+('' if facts_only else '<a href="'+CTA+'">Premium · 14,90 EUR/mois</a>')+'<p>18+ · joueurs-info-service.fr</p></html>'
         atomic(out/(lang+'.html'),page)
     tmp=root/('.current-'+version);tmp.symlink_to(version,target_is_directory=True);os.replace(tmp,root/'current')
     for key in visible_before:store.db.execute('INSERT OR IGNORE INTO site_history VALUES(?,?)',(key,time.time()))
@@ -407,7 +420,7 @@ def process(source,store,cfg,output,now,dry_run=True,offline=False,review=True):
                     report['blocked'].append({'fixtureId':fid,'stage':'missing_before_translation','lang':lang});continue
                 key=f'{fid}:{phase}:{lang}'
                 old=store.db.execute('SELECT body FROM cards WHERE key=?',(key,)).fetchone()
-                c=json.loads(old[0]) if old else content(f,phase,lang,dry_run)
+                c=json.loads(old[0]) if old else content(f,phase,lang,dry_run,cfg.get('publicationMode')=='facts_only')
                 # A frozen pre-match record cannot be rewritten later using new facts.
                 if not old:store.save_card(c,now)
                 cards.append(c)
@@ -444,7 +457,7 @@ def process(source,store,cfg,output,now,dry_run=True,offline=False,review=True):
                 atomic(media,png.read_bytes())
                 state=deliver(store,c,dest,lambda:metricool(c,dest,'https://www.touslesmatchs.com/media/social/'+png.name,cfg))
                 report['deliveries'].append({'fixtureId':c['fixtureId'],'lang':c['lang'],'destination':dest,'state':state})
-    site(store,output/'web' if dry_run else cfg['webroot'],test=dry_run)
+    site(store,output/'web' if dry_run else cfg['webroot'],test=dry_run,facts_only=cfg.get('publicationMode')=='facts_only')
     report['attention']=[dict(r) for r in store.db.execute("SELECT key,state FROM delivery WHERE state IN ('uncertain','pending')")]
     atomic(output/'report.json',json.dumps(report,ensure_ascii=False,indent=2))
     return report
