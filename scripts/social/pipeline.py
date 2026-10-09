@@ -222,6 +222,8 @@ def request(url,body=None,headers=None,timeout=90):
     except urllib.error.HTTPError as e:raise HttpFailure(e.code) from None
 
 def background(store,c,cfg,folder):
+    # Publication requires AI-generated artwork. The neutral design is limited to offline testing.
+    if cfg.get('imageMode')!='openai_required':raise ValueError('ai_image_required_for_publication')
     key=c['fixtureId']+':'+c['phase'];tag=hashlib.sha256(key.encode()).hexdigest()[:24]
     path=folder/(tag+'-openai.png')
     if path.exists():return path
@@ -229,10 +231,15 @@ def background(store,c,cfg,folder):
     if not isinstance(model,str) or not model or type(cents) is not int or type(cap) is not int or not os.environ.get('OPENAI_API_KEY'):raise ValueError('openai_runtime_configuration_missing')
     day=datetime.now(PARIS).strftime('%Y-%m-%d')
     if not store.reserve_image(key,day,cents,cap):raise ValueError('image_budget_breaker_or_previous_attempt')
-    prompt='Create a subtle dark navy football stadium background, portrait, generous empty center and margins, sober gold accent. No text, no numbers, no logos, no people, no betting slips. This background will support a factual reconstructed TousLesMatchs editorial card.'
+    prompt=('Create an exquisite cinematic football editorial art background for TousLesMatchs, vertical 2:3 social poster. '
+      'Professional sports broadcasting visual direction, realistic floodlit football stadium, premium midnight navy '
+      'and restrained gold/violet rim lighting, dramatic sense of depth, sophisticated modern finish. '
+      'Leave center and left half very dark, clean and uncluttered for perfectly legible editorial typography layered later. '
+      'Do not depict any specific real match or identifiable player. Absolutely no written text, numbers, scores, flags, logos, '
+      'bookmaker imagery, sponsor marks, odds, watermarks or betting slips. Consistent recurring brand style.')
     atomic(folder/(tag+'-prompt.json'),json.dumps({'prompt':prompt,'model':model,'createdAt':iso(),'source':'OpenAI Images API','factsHash':hashlib.sha256(json.dumps(c['facts'],sort_keys=True).encode()).hexdigest()}))
     try:
-        r=request('https://api.openai.com/v1/images/generations',json.dumps({'model':model,'prompt':prompt,'n':1,'size':'1024x1536','quality':'low','output_format':'png'}).encode(),{'Authorization':'Bearer '+os.environ['OPENAI_API_KEY'],'Content-Type':'application/json'})
+        r=request('https://api.openai.com/v1/images/generations',json.dumps({'model':model,'prompt':prompt,'n':1,'size':'1024x1536','quality':cfg.get('imageQuality','medium'),'output_format':'png'}).encode(),{'Authorization':'Bearer '+os.environ['OPENAI_API_KEY'],'Content-Type':'application/json'})
         data=base64.b64decode(r['data'][0]['b64_json'],validate=True)
         if not data.startswith(PNG):raise ValueError('not_png')
         atomic(path,data)
