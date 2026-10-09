@@ -39,10 +39,15 @@ def main(source_b64,test_b64):
             (tmp/'test.js').write_bytes(gzip.decompress(base64.b64decode(test_b64)))
             shutil.copy2(ROOT/'scripts/bookmakers.config.js',tmp/'bookmakers.config.js')
             run(['node',str(tmp/'test.js')])
-            (tmp/'Dockerfile').write_text('FROM '+originalimage+'\nCOPY telegram_client.js /app/telegram_client.js\n')
             image='tlm-api-telegram-campaign:'+stamp.lower()
-            stage='image_build'
-            run(['docker','build','--network=none','-t',image,str(tmp)])
+            stage='image_snapshot'
+            temporary='tlm-telegram-stage-'+stamp.lower()
+            run(['docker','create','--name',temporary,originalimage])
+            try:
+                run(['docker','cp',str(tmp/'telegram_client.js'),temporary+':/app/telegram_client.js'])
+                run(['docker','commit',temporary,image])
+            finally:
+                run(['docker','rm',temporary])
         stage='configuration'
         values={'GOAL05_ENABLED':'1','GOAL05_PUSH_ENABLED':'1','TLM_LAUNCH_ALL_ACCESS':'1','TLM_FREE_OFFER_CONFIRMED':'1','TLM_FREE_OFFER_ENDS_AT':END}
         lines=envpath.read_text().splitlines();lines=[x for x in lines if x.partition('=')[0].strip() not in values]
