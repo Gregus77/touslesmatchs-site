@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Targeted, guarded deployment. Preserve current image and roll back on failure."""
-import base64, hashlib, json, os, shutil, sqlite3, subprocess, tempfile, time, urllib.request
+import base64, gzip, hashlib, json, os, shutil, sqlite3, subprocess, tempfile, time, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 ROOT=Path('/opt/touslesmatchs')
@@ -13,7 +13,7 @@ def run(args,**kwargs):
     return p.stdout+p.stderr if merge else p.stdout
 
 def main(source_b64,test_b64):
-    source=base64.b64decode(source_b64);digest=hashlib.sha256(source).hexdigest()
+    source=gzip.decompress(base64.b64decode(source_b64));digest=hashlib.sha256(source).hexdigest()
     db=sqlite3.connect((ROOT/'data/tlm_telegram_probe.sqlite').as_uri()+'?mode=ro',uri=True)
     rows=db.execute("SELECT key,state,message_id FROM probes WHERE key LIKE 'tlm-telegram-test-20261009:%'").fetchall();db.close()
     assert len(rows)==3 and all(r[1]=='delivered' and r[2]>0 for r in rows),'three_TEST_receipts_required'
@@ -35,7 +35,7 @@ def main(source_b64,test_b64):
     try:
         with tempfile.TemporaryDirectory(prefix='tlm-telegram-build-') as tmp:
             tmp=Path(tmp);(tmp/'telegram_client.js').write_bytes(source)
-            (tmp/'test.js').write_bytes(base64.b64decode(test_b64))
+            (tmp/'test.js').write_bytes(gzip.decompress(base64.b64decode(test_b64)))
             shutil.copy2(ROOT/'scripts/bookmakers.config.js',tmp/'bookmakers.config.js')
             run(['node',str(tmp/'test.js')])
             (tmp/'Dockerfile').write_text('FROM '+originalimage+'\nCOPY telegram_client.js /app/telegram_client.js\n')
