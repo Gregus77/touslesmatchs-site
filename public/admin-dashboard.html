@@ -189,6 +189,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
+  <!-- Réseaux sociaux : trafic vers TousLesMatchs, pas les vues des publications. -->
+  <div class="grid">
+    <div class="card" style="grid-column:1/-1">
+      <h2>Acquisition — Facebook · Instagram · YouTube · TikTok · Telegram</h2>
+      <div id="socialAcquisitionContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
   <!-- ROW 3: Pronostics -->
   <div class="grid">
     <div class="card">
@@ -410,6 +418,38 @@ function renderDashboard(d) {
     ${a.topSources?.length ? `<div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Top sources :</div>
     ${a.topSources.slice(0, 5).map(([s, c]) => `<div class="stat-row"><span class="stat-label">${esc(s)}</span><span class="stat-value">${c}</span></div>`).join("")}` : ""}
   `;
+
+  // Acquisition sociale — comptage existant page_views, vue réservée à l'administrateur.
+  const social = d.socialAcquisition || {};
+  const socialBox = document.getElementById("socialAcquisitionContent");
+  if (social.error || !social.sources) {
+    socialBox.textContent = 'Mesure temporairement indisponible';
+  } else {
+    const labels = {facebook:'Facebook',instagram:'Instagram',youtube:'YouTube',
+                    tiktok:'TikTok',telegram:'Telegram'};
+    const periods = [['today',"Aujourd'hui"],['week','7 jours'],['month','30 jours']];
+    const rows = Object.entries(labels).map(([key,label])=>{
+      const row = social.sources[key] || {};
+      const cells = periods.map(([period])=>{
+        const stat = row[period] || {};
+        return '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--border)">'+
+          '<strong>'+Number(stat.visitorsEstimated || 0)+'</strong>'+
+          '<div style="font-size:.7rem;color:var(--muted)">'+Number(stat.views||0)+' vues</div></td>';
+      }).join('');
+      const clicks = Number(row.month?.premiumClicks||0);
+      return '<tr><td style="padding:10px;border-bottom:1px solid var(--border)">'+label+'</td>'+cells+
+        '<td style="text-align:center;padding:10px;border-bottom:1px solid var(--border)">'+clicks+'</td></tr>';
+    }).join('');
+    socialBox.innerHTML =
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.85rem">'+
+      '<thead><tr><th style="text-align:left;padding:10px">Réseau</th>'+
+      periods.map(([_,name])=>'<th style="padding:10px">'+name+'</th>').join('')+
+      '<th style="padding:10px">Clics Premium (30j)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<p style="font-size:.75rem;color:var(--muted);margin-top:10px;line-height:1.5">'+
+      'Chiffres = visiteurs estimés (identifiants IP hachés), non personnes distinctes certaines. '+
+      'Pages vues et clics Premium ne sont pas des abonnements payés. Attribution via UTM ou référent ; '+
+      'les visites sans origine reconnue ne figurent pas ici. Historique antérieur partiel.</p>';
+  }
 
   // Pronostics — Signal Fort
   const sf = d.pronostics.signalFort;
