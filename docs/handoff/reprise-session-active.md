@@ -82,8 +82,11 @@ Gratuit/Premium jusqu’au 7 novembre 2026 inclus (Europe/Paris).
   en préservant l’historique et sans rejouer les imports anciens.
 
 ### Prochaine action
-Vérifier le run `37969449046` : audit après activation et réutilisation des trois
-reçus TEST sans renvoi. Puis surveiller la prochaine vraie livraison +0,5 avec
+Run `37969449046` réussi : audit après activation ; les trois reçus TEST sont
+réutilisés avec `reused=true`, sans renvoi. Solde OpenRouter calculé 7,813097975 $ ;
+limite de clé restante 9,084183481 $, budget runtime 2 €/jour, 400 requêtes/modèle/jour.
+Les services Hermès, les droits bot et les cinq variables de campagne sont confirmés.
+Surveiller la prochaine vraie livraison +0,5 avec
 preuve de cote fraîche, quorum 4/5, note verte et message_id par canal.
 
 Horodatage : 2026-10-09T19:54:57.929929+02:00
