@@ -31,6 +31,7 @@ const tlmOperations = require("./tlm_operations");
 const multisportShadow = require("./multisport_shadow");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
+const socialAttribution = require("./social_attribution");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
 // (le Dockerfile ne copie que api_server.js + bookmakers.config.js). Rendu de
@@ -19780,7 +19781,11 @@ app.get("/admin/dashboard-data", (req, res) => {
       vps.error = "vps-status.json indisponible — installer le cron sur le host";
     }
 
-    res.json({ ok: true, health, vps, docker, backups, business, analytics, pronostics, alerts, activityLog, services, timestamp: new Date().toISOString() });
+    // Sources sociales : ce sont des visiteurs estimes, pas des personnes identifiees.
+    let socialAcquisition={error:'unavailable'};
+    try { socialAcquisition=socialAttribution.report(db); }
+    catch(error){console.error('[social-acquisition]',error.message);}
+    res.json({ ok: true, health, vps, docker, backups, business, analytics, socialAcquisition, pronostics, alerts, activityLog, services, timestamp: new Date().toISOString() });
   } catch (e) {
     console.error("[admin-dashboard]", e.message);
     res.status(500).json({ ok: false, error: e.message });
