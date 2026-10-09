@@ -15,7 +15,7 @@ Un candidat n'est valable que si toutes les conditions obligatoires suivantes so
 1. compétition autorisée par la whitelist de production ;
 2. une équipe classée **Top 5** affronte une équipe des **5 dernières** de son championnat/groupe ;
 3. l'équipe Top 5 est bien l'équipe favorite/ciblée ;
-4. avant match, le candidat peut être signalé au propriétaire pour surveillance ;
+4. avant match, le candidat peut être annoncé au propriétaire et sur les réseaux sociaux comme match à surveiller, sans le présenter comme jouable ;
 5. en live, minute comprise entre **30 et 85** ;
 6. l'équipe favorite/ciblée **n'a pas encore marqué** ;
 7. marché réel **équipe +0,5 but / équipe marque au moins un but** disponible ;
@@ -154,3 +154,7 @@ Avant toute intervention :
 2. lire l'état courant de production ;
 3. considérer les documents historiques uniquement comme contexte ;
 4. ne jamais faire revenir une ancienne règle par simple lecture d'un fichier daté.
+
+## Clarification propriétaire — 9 octobre 2026
+
+Publier avant match les affiches Top5 contre Bottom5 à surveiller et nommer l’équipe ciblée +0,5. Afficher « Attendre une cote live réelle >=1,60 ». Ce seuil n’est pas une cote observée ; la liste de surveillance n’est pas un feu vert et ne compte pas dans les pronostics joués. Le signal jouable reste soumis aux critères officiels live, dont cible à 0 but, minute 30–85, cote fraîche et au moins 4 IA sur 5.

@@ -526,3 +526,16 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Shadow vainqueur multisport séparé du registre officiel, sous quotas existants, sans diffusion client.
 - Supervision en lecture seule et rapport propriétaire ; télécommande préparée mais inactive sans utilisateur explicitement autorisé.
 - Tests hors réseau Football, Jev, budgets, Shadow, résolution et contrôle d’accès.
+
+## 2026-10-09 — Visuel Premium et diffusion Metricool
+- Visuel original imagegen pour Instagram/Facebook avec tarif Premium Stripe LIVE verifie 14,90 EUR/mois et lien public checkout teste (303).
+- Publication Metricool 391671338 programmee pour 03h32 Paris ; statut final a verifier. YouTube non connecte, TikTok en attente eSIM ; @parrainagebanque exclu.
+
+- Livraison confirmee Metricool le 9 octobre : Facebook 122103518433500089 et Instagram DeQVhfIHxgD, statuts PUBLISHED et URLs publiques conservees dans le dossier campagne.
+
+## 2026-10-09 — Surveillance prematch publique
+- Decision utilisateur : annoncer les affiches Top5/Bottom5 avant match sur les reseaux, puis attendre une cote live >=1,60 et la validation officielle avant de jouer. Surveillance et signal jouable restent separes.
+- Nordsjaelland/Odense et Kazma/Al Arabi reverifies via fixtures + standings API-Sports a 03h45 Paris ; horaires 19h00/19h05, classements 4e/9e et 1er/10e sur 12.
+- Publication Metricool 391683938 ; image et texte archives sans vote ni cote invente, aucune entree dans les statistiques de pronostics joues.
+
+- Surveillance livree : Facebook 122103525045500089 et Instagram DeQXlLFjTAQ, statuts PUBLISHED ; lien Premium Stripe inclus. Suivi apres match programme a 21h15/22h15/23h15 Paris pour cartes bilan et page SEO, sans assimiler une observation a un pari joue.
