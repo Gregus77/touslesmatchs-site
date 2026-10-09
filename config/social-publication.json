@@ -1,0 +1,74 @@
+{
+  "enabled": true,
+  "sourceFile": "/opt/touslesmatchs/data/social-source.json",
+  "officialDb": "/opt/touslesmatchs/data/tlm.db",
+  "stateDir": "/opt/touslesmatchs/data/social-publication",
+  "webroot": "/opt/touslesmatchs/public",
+  "imageModel": "gpt-image-2.5-flare",
+  "imageReservationCents": 0,
+  "imageDailyCapCents": 0,
+  "metricoolEnabled": false,
+  "metricoolVerifiedNetworks": {
+    "instagram": false,
+    "facebook": false
+  },
+  "instagramBioVerified": false,
+  "countryCodes": {
+    "Espagne": "ES",
+    "Spain": "ES",
+    "Italie": "IT",
+    "Italy": "IT",
+    "Pays-Bas": "NL",
+    "Netherlands": "NL",
+    "Belgique": "BE",
+    "Belgium": "BE",
+    "Angleterre": "GB",
+    "England": "GB",
+    "Écosse": "GB",
+    "Scotland": "GB",
+    "Irlande": "IE",
+    "Ireland": "IE",
+    "Danemark": "DK",
+    "Denmark": "DK",
+    "Brésil": "BR",
+    "Brazil": "BR",
+    "Argentine": "AR",
+    "Argentina": "AR",
+    "Japon": "JP",
+    "Japan": "JP",
+    "Norvège": "NO",
+    "Norway": "NO",
+    "Chili": "CL",
+    "Chile": "CL",
+    "Uruguay": "UY",
+    "Paraguay": "PY",
+    "Colombie": "CO",
+    "Colombia": "CO",
+    "Corée du Sud": "KR",
+    "South Korea": "KR",
+    "USA": "US",
+    "United States": "US",
+    "Canada": "CA"
+  },
+  "october9EnglishReceiptsVerified": true,
+  "runtimeBlockers": [
+    {
+      "stage": "metricool_server_credentials_missing"
+    },
+    {
+      "stage": "social_tipster_marketing_legal_review"
+    },
+    {
+      "stage": "openai_api_key_invalid_401"
+    },
+    {
+      "stage": "openai_image_budget_not_configured"
+    }
+  ],
+  "imageMode": "openai_required",
+  "publicationMode": "facts_only",
+  "telegramEnabled": false,
+  "notifyOwner": true,
+  "imageQuality": "medium",
+  "imageFallback": "preview_only"
+}
