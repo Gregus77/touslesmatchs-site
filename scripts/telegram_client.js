@@ -56,9 +56,19 @@ function freeOfferClock(ru,at=Date.now()) {
     ? `⏳ Подтверждённый конец ознакомительной акции через ${days} д. ${hours} ч. Условия бесплатного доступа доступны на сайте.`
     : `⏳ Offre gratuite de lancement : fin annoncée dans ${days} j ${hours} h. Conditions de l'accès Gratuit disponibles sur le site.`;
 }
+// Fin confirmée par le propriétaire : 7 novembre 2026 inclus, heure de Paris.
+const LAUNCH_CAMPAIGN_END=Date.parse('2026-11-08T00:00:00+01:00');
+function launchCampaignEnd(env=process.env) {
+  const raw=String(env.TLM_FREE_OFFER_ENDS_AT||'2026-11-08T00:00:00+01:00');
+  if(!/Z$|[+-]\d\d:\d\d$/.test(raw))return NaN;
+  return Math.min(Date.parse(raw),LAUNCH_CAMPAIGN_END);
+}
+function launchAllAccessAt(at=Date.now(),env=process.env) {
+  return env.TLM_LAUNCH_ALL_ACCESS==='1' && at<launchCampaignEnd(env);
+}
 function render(kind,data,dest) {
   const ru=dest.lang==='ru',free=dest.tier==='free',paymentVerified=dest.paymentVerified===true;
-  const launchAllAccess=process.env.TLM_LAUNCH_ALL_ACCESS==='1';
+  const launchAllAccess=launchAllAccessAt();
   const effectiveFree=free&&!launchAllAccess;
   const market=()=>esc(ru?marketRu(data.market):data.market);
   const match=()=>`⚽ <b>${esc(data.home)} — ${esc(data.away)}</b>`;
@@ -205,7 +215,7 @@ function render(kind,data,dest) {
     const promo=freeOfferClock(ru);
     if(promo)lines.push(promo);
   }
-  if(launchAllAccess && free && ['signal','goal05','scanner','scanner_result','recap'].includes(kind)) {
+  if(launchAllAccess && ['signal','goal05','scanner','scanner_result','recap'].includes(kind)) {
     lines.push(ru
       ? '🎁 Запуск: полный доступ временно открыт всем участникам. Позже Бесплатный и Premium снова будут разделены.'
       : '🎁 Lancement : accès intégral temporairement offert à tous. Gratuit et Premium seront séparés plus tard.');
@@ -319,6 +329,7 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
   db.prepare("UPDATE client_telegram_outbox SET state='uncertain' WHERE state='sending' AND next_at<?").run(now());
   let busy=false;
   function enqueue(kind,data,dest,key,expiresAt=now()+7*86400000) {
+    if(['signal','goal05'].includes(kind) && launchAllAccessAt(now(),env)) expiresAt=Math.min(expiresAt,launchCampaignEnd(env));
     return db.transaction(()=>{
       const deliveryKey=`${kind}:${key}:${dest.id}`;
       if(db.prepare('SELECT 1 FROM client_telegram_outbox WHERE delivery_key=?').get(deliveryKey))return false;
