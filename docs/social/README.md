@@ -1,6 +1,6 @@
 # Publication serveur — livraison opérateur du 9 octobre 2026
 
-**Préparée dans un worktree, non installée, non diffusée.** Aucun appel OpenAI payant, envoi Telegram ou création Metricool effectué. Le test complet est une simulation marquée TEST NE PAS DIFFUSER. Les consignes sont persistées dans Git ; ceci ne prouve pas une automatisation VPS active.
+**Installation partielle vérifiée sur le VPS le 9 octobre 2026.** Le timer est actif, les pages FR/EN et l’export canonique fonctionnent. Les nouveaux visuels et la diffusion automatique Metricool restent bloqués. Le reste de ce document décrit la livraison initiale de la mission ; consulter [checkpoint-vps-20261009.md](checkpoint-vps-20261009.md) pour les preuves de production et les étapes restantes.
 
 ## Composants et limites exactes
 

@@ -1,3 +1,7 @@
+## 2026-10-09 — Checkpoint réel de l’automatisation sociale
+
+Installation VPS partielle vérifiée ; accès OpenAI 401 et credentials Metricool toujours bloquants. Ajout des preuves Telegram RU et des étapes sécurisées de remédiation, sans secrets ni identifiants privés.
+
 # CHANGELOG — TousLesMatchs
 
 ## 2026-10-08 — Telegram Goal05 : cotes, partenaires et reprise de connexion
