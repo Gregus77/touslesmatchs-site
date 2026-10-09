@@ -31,6 +31,7 @@ const tlmOperations = require("./tlm_operations");
 const multisportShadow = require("./multisport_shadow");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
+const socialTrafficAnalytics = require("./social_traffic_analytics");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
 // (le Dockerfile ne copie que api_server.js + bookmakers.config.js). Rendu de
@@ -1002,6 +1003,7 @@ db.exec(`
     user_agent TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now'))
   );
+  CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views(created_at);
 `);
 
 // ── Shadow eval table ─────────────────────────────────────────────────────────
@@ -19690,6 +19692,19 @@ app.get("/admin/dashboard-data", (req, res) => {
       };
     } catch (e) { analytics.error = e.message; }
 
+    // ── Réseaux sociaux — compteur privé basé sur le pixel existant ──
+    // Un chargement de page n'est pas une personne; les visiteurs uniques sont des
+    // approximations basées sur les pseudonymes IP deja journalises.
+    let socialTraffic = null;
+    try {
+      const visits=db.prepare(`SELECT page, referrer, utm_source, utm_campaign, ip_hash, created_at
+        FROM page_views WHERE created_at >= datetime('now','-31 days')`).all();
+      socialTraffic=socialTrafficAnalytics.accumulate(visits);
+    } catch (e) {
+      console.error("[social-traffic] failed:",e.message);
+      socialTraffic={error:"Compteur social temporairement indisponible"};
+    }
+
     // ── Pronostics — performance ──
     const perf = getConcilePerformance();
     const signalFort = getSignalFortStats();
@@ -19780,7 +19795,7 @@ app.get("/admin/dashboard-data", (req, res) => {
       vps.error = "vps-status.json indisponible — installer le cron sur le host";
     }
 
-    res.json({ ok: true, health, vps, docker, backups, business, analytics, pronostics, alerts, activityLog, services, timestamp: new Date().toISOString() });
+    res.json({ ok: true, health, vps, docker, backups, business, analytics, socialTraffic, pronostics, alerts, activityLog, services, timestamp: new Date().toISOString() });
   } catch (e) {
     console.error("[admin-dashboard]", e.message);
     res.status(500).json({ ok: false, error: e.message });
