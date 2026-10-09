@@ -44,7 +44,11 @@ function tlmSocialTrafficSummary(rows,now=Date.now()){
   const totals=new Map(TLM_SOCIAL_NETWORKS.map(network=>[network,{network,eventsToday:0,events7d:0,events30d:0,visitorsToday:new Set(),visitors7d:new Set(),visitors30d:new Set()}]));
   const campaigns=new Map();
   const recentVisit=new Map();
-  const valid=(Array.isArray(rows)?rows:[]).map(r=>{
+  const valid=(Array.isArray(rows)?rows:[]).filter(r=>{
+    const page=String(r&&r.page||'');
+    // A /go/tiktok click redirects to Telegram; it is NOT a visit to our site.
+    return page!='/go/tiktok'&&!page.startsWith('/go/')&&!page.startsWith('/admin/')&&page!='/t'&&page!='/api/t';
+  }).map(r=>{
     const date=tlmTrafficParisDate(r.created_at);
     const network=tlmSocialNetwork(r.utm_source,r.referrer);
     const parsed=Date.parse(String(r.created_at||'').trim().replace(' ','T').replace(/(?<![zZ]|[+-]\d\d:\d\d)$/,'Z'));
