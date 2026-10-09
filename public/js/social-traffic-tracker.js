@@ -4,7 +4,7 @@
   // Only one event for this full page load; client never sends credentials.
   var q=new URLSearchParams(window.location.search||'');
   var url='/api/t?p='+encodeURIComponent(location.pathname)
-    +'&r='+encodeURIComponent(document.referrer||'')
+    +'&r='+encodeURIComponent((function(){try{return document.referrer?new URL(document.referrer).origin:'';}catch(e){return '';}})())
     +'&s='+encodeURIComponent(q.get('utm_source')||'')
     +'&m='+encodeURIComponent(q.get('utm_medium')||'')
     +'&c='+encodeURIComponent(q.get('utm_campaign')||'')
