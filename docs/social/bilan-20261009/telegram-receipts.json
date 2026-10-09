@@ -1,0 +1,26 @@
+[
+  {
+    "destination": "telegram_free",
+    "lang": "fr",
+    "state": "published",
+    "message_id": 638
+  },
+  {
+    "destination": "telegram_free",
+    "lang": "en",
+    "state": "published",
+    "message_id": 639
+  },
+  {
+    "destination": "telegram_premium",
+    "lang": "fr",
+    "state": "published",
+    "message_id": 225
+  },
+  {
+    "destination": "telegram_premium",
+    "lang": "en",
+    "state": "published",
+    "message_id": 226
+  }
+]

@@ -1,0 +1,66 @@
+{
+  "posts": [
+    {
+      "id": 392333140,
+      "providers": [
+        {
+          "network": "facebook",
+          "id": "122104235247500089",
+          "status": "PUBLISHED",
+          "publicUrl": "https://facebook.com/122103473883500089/posts/122104235247500089",
+          "detailedStatus": "Published"
+        },
+        {
+          "network": "instagram",
+          "id": "https://www.instagram.com/p/DeSRIEzDtoP/",
+          "status": "PUBLISHED",
+          "publicUrl": "https://www.instagram.com/p/DeSRIEzDtoP/",
+          "detailedStatus": "Published"
+        }
+      ]
+    },
+    {
+      "id": 392333293,
+      "providers": [
+        {
+          "network": "facebook",
+          "id": "122104235223500089",
+          "status": "PUBLISHED",
+          "publicUrl": "https://facebook.com/122103473883500089/posts/122104235223500089",
+          "detailedStatus": "Published"
+        },
+        {
+          "network": "instagram",
+          "id": "https://www.instagram.com/p/DeSRIFfiTr2/",
+          "status": "PUBLISHED",
+          "publicUrl": "https://www.instagram.com/p/DeSRIFfiTr2/",
+          "detailedStatus": "Published"
+        }
+      ]
+    },
+    {
+      "id": 392337004,
+      "providers": [
+        {
+          "network": "youtube",
+          "status": "PENDING",
+          "detailedStatus": "Pending"
+        }
+      ]
+    },
+    {
+      "id": 392337056,
+      "providers": [
+        {
+          "network": "youtube",
+          "status": "PENDING",
+          "detailedStatus": "Pending"
+        }
+      ]
+    }
+  ],
+  "captions": {
+    "fr": "⚽ BILAN DU 9 OCTOBRE 2026 — MATCHS TERMINÉS\n\n🇩🇰 Danemark · Superliga\nFC Nordsjaelland 0–0 Odense\n🎯 Cible : FC Nordsjaelland, au moins un but (+0,5 équipe).\n🔴 Observation négative : l’équipe ciblée n’a pas marqué.\n\n🇰🇼 Koweït · Premier League\nKazma 1–1 Al Arabi\n🎯 Cible : Kazma, au moins un but (+0,5 équipe).\n🟢 Observation positive : Kazma a marqué à la 20e minute, avant la fenêtre live de notre méthode (30–85).\n\nCes affiches avaient été annoncées comme surveillance. Aucun signal officiel enregistré pour ces deux matchs : aucun pari joué ni gain financier revendiqué. Les deux résultats restent visibles.\n\nSource : API-Sports, statuts FT et scores vérifiés le 9 octobre à 21h21, heure de Paris. Carte bilan reconstituée, pas un ticket bookmaker.\n\n⭐ Rejoindre Premium — 14,90 EUR/mois\nhttps://www.touslesmatchs.com/api/premium-checkout?lang=fr\n📊 https://www.touslesmatchs.com/social/current/fr.html\nSur Instagram, copiez le lien dans votre navigateur.\n🤝 Partage ce bilan à un ami.\n\n18+ · Aucun gain garanti. Jouer comporte des risques. joueurs-info-service.fr\n#TousLesMatchs #Football #Bilan",
+    "en": "⚽ 9 OCTOBER 2026 REVIEW — MATCHES FINISHED\n\n🇩🇰 Denmark · Superliga\nFC Nordsjaelland 0–0 Odense\n🎯 Target: FC Nordsjaelland to score at least one goal (team over 0.5).\n🔴 Negative observation: the target team did not score.\n\n🇰🇼 Kuwait · Premier League\nKazma 1–1 Al Arabi\n🎯 Target: Kazma to score at least one goal (team over 0.5).\n🟢 Positive observation: Kazma scored in the 20th minute, before our method’s live entry window (30–85).\n\nThese fixtures were announced as a watchlist. No official signal recorded for either match: no bet placed or financial profit claimed. Both outcomes remain visible.\n\nSource: API-Sports, FT statuses and scores checked on 9 October at 21:21 Paris time. Reconstructed results card, not a bookmaker ticket.\n\n⭐ Join Premium — 14.90 EUR/month\nhttps://www.touslesmatchs.com/api/premium-checkout?lang=fr\n📊 https://www.touslesmatchs.com/social/current/en.html\nOn Instagram, copy the link into your browser.\n🤝 Share this review with a friend.\n\n18+ · No guaranteed returns. Gambling involves risks. joueurs-info-service.fr\n#TousLesMatchs #Football #Review"
+  }
+}
