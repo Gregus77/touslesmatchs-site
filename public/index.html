@@ -1119,6 +1119,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 }
 </style>
 
+<script src="/js/social-attribution.js?v=20261009-1"></script>
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -2493,22 +2494,7 @@ async function loadPremiumYesterday(){
 
 /* ══ FAQ ══ */
 </script>
-<script>
-(function(){
-  // Pixel de tracking visiteurs (page_views) -- manquait sur l'accueil, la
-  // seule page qui recoit reellement le trafic TikTok/bio-link. Sans ca,
-  // aucune visibilite sur combien de visiteurs viennent de TikTok ni si
-  // ils convertissent (repere le 03/08/2026 en travaillant l'acquisition).
-  var q=new URLSearchParams(location.search);
-  var r=document.referrer||'';
-  new Image().src='/api/t?p='+encodeURIComponent(location.pathname)
-    +'&r='+encodeURIComponent(r)
-    +'&s='+encodeURIComponent(q.get('utm_source')||'')
-    +'&m='+encodeURIComponent(q.get('utm_medium')||'')
-    +'&c='+encodeURIComponent(q.get('utm_campaign')||'')
-    +'&_='+Date.now();
-})();
-</script>
+
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/i18n.js?v=20260915-account-v1" defer></script>
 <script>
