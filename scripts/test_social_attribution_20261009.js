@@ -20,7 +20,7 @@ const rows=[
   row('2026-10-09 14:10:00','instagram','a','/app'),
   row('2026-10-09 14:15:00','instagram','a','/event/premium-click'),
   row('2026-10-09 15:00:00','facebook','b'),
-  row('2026-10-08 22:10:00','youtube','c'),
+  row('2026-10-08 20:10:00','youtube','c'),
   row('2026-09-01 12:00:00','facebook','old'),
   row('2026-10-09 14:03:00','','d','/', 'https://l.instagram.com/post'),
   row('2026-10-09 14:03:00','not-social','z','/','https://l.instagram.com/post'),
