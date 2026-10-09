@@ -1,0 +1,39 @@
+name: Social acquisition dashboard and attribution
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/social_attribution.js
+      - scripts/test_social_attribution_20261009.js
+      - scripts/api_server.js
+      - Dockerfile.api
+      - public/js/social-attribution.js
+      - public/admin-dashboard.html
+      - public/index.html
+      - public/live-ia.html
+      - public/app.html
+      - .github/workflows/test-social-acquisition-counter-20261009.yml
+  push:
+    branches: [codex/social-acquisition-counter-20261009]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax and social acquisition integration
+        run: |
+          set -euo pipefail
+          node --check scripts/api_server.js
+          node --check scripts/social_attribution.js
+          node --check public/js/social-attribution.js
+          node scripts/test_social_attribution_20261009.js
+          node scripts/test_goal05_policy_20261005.js
+          node scripts/test_goal05_telegram_odds_20261008.js
+          node scripts/test_current_product_goal05_20261005.js
+          echo SOCIAL_ACQUISITION_TESTS_OK
