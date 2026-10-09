@@ -1,5 +1,11 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-09 — Correction de la mesure sociale en navigation
+- Préserve les sources Facebook/Instagram/YouTube/TikTok/Telegram pendant 30 minutes dans l'onglet après arrivée depuis une campagne UTM.
+- Protège l'attribution avant nettoyage des URL Live IA ; réutilise les pixels et le dashboard préexistants sans ajouter de compteur concurrent.
+- Conserve la distinction entre arrivées estimées et personnes réelles ; documente l'attribution temporaire.
+
+
 ## 2026-10-09 — Compteur d'acquisition des réseaux sociaux
 - Réutilise la table de visites et les balises existantes pour distinguer les arrivées estimées depuis Facebook, Instagram, YouTube, TikTok et Telegram.
 - Ajoute au tableau de bord administrateur des comptes sur aujourd'hui, 7 jours et 30 jours, par source, et des liens UTM à copier.
