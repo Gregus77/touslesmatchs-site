@@ -1,3 +1,9 @@
+# Reprise vérifiée du 9 octobre 2026
+
+Worker et unités déjà installés, améliorés après a6030b6. 27 tests réussis ; cycle fictif local marqué TEST NE PAS DIFFUSER, aucun envoi public. Timer social désactivé et enabled=false en attente de validation explicite. Voir data/social-publication/report.json pour les blocages actuels. Clé OpenAI corrigée dans le fichier privé du service ; budget images zéro. Metricool serveur absent. Cartes FR/EN et bilans SEO déjà publiés avec reçus. Le document ancien ci-dessous est historique et ne décrit pas l’état actuel.
+
+---
+
 # Publication serveur — livraison opérateur du 9 octobre 2026
 
 **Installation partielle vérifiée sur le VPS le 9 octobre 2026.** Le timer est actif, les pages FR/EN et l’export canonique fonctionnent. Les nouveaux visuels et la diffusion automatique Metricool restent bloqués. Le reste de ce document décrit la livraison initiale de la mission ; consulter [checkpoint-vps-20261009.md](checkpoint-vps-20261009.md) pour les preuves de production et les étapes restantes.

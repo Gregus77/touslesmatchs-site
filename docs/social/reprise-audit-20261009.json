@@ -1,0 +1,88 @@
+{
+  "createdAt": "2026-10-09T19:45:23.446171+00:00",
+  "mode": "DRY_RUN_VALIDATED_AWAITING_OWNER_APPROVAL",
+  "installed": true,
+  "timer": "disabled_pending_explicit_approval",
+  "tests": {
+    "passed": 27,
+    "dryRunRealSource": "reports/reprise-20261009-preview/report.json",
+    "fictitiousLocalCycle": "reports/reprise-20261009-fiction/report.json",
+    "fictitiousPNGs": 4,
+    "externalImageGenerationTest": false,
+    "publicTestDeliveries": 0,
+    "DRY_RUN_blocks_publish": true
+  },
+  "blocked": [
+    {
+      "stage": "metricool_server_credentials_missing",
+      "missingVariables": [
+        "METRICOOL_API_TOKEN",
+        "METRICOOL_USER_ID",
+        "METRICOOL_BLOG_ID"
+      ],
+      "requestedAliasAlsoAbsent": "METRICOOL_USER_TOKEN",
+      "note": "worker consumes METRICOOL_API_TOKEN, not METRICOOL_USER_TOKEN; no workaround used"
+    },
+    {
+      "stage": "image_model_budget_and_generation_test_pending",
+      "imageModel": null,
+      "dailyCapCents": 0,
+      "reservedCents": 0,
+      "providerCreditRemaining": "unknown",
+      "accessNote": "replacement OPENAI_API_KEY in /etc/tlm-social-runtime.env; HTTP200 verified earlier on 2026-10-09; .env contains older different key"
+    },
+    {
+      "stage": "canonical_export_missing_after_other_deployment",
+      "note": "tlmSocialExport absent from current API; no concurrent API changes overwritten"
+    },
+    {
+      "stage": "live_goal05_image_pipeline_not_implemented",
+      "note": "timer consumes social-source.json; not polling goal05/latest; valid live signal is not a prematch watchlist"
+    },
+    {
+      "stage": "metricool_prematch_expiration_not_implemented"
+    },
+    {
+      "stage": "russian_recurring_cards_not_implemented"
+    }
+  ],
+  "telegram": {
+    "tokenPresent": true,
+    "freeFRPresent": true,
+    "premiumFRPresent": true,
+    "freeRUPresent": true,
+    "premiumRUPresent": true,
+    "telegram_bot_new_py": "not found under /opt/touslesmatchs",
+    "canonicalRouting": "scripts/telegram_client.js",
+    "existingReceiptEvidence": {
+      "freeFR": [
+        638,
+        639
+      ],
+      "premiumFR": [
+        225,
+        226
+      ],
+      "freeRU": [
+        78
+      ],
+      "premiumRU": [
+        97
+      ]
+    }
+  },
+  "deliveryDeduplication": "match:phase:language:destination PRIMARY KEY; 36 published records retained",
+  "latestGoal05": {
+    "available": false,
+    "signal": null,
+    "locked": true
+  },
+  "alreadyCompleted": [
+    "bilingual before and after cards",
+    "FR/EN Facebook Instagram YouTube published with receipts",
+    "dated SEO pages linked from home and app"
+  ],
+  "deliveries": [],
+  "attention": [],
+  "backup": "/opt/touslesmatchs/backups/social-reprise-20261009T194522Z"
+}

@@ -450,7 +450,10 @@ def main():
     parser.add_argument('--config',default=str(ROOT/'config/social-publication.json'))
     parser.add_argument('--output',default=str(ROOT/'reports/social-offline'))
     parser.add_argument('--publish',action='store_true')
-    args=parser.parse_args();cfg=json.loads(Path(args.config).read_text())
+    args=parser.parse_args()
+    if os.environ.get('DRY_RUN','').lower() in ('1','true','yes') and args.publish:
+        raise ValueError('dry_run_publish_forbidden')
+    cfg=json.loads(Path(args.config).read_text())
     if args.command=='offline' and args.publish:raise ValueError('offline_publish_forbidden')
     live=args.publish and args.command=='once'
     if live and cfg.get('enabled') is not True:raise ValueError('publication_disabled')

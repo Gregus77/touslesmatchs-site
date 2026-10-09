@@ -1,3 +1,7 @@
+## 2026-10-09 — Reprise opérateur en dry-run
+- DRY_RUN=1 bloque --publish avant tout effet externe ; 27 tests passent.
+- Audit des accès sans secrets, timer social placé en attente de validation, reçus existants préservés.
+
 ## 2026-10-09 — Checkpoint réel de l’automatisation sociale
 
 Installation VPS partielle vérifiée ; accès OpenAI 401 et credentials Metricool toujours bloquants. Ajout des preuves Telegram RU et des étapes sécurisées de remédiation, sans secrets ni identifiants privés.
