@@ -23,6 +23,10 @@ SQLite publication : unicité match/phase/langue/destination. Avant tout POST, r
 
 Le fichier `report.json` contient blocages et liste `attention` pour l'opérateur/Hermès. Le lecteur de supervision doit le surveiller : pas de nouvelle boucle de notifications admin installée ici. Pour Telegram uncertain, obtenir une preuve du canal avant toute résolution manuelle ; **ne pas effacer une ligne pour forcer un renvoi**. Pour Metricool pending, le prochain cycle lit le post par id, sans nouveau POST. Une réponse perdue sans id nécessite réconciliation humaine, jamais un renvoi aveugle.
 
+## Décision visuelle du 9 octobre : OpenAI reste obligatoire
+
+L'utilisateur préfère les créations visuelles de ChatGPT/OpenAI. Le moteur utilise l'API officielle OpenAI Images avec `gpt-image-2.5-flare`, qualité `medium`, pour un fond sportif premium ; les faits du match sont ajoutés de manière déterministe afin de ne rien inventer. `imageMode=openai_required` est obligatoire pour une publication réelle. Le rendu neutre sert uniquement aux tests hors ligne. En cas d'échec OpenAI (clé 401, budget 0 ou quota), les nouvelles images restent bloquées, sans publication d'une version dégradée. Le modèle et le budget restent modifiables sous contrôle opérateur, sans clé dans le dépôt. Cette configuration n'utilise pas l'abonnement ChatGPT : elle nécessite une clé API valide et une facturation API distincte.
+
 ## Images OpenAI et budget
 
 API officielle : https://developers.openai.com/api/reference/resources/images ; POST `/v1/images/generations`, modèle configurable, PNG base64. Le fond commun à la paire FR/EN est demandé à l'API ; textes et composition sont posés déterministiquement, pour éviter chiffres et traductions inventés. Réponse PNG, prompt, modèle, provenance, date, usage et empreinte conservés dans l'état privé. Le rendu offline utilise un fond neutre, **pas une prétendue image OpenAI**.
