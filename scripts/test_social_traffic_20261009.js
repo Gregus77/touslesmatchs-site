@@ -53,6 +53,6 @@ assert.equal(result.total.arrivalsToday,6);
 assert.equal(result.total.arrivals30d,7);
 assert.equal(result.trend.length,7);
 assert(result.campaigns.some(x=>x.network==='facebook'&&x.campaign==='promo1'&&x.arrivals===2));
-assert(!JSON.stringify(result).includes('one'),'raw identifiers cannot be returned');
+assert(!JSON.stringify(result).includes('"ip_hash"'),'raw visitor hashes cannot be returned');
 assert(!JSON.stringify(result).includes('attacker'));
 console.log('SOCIAL_TRAFFIC_ATTRIBUTION_OK');
