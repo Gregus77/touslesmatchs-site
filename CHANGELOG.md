@@ -1,3 +1,7 @@
+## 2026-10-09 — Bilan factuel de surveillance
+- Scores FT vérifiés API-Sports : FC Nordsjaelland–Odense 0–0 et Kazma–Al Arabi 1–1.
+- Cartes et pages FR/EN ; observations séparées, aucun signal officiel enregistré ni gain annoncé. Liens depuis le site et la PWA.
+
 # CHANGELOG — TousLesMatchs
 
 ## 2026-10-09 — Correction de la mesure sociale en navigation
