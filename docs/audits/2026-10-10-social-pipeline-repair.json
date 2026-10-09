@@ -1,0 +1,28 @@
+{
+  "verifiedAt": "2026-10-09T22:44:49.191950+00:00",
+  "reason": "publication_disabled",
+  "queueConsumed": false,
+  "testsPassed": 30,
+  "dryRunDeliveries": 0,
+  "deliveryStates": [
+    [
+      "published",
+      36
+    ]
+  ],
+  "sourceUpdatedAt": "2026-10-09T19:27:05.535896+00:00",
+  "exporterCount": "0",
+  "credentialPresence": {
+    "OPENAI_API_KEY": true,
+    "METRICOOL_API_TOKEN": false,
+    "METRICOOL_USER_ID": false,
+    "METRICOOL_BLOG_ID": false,
+    "FACEBOOK_PAGE_ACCESS_TOKEN": false,
+    "META_ACCESS_TOKEN": false,
+    "INSTAGRAM_ACCESS_TOKEN": false,
+    "TELEGRAM_BOT_TOKEN": true
+  },
+  "publicationEnabled": false,
+  "backup": "/opt/backups/social-pipeline-20261009T224244Z",
+  "completeAutomation": false
+}
