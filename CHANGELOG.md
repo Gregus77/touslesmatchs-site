@@ -1,5 +1,15 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-10-09 — Compteur acquisition des réseaux sociaux
+- Réutilise le registre de visites existant `page_views` sans second système concurrent.
+- Mesure les visites attribuées à Facebook, Instagram, YouTube, TikTok et Telegram sur 1/7/30 jours, les pages vues et les clics Premium (distincts des ventes).
+- Ajoute au tableau de bord admin une rubrique privée ; les visiteurs sont seulement des estimations basées sur les empreintes IP hachées, pas des personnes identifiées.
+- Les pages Accueil, Live IA et application conservent les paramètres source UTM sur 30 minutes dans l'onglet. Les doubles pixels des pages existantes ont été retirés.
+- Liens d'exemple UTM et transparence des mesures d'audience ajoutés ; tests CI et documentation.
+- Aucun ancien volume de visiteurs inventé ; les anciennes publications sans UTM peuvent rester inattribuables.
+
+
+
 ## 2026-10-08 — Telegram Goal05 : cotes, partenaires et reprise de connexion
 
 - Ajout de la cote réelle horodatée dans les notifications +0,5 Gratuites et Premium (FR/RU), des alertes sous 1,60 ou lorsque la cote est absente/périmée, et d'un rappel qu'un combiné de deux rencontres est plus risqué.
