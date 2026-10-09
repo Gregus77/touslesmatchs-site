@@ -1,0 +1,36 @@
+name: Test social traffic attribution
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/api_server.js
+      - scripts/social_traffic_analytics.js
+      - scripts/test_social_traffic_20261009.js
+      - Dockerfile.api
+      - public/admin-dashboard.html
+      - public/app.html
+      - public/performances.html
+      - public/js/social-traffic-tracker.js
+      - .github/workflows/test-social-traffic-20261009.yml
+  push:
+    branches: [codex/social-traffic-counter-20261009]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: API syntax and private social source counters
+        run: |
+          set -euo pipefail
+          node --check scripts/api_server.js
+          node --check scripts/social_traffic_analytics.js
+          node --check scripts/test_social_traffic_20261009.js
+          node scripts/test_social_traffic_20261009.js
+          node scripts/test_current_product_goal05_20261005.js
+          echo SOCIAL_TRAFFIC_GUARDS_OK
