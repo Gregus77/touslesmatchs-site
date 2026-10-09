@@ -11,7 +11,7 @@ REPORT=$(
 docker run --rm \
  --env-file /opt/touslesmatchs/.env \
  -v /opt/touslesmatchs:/repo:ro \
- -v touslesmatchs_data:/data \
+ -v /opt/touslesmatchs/data:/data \
  -w /repo touslesmatchs-api:latest \
  sh -lc 'NODE_PATH=/app/node_modules node scripts/hermes_phase21_director.js' 2>&1
 )
@@ -26,7 +26,6 @@ if [ -f "$STATE" ] && [ "$(cat "$STATE")" = "$HASH" ]; then
  exit 0
 fi
 
-printf '%s' "$HASH" > "$STATE"
 
 set -a
 . /opt/touslesmatchs/.env
@@ -44,10 +43,10 @@ TEXT="🤖 HERMÈS — RAPPORT AUTONOME
 
 ${REPORT}"
 
-curl -fsS --max-time 20 \
+RESPONSE=$(curl -fsS --max-time 20 \
  --data-urlencode "chat_id=$CHAT" \
  --data-urlencode "text=$TEXT" \
- "https://api.telegram.org/bot${TOKEN}/sendMessage" \
- >/dev/null
-
-echo "Hermes: rapport admin Telegram envoye."
+ "https://api.telegram.org/bot${TOKEN}/sendMessage") || exit 1
+PROOF=$(printf '%s' "$RESPONSE" | python3 -c 'import json,sys; d=json.load(sys.stdin); m=d.get("result",{}).get("message_id"); sys.exit(1) if d.get("ok") is not True or not isinstance(m,int) else print("telegram_message_id="+str(m))') || exit 1
+printf '%s' "$HASH" > "$STATE"
+echo "Hermes: rapport admin Telegram confirme — $PROOF"
