@@ -32,8 +32,8 @@ jobs:
             flock -w 60 9
             python3 - <<'PY'
             import urllib.request, hashlib, base64, gzip, sys
-            base='https://raw.githubusercontent.com/Gregus77/touslesmatchs-site/a492b425b02b30c6007c79c81fda6041f60f27c1/'
-            manifest={'scripts/tlm_telegram_campaign_activate.py': 'ead27adfc06083b8cf3bcaf9b2dd139a0cdc3e46b5cacf489afc3b0df54e821a', 'scripts/telegram_client.js': 'f4304575546845312325bb06793d6224b66f2b0dd14d40ffa66d4c227cde48b0', 'scripts/test_telegram_campaign_20261009.js': '0d49a4cff9431197535db4e43ce3bd62c4461ed44b948c414ebdab75ad379327', 'scripts/tlm_telegram_runtime_probe.py': '7d0a3b820b4a29f0ad30ba9c227037977aa3f9d7544d2cfe81cd4c1be3e7edad'}
+            base='https://raw.githubusercontent.com/Gregus77/touslesmatchs-site/9c46f432d171f7fa12fca3d2df74e1dfc1eb0f3c/'
+            manifest={'scripts/tlm_telegram_campaign_activate.py': '31fc982bf0490f88581d455d9a8d1f3d8b573495d70ce20f34bbfe5c5306c8ed', 'scripts/telegram_client.js': 'f4304575546845312325bb06793d6224b66f2b0dd14d40ffa66d4c227cde48b0', 'scripts/test_telegram_campaign_20261009.js': '0d49a4cff9431197535db4e43ce3bd62c4461ed44b948c414ebdab75ad379327', 'scripts/tlm_telegram_runtime_probe.py': '7d0a3b820b4a29f0ad30ba9c227037977aa3f9d7544d2cfe81cd4c1be3e7edad'}
             sources={}
             for path,expected in manifest.items():
                 with urllib.request.urlopen(base+path,timeout=30) as response: content=response.read()
