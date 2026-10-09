@@ -25,6 +25,7 @@ current=run('?utm_source=unknown', 'https://instagram.com/');
 assert.equal(current.source,'','Explicit unknown campaign cannot inherit previous source');
 current=run('','https://youtu.be/abc');
 assert.equal(current.source,'youtube');
+run('?utm_source=unknown');
 assert.equal(run('','https://youtube.com.evil.site/').source,'','Reject forged referrer host');
 
 for(const htmlPath of ['public/index.html','public/live-ia.html','public/app.html','public/performances.html']){
