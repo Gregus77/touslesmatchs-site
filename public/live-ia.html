@@ -560,6 +560,7 @@ body{overflow-x:hidden}
 /* ancien système reste consultable dans l'historique, mais ses panneaux live ne sont plus le produit courant. */
 #tab-live .mc-analysis{display:none!important}
 </style>
+<script src="/js/social-attribution.js?v=20261009-1"></script>
 </head>
 <body class="tlm-wow tlm-page-live">
 
@@ -1916,18 +1917,7 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
   history.replaceState(null, '', location.pathname);
 })();
 </script>
-<script>
-(function(){
-  var q=new URLSearchParams(location.search);
-  var r=document.referrer||'';
-  new Image().src='/api/t?p='+encodeURIComponent(location.pathname)
-    +'&r='+encodeURIComponent(r)
-    +'&s='+encodeURIComponent(q.get('utm_source')||'')
-    +'&m='+encodeURIComponent(q.get('utm_medium')||'')
-    +'&c='+encodeURIComponent(q.get('utm_campaign')||'')
-    +'&_='+Date.now();
-})();
-</script>
+
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/cookie-consent.js" defer></script>
   <script src="/js/tlm-wow-theme.js?v=20260907-integral6" defer></script>
