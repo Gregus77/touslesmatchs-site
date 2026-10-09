@@ -16,3 +16,10 @@ Objectif : compter les visites arrivant sur TousLesMatchs depuis Facebook, Insta
 
 ## Contrôle production
 Après fusion : déploiement API + site, connexion réelle à la console admin, vérifier que les 5 lignes réseau existent, qu'un clic sur un lien UTM relève le compteur (sans confondre cet essai avec un utilisateur acquis). Vérifier les logs sans afficher d'empreintes ni d'identifiants.
+
+
+## Correction de navigation du 9 octobre
+- Un script chargé en amont sauvegarde le `utm_source` dans le stockage de session du même onglet (30 minutes) avant qu'une page Live IA ne puisse retirer les paramètres d'URL.
+- Le pixel déjà existant reste **unique** sur chaque page ; la source est transmise à la table `page_views` sur l'accueil, Live IA, App et Performances, y compris après navigation interne.
+- Aucun compteur concurrent ajouté. Les chiffres historiques non attribués ne peuvent pas être corrigés rétroactivement.
+- Test : `node scripts/test_social_source_session_20261009.js`.
