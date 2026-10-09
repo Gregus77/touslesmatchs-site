@@ -1,0 +1,40 @@
+name: Social automation safety and image rendering
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/social/**
+      - scripts/test_social_source_20261009.js
+      - tests/social/**
+      - config/social-publication.json
+      - scripts/api_server.js
+      - .github/workflows/test-social-autonomy-20261009.yml
+  push:
+    branches: [codex/social-autonomy-install-20261009]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --disable-pip-version-check pillow
+      - name: Static and integration verification (no external publications)
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/social/pipeline.py
+          node --check scripts/api_server.js
+          node scripts/test_social_source_20261009.js
+          python -m unittest discover -s tests/social -p 'test_*.py' -v
+          node scripts/test_goal05_policy_20261005.js
+          node scripts/test_goal05_v2_20261006.js
+          node scripts/test_goal05_v2_integration_20261006.js
+          node scripts/test_current_product_goal05_20261005.js
+          echo SOCIAL_AUTOMATION_GUARDS_OK
