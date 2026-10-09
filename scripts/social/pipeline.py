@@ -419,6 +419,31 @@ def process(source,store,cfg,output,now,dry_run=True,offline=False,review=True):
     atomic(output/'report.json',json.dumps(report,ensure_ascii=False,indent=2))
     return report
 
+def notify_owner(store,report,cfg):
+    if cfg.get('notifyOwner') is not True:return
+    token=os.environ.get('HERMES_ADMIN_TLM_BOT') or os.environ.get('TELEGRAM_BOT_TOKEN')
+    chat=os.environ.get('TELEGRAM_ADMIN_CHAT_ID')
+    if not token or not chat:return
+    snapshot={'blocked':sorted(set(x.get('stage','unknown') for x in report['blocked'])),'attention':report['attention'],'states':[dict(x) for x in store.db.execute('SELECT state,count(*) count FROM delivery GROUP BY state')]}
+    digest=hashlib.sha256(json.dumps(snapshot,sort_keys=True).encode()).hexdigest()
+    old=store.db.execute("SELECT value FROM settings WHERE key='owner_report_hash'").fetchone()
+    if old and old[0]==digest:return
+    stages=snapshot['blocked']
+    text='🤖 HERMÈS — SUIVI SUR LE VPS\nLe contrôle autonome est installé sur Hostinger, toutes les cinq minutes. Le PC peut être éteint pour ce suivi.\n'
+    if 'openai_api_key_invalid_401' in stages:text+='🔴 Nouveaux visuels : clé OpenAI serveur invalide (HTTP 401).\n'
+    if 'metricool_server_credentials_missing' in stages:text+='🔴 Publications sociales depuis le VPS : accès API Metricool absent.\n'
+    if stages:text+='🟠 Autres étapes bloquées : '+', '.join(x for x in stages if x not in ['openai_api_key_invalid_401','metricool_server_credentials_missing'])+'\n'
+    text+='📊 Site : https://www.touslesmatchs.com/social/\nFR/EN archivés avec preuves ; observations séparées des signaux validés. Aucun nouveau signal ou visuel n’est annoncé envoyé sans reçu.'
+    try:
+        from urllib.parse import urlencode
+        response=request('https://api.telegram.org/bot'+token+'/sendMessage',urlencode({'chat_id':chat,'text':text[:3900],'disable_web_page_preview':'true'}).encode(),{'Content-Type':'application/x-www-form-urlencoded'},30)
+        mid=response.get('result',{}).get('message_id')
+        if response.get('ok') is True and type(mid) is int and mid>0:
+            store.db.execute("INSERT OR REPLACE INTO settings VALUES('owner_report_hash',?)",(digest,))
+            store.db.execute("INSERT OR REPLACE INTO settings VALUES('owner_report_message_id',?)",(str(mid),))
+            print(json.dumps({'owner_report_confirmed':True,'message_id':mid}))
+    except Exception:pass
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command',choices=['once','offline','status'])
@@ -456,6 +481,7 @@ def main():
         if args.command=='offline':
             for row in source['matches'].values():row['result']={'fixtureId':row['fixtureId'],'source':'api-sports','status':'FT','home':0,'away':1,'verifiedAt':'2030-01-01T17:00:00Z'}
             report=process(source,store,cfg,output,now+18000,dry_run=True,offline=True)
+        if live:notify_owner(store,report,cfg)
         print(json.dumps({'mode':report['mode'],'blocked':len(report['blocked']),'deliveries':len(report['deliveries']),'report':str(output/'report.json')}))
 if __name__=='__main__':
     try:main()
