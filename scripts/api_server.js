@@ -5994,7 +5994,7 @@ async function tlmScannerFootballRow(f){
   const c=tlmScannerComp(f);
   const base={key:"Football:"+(f.sourceId||f.fixtureId||f.id||f.home+"|"+f.away+"|"+f.kickoff),
     sourceId:String(f.sourceId||f.fixtureId||""),sport:"Football",home:f.home,away:f.away,
-    socialWhitelist: f.source==="api-sports"&&!isWomenMatch(f)&&!isCategoryBanned(f)&&!isUsaOrCanadaMatch(f)&&!isLowTrustCompetition(f)&&!isBlacklistedForLiveDisplay(f)&&["trusted_major","trusted_secondary"].includes(leagueTier(f)),
+    socialWhitelist: f.source==="api-sports"&&!isWomenMatch(f)&&!isCategoryBanned(f)&&!isUsaOrCanadaMatch(f)&&!isLowTrustCompetition(f)&&!isBlacklistedForLiveDisplay(f)&&["trusted_major","trusted_secondary"].includes(leagueTier(f))&&tlmSocialCompetitionAllowed(c.country,c.league),
     competition:c.league,country:c.country,kickoff:f.kickoff,kickoffLabel:tlmScannerKickoff(f.kickoff),
     targetTeam:null,targetSide:null,targetRank:null,opponentRank:null,targetMetric:null,opponentMetric:null,
     form:null,rating:null,color:"gray",selection:null,reason:"Top 5 / Bottom 5 non vérifié"};
@@ -6037,6 +6037,32 @@ function tlmScannerExploratoryRow(f){
     reason:"veille exploratoire : critère spécifique au sport non vérifié, aucune sélection forcée"};
 }
 // TLM_SOCIAL_SOURCE_BEGIN — included inline in api_server.js; no new scheduler/API calls.
+function tlmSocialCompetitionAllowed(country,competition){
+  const norm=x=>String(x||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+  const c=norm(country),l=norm(competition);
+  if(!l||/\b(women|feminin|feminine|femenin|youth|u1[789]|u2[013]|cup|copa|pokal|playoff|friendly|reserve|amateur)\b/.test(l))return false;
+  const allowed=[
+    [/^(spain|espagne|espana)$/,/\b(la liga|laliga|primera division|segunda division|la liga 2)\b/],
+    [/^(italy|italie|italia)$/,/\b(serie a|serie b)\b/],
+    [/^(netherlands|pays-bas|holland|hollande)$/,/\b(eredivisie|eerste divisie)\b/],
+    [/^(belgium|belgique|belgie)$/,/\b(pro league|jupiler|challenger pro league|first division a|first division b)\b/],
+    [/^(england|angleterre)$/,/\b(premier league|championship)\b/],
+    [/^(scotland|ecosse)$/,/\b(premiership|championship)\b/],
+    [/^(ireland|irlande|republic of ireland)$/,/\b(premier division|first division)\b/],
+    [/^(denmark|danemark|danmark)$/,/\b(superliga|super league|1st division|1\. division|first division)\b/],
+    [/^(brazil|bresil|brasil)$/,/\b(serie a|serie b)\b/],
+    [/^(argentina|argentine)$/,/\b(primera division|liga profesional|primera nacional)\b/],
+    [/^(japan|japon)$/,/\b(j1 league|j2 league|j-league 1|j-league 2|j1|j2)\b/],
+    [/^(norway|norvege|norge)$/,/\b(eliteserien)\b/],
+    [/^(chile|chili)$/,/\b(primera division|primera a)\b/],
+    [/^(uruguay)$/,/\b(primera division|primera)\b/],
+    [/^(paraguay)$/,/\b(primera division|primera)\b/],
+    [/^(colombia|colombie)$/,/\b(primera a|categoria primera a|liga betplay)\b/],
+    [/^(south korea|korea republic|coree du sud)$/,/\b(k league 1|k-league 1)\b/],
+    [/^(usa|united states|united states of america|canada|etats-unis|international)$/,/\b(major league soccer|mls)\b/]
+  ];
+  return allowed.some(([p,league])=>p.test(c)&&league.test(l));
+}
 function tlmSocialExport(rows = [], resolved = null) {
   if (!fs.existsSync('/data/social-publication.enabled')) return;
   try {
@@ -6044,7 +6070,7 @@ function tlmSocialExport(rows = [], resolved = null) {
     let state={schema:1,matches:{}};
     if(fs.existsSync(file))state=JSON.parse(fs.readFileSync(file,'utf8'));
     for(const row of rows) {
-      if(row.sport!=='Football'||row.socialWhitelist!==true||!row.targetTeam)continue;
+      if(row.sport!=='Football'||row.socialWhitelist!==true||!row.targetTeam||!tlmSocialCompetitionAllowed(row.country,row.competition))continue;
       const tr=String(row.targetRank||'').match(/^(\d+)e\/(\d+)$/);
       const op=String(row.opponentRank||'').match(/^(\d+)e\/(\d+)$/);
       if(!tr||!op||tr[2]!==op[2]||!/^\d+$/.test(String(row.sourceId)))continue;
@@ -6108,7 +6134,7 @@ async function tlmScannerRows(){
   const now=Date.now(),limit=now+TLM_SCANNER_WINDOW_HOURS*3600000;
   let result=_upcomingPicksCache;
   if(!result||!result.ts||now-result.ts>2*3600000)result=await computeUpcomingPicks();
-  const fixtures=(result.fixtures||[]).filter(function(f){const t=new Date(f.kickoff).getTime();return Number.isFinite(t)&&t>now&&t<=limit;})
+  const fixtures=(result.fixtures||[]).filter(function(f){const t=new Date(f.kickoff).getTime();const c=tlmScannerComp(f);return Number.isFinite(t)&&t>now&&t<=limit&&(String(f.sport||"Football").toLowerCase()!=="football"||tlmSocialCompetitionAllowed(c.country,c.league));})
     .sort(function(a,b){return new Date(a.kickoff)-new Date(b.kickoff);}).slice(0,24);
   const rows=[];
   for(const f of fixtures)rows.push(String(f.sport||"Football").toLowerCase()==="football"?await tlmScannerFootballRow(f):tlmScannerExploratoryRow(f));
