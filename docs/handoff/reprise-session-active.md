@@ -36,3 +36,57 @@
 - Pas de secret ou de donnée personnelle stockés dans le checkpoint.
 
 **Prochaine action automatique lors d'une reprise :** vérifier les preuves des prochaines livraisons officielles Goal05 et le statut Stripe LIVE, puis avancer uniquement sur les points ouverts.
+
+
+## Reprise Telegram — 9 octobre 2026
+
+### Objectif
+Réparer les livraisons et activer la campagne +0,5 V2 avec contenu identique
+Gratuit/Premium jusqu’au 7 novembre 2026 inclus (Europe/Paris).
+
+### Branche / PR
+- Branche : `codex/telegram-runtime-repair-20261009`.
+- PR : https://github.com/Gregus77/touslesmatchs-site/pull/180 (ouverte, non fusionnée).
+- Source déployée : module Telegram de la branche, empreinte SHA-256
+  `f4304575546845312325bb06793d6224b66f2b0dd14d40ffa66d4c227cde48b0`.
+
+### Dernière étape terminée / preuves
+- Audit réel VPS via Actions : run `37968030063`. Hermès Guardian, console
+  propriétaire et mission-runner actifs ; bot administrateur dans trois chats distincts.
+- Tests explicites Telegram : run `37968258084`, message_id Hermès `4024`,
+  Gratuit `633`, Premium `220`. Aucun signal sportif créé pour ces tests.
+- Activation réussie : run `37969286415`. Empreinte du module exécuté vérifiée,
+  santé publique API/Telegram OK, observateur Goal05 actif avec push activé.
+- Image ciblée : `tlm-api-telegram-campaign:20261009t175214z`.
+- Sauvegarde privée VPS : `/opt/backups/telegram-campaign-20261009T175214Z`.
+- Override Compose persistant : `/opt/tlm-telegram-runtime/campaign.compose.json`.
+- Échéance : `2026-11-08T00:00:00+01:00`, fin du 7 novembre en heure de Paris.
+
+### Tests
+- Quatre tests des sondes : livraison, non-renvoi, incertitude, destinataires.
+- Égalité texte/boutons et échéance de campagne testées RED puis GREEN.
+- Goal05 V2 scoring/integration/policy, produit courant/historique et
+  cotes/partenaires/reprise passent ; CI de PR sans échec au dernier contrôle.
+
+### Sécurité / limites
+- Aucune clé ni fichier .env dans GitHub. Secrets conservés côté VPS.
+- Aucune recharge OpenRouter déclenchée. Limite clé observée 10 $, budget
+  applicatif 2 €/jour et 400 requêtes/modèle/jour. Paramètres d’auto-recharge
+  du compte OpenRouter non exposés par ces endpoints, donc non attestés.
+- Un résultat historique en état `uncertain` est conservé sans renvoi aveugle.
+- Aucun nouveau signal officiel +0,5 prouvé ; attendre un vrai candidat conforme.
+- VPS Hostinger annoncé expirant le 17 octobre 2026 : renouvellement exploitant
+  nécessaire pour garantir la continuité jusqu’au 7 novembre. Aucun renouvellement effectué.
+- PR non fusionnée : un déploiement général basé sur l’ancien main pourrait
+  écraser le module ciblé. Réconcilier la PR avant tout déploiement général,
+  en préservant l’historique et sans rejouer les imports anciens.
+
+### Prochaine action
+Run `37969449046` réussi : audit après activation ; les trois reçus TEST sont
+réutilisés avec `reused=true`, sans renvoi. Solde OpenRouter calculé 7,813097975 $ ;
+limite de clé restante 9,084183481 $, budget runtime 2 €/jour, 400 requêtes/modèle/jour.
+Les services Hermès, les droits bot et les cinq variables de campagne sont confirmés.
+Surveiller la prochaine vraie livraison +0,5 avec
+preuve de cote fraîche, quorum 4/5, note verte et message_id par canal.
+
+Horodatage : 2026-10-09T19:54:57.929929+02:00

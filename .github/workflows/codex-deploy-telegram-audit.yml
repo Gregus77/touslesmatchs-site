@@ -1,44 +1,52 @@
-name: Telegram and Goal05 production health audit
-
+name: Telegram runtime audit and explicit TEST probes
 on:
   workflow_dispatch:
-
+    inputs:
+      mode:
+        type: choice
+        options: [audit, test, activate]
+        default: audit
 permissions:
   contents: read
-
+concurrency:
+  group: tlm-telegram-runtime-probe
+  cancel-in-progress: false
 jobs:
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify current Goal05 and Telegram production health
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Audit runtime without exposing secrets
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
           command_timeout: 6m
-          script_stop: true
+          script_stop: false
           script: |
             set -euo pipefail
             cd /opt/touslesmatchs
-
-            node --check scripts/api_server.js
-            node --check scripts/goal05_v2.js
-            node --check scripts/telegram_client.js
-            node scripts/test_goal05_policy_20261005.js
-            node scripts/test_current_product_goal05_20261005.js
-
-            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
-            docker exec touslesmatchs-api grep -q 'goal05_v2_20261006' /app/server.js
-            docker exec touslesmatchs-api sh -lc 'test -n "$TELEGRAM_BOT_TOKEN"'
-            docker exec touslesmatchs-api sh -lc 'test -n "$TELEGRAM_GOAL05_CHANNEL_ID" || test -n "$TELEGRAM_PREMIUM_CHANNEL_ID"'
-
-            curl -fsSL "https://www.touslesmatchs.com/api/health?t=$(date +%s)" |
-              node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);if(!x.ok)process.exit(1);const t=x.integrations?.telegram;if(t?.configured===false||t?.ok===false)process.exit(1);console.log("PUBLIC_TELEGRAM_HEALTH_OK")})'
-
-            curl -fsSL "https://www.touslesmatchs.com/api/goal05/stats?t=$(date +%s)" |
-              node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);if(!x.ok||x.policyVersion!=="goal05_v2_20261006")process.exit(1);console.log("PUBLIC_GOAL05_STATS_OK")})'
-
-            echo "GOAL05_TELEGRAM_AUDIT_OK"
+            exec 9>/tmp/tlm-telegram-runtime-probe.lock
+            flock -w 60 9
+            python3 - <<'PY'
+            import urllib.request, hashlib, base64, gzip, sys
+            base='https://raw.githubusercontent.com/Gregus77/touslesmatchs-site/9c46f432d171f7fa12fca3d2df74e1dfc1eb0f3c/'
+            manifest={'scripts/tlm_telegram_campaign_activate.py': '31fc982bf0490f88581d455d9a8d1f3d8b573495d70ce20f34bbfe5c5306c8ed', 'scripts/telegram_client.js': 'f4304575546845312325bb06793d6224b66f2b0dd14d40ffa66d4c227cde48b0', 'scripts/test_telegram_campaign_20261009.js': '0d49a4cff9431197535db4e43ce3bd62c4461ed44b948c414ebdab75ad379327', 'scripts/tlm_telegram_runtime_probe.py': '7d0a3b820b4a29f0ad30ba9c227037977aa3f9d7544d2cfe81cd4c1be3e7edad'}
+            sources={}
+            for path,expected in manifest.items():
+                with urllib.request.urlopen(base+path,timeout=30) as response: content=response.read()
+                assert hashlib.sha256(content).hexdigest()==expected, 'source_integrity_failed'
+                sources[path]=content
+            mode='${{ inputs.mode }}'
+            if mode=='activate':
+                scope={'__name__':'tlm_campaign_activate'}
+                exec(compile(sources['scripts/tlm_telegram_campaign_activate.py'],'activate.py','exec'),scope)
+                pack=lambda b:base64.b64encode(gzip.compress(b)).decode()
+                scope['main'](pack(sources['scripts/telegram_client.js']),pack(sources['scripts/test_telegram_campaign_20261009.js']))
+            else:
+                assert mode in ['audit','test']
+                sys.argv=['probe','--mode',mode]
+                exec(compile(sources['scripts/tlm_telegram_runtime_probe.py'],'probe.py','exec'),{'__name__':'__main__'})
+            PY
