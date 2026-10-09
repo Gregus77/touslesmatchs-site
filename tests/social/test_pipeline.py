@@ -108,7 +108,7 @@ class IntegrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             s=m.Store(pathlib.Path(tmp)/'state.db');calls=[]
             def deny(*a,**k):calls.append(1);raise m.HttpFailure(403)
-            cfg={'imageModel':'TEST-model','imageReservationCents':100,'imageDailyCapCents':200}
+            cfg={'imageMode':'openai_required','imageModel':'TEST-model','imageReservationCents':100,'imageDailyCapCents':200}
             with patch.dict(m.os.environ,{'OPENAI_API_KEY':'TEST-NOT-A-SECRET'}),patch.object(m,'request',deny):
                 with self.assertRaises(ValueError):m.background(s,m.content(fixture(),'before','fr'),cfg,pathlib.Path(tmp))
                 with self.assertRaises(ValueError):m.background(s,m.content({**fixture(),'fixtureId':'999002'},'before','fr'),cfg,pathlib.Path(tmp))
@@ -169,7 +169,7 @@ class RaceAndImageTests(unittest.TestCase):
         from unittest.mock import patch
         b=io.BytesIO();Image.new('RGB',(2,2)).save(b,format='PNG')
         with tempfile.TemporaryDirectory() as tmp:
-            s=m.Store(pathlib.Path(tmp)/'state.db');cfg={'imageModel':'TEST-model','imageReservationCents':100,'imageDailyCapCents':100};calls=[]
+            s=m.Store(pathlib.Path(tmp)/'state.db');cfg={'imageMode':'openai_required','imageModel':'TEST-model','imageReservationCents':100,'imageDailyCapCents':100};calls=[]
             def transport(url,body,headers):
                 calls.append(json.loads(body));return {'created':123,'data':[{'b64_json':base64.b64encode(b.getvalue()).decode()}],'usage':{'TEST':True}}
             with patch.dict(m.os.environ,{'OPENAI_API_KEY':'TEST-NOT-A-SECRET'}),patch.object(m,'request',transport):
