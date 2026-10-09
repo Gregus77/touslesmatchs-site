@@ -516,3 +516,5 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 ## 2026-10-09 — Visuel Premium et diffusion Metricool
 - Visuel original imagegen pour Instagram/Facebook avec tarif Premium Stripe LIVE verifie 14,90 EUR/mois et lien public checkout teste (303).
 - Publication Metricool 391671338 programmee pour 03h32 Paris ; statut final a verifier. YouTube non connecte, TikTok en attente eSIM ; @parrainagebanque exclu.
+
+- Livraison confirmee Metricool le 9 octobre : Facebook 122103518433500089 et Instagram DeQVhfIHxgD, statuts PUBLISHED et URLs publiques conservees dans le dossier campagne.

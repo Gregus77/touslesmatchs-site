@@ -7,7 +7,7 @@
   "uuid": "437002276994237473",
   "plannerUrl": "https://app.metricool.com/planner/calendar?blogId=7314226&openWithPostUuid=437002276994237473",
   "scheduledAt": "2026-10-09T03:32:00+02:00",
-  "state": "PENDING",
+  "state": "PUBLISHED",
   "channels": [
     "facebook",
     "instagram"
@@ -20,5 +20,20 @@
     "url": "https://www.touslesmatchs.com/api/premium-checkout?lang=fr"
   },
   "youtube": "not connected",
-  "tiktok": "awaiting eSIM"
+  "tiktok": "awaiting eSIM",
+  "publications": {
+    "facebook": {
+      "status": "PUBLISHED",
+      "id": "122103518433500089",
+      "url": "https://facebook.com/122103473883500089/posts/122103518433500089"
+    },
+    "instagram": {
+      "status": "PUBLISHED",
+      "url": "https://www.instagram.com/p/DeQVhfIHxgD/"
+    }
+  },
+  "imageGeneration": {
+    "tool": "built-in image_gen",
+    "prompt": "Use case: ads-marketing. Create a polished French customer-acquisition social media advertisement for the sports analysis brand TousLesMatchs, square 1:1 format, readable on mobile. A cinematic close-up of an unbranded football on the edge of a floodlit stadium pitch at night, dark midnight blue atmosphere, cyan and violet lighting aligned with a modern sports analytics brand. No people, no celebrity, no club logos. Sophisticated editorial typography, restrained strong layout, ample clean space, no fake application screenshots or invented statistics. Render these exact French words clearly and verbatim, no other claims: top brand 'TOUSLESMATCHS'; large headline 'LE FOOTBALL. LES FAITS. L’IA.'; subheadline 'Analyses +0,5 but • Vote de 5 IA'; smaller support line 'Historique transparent : gains et pertes visibles'; offer in clear badge 'PREMIUM • 14,90 €/mois'; CTA 'DÉCOUVRIR TOUSLESMATCHS.COM'; readable bottom footer '18+ • Aucun gain garanti • joueurs-info-service.fr'. All text fully inside safe margins at least 7 percent from edges. No actual match picks, odds, winrate, promise of profits, countdown, invented endorsements, Stripe logo, QR code, or unrelated brand. This is a real promotional creative, not a diagnostic report."
+  }
 }
