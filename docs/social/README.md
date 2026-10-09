@@ -112,3 +112,7 @@ l'état de production. Les 25 scripts inline des deux pages ont été contrôlé
 `node --check` ; syntaxe valide.
 
 Le bilan exige aussi un reçu AVANT publié sur la même destination/langue. Sans ce reçu, il reste `before_unpublished` ; une panne initiale ne doit pas produire un faux couple AVANT/APRÈS. Cela limite notamment Metricool aux AVANT déjà publiés et prouvés (migration FR du 9 octobre), tant que la deadline prématch n’est pas prise en charge. Le site refuse sa première publication AVANT à moins de 30 secondes du kickoff et conserve seulement les archives déjà visibles ou diffusées avec preuve.
+
+
+## État opérateur vérifié du 9 octobre
+OpenAI gpt-image-1 : HTTP401 invalid_api_key ; ne pas répéter la requête tant que l’accès n’est pas remplacé. Accès serveur Metricool absent. Migration EN vérifiée : Telegram Gratuit624/Premium211, Metricool391699655 PUBLISHED Facebook et Instagram, URLs conservées dans le seed. Cartes originales FR/EN déjà hébergées et visibles sur le bilan du site ; aucune nouvelle génération API ni commission certifiée.

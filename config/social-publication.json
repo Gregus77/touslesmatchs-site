@@ -8,7 +8,25 @@
   "imageReservationCents": 0,
   "imageDailyCapCents": 0,
   "metricoolEnabled": false,
-  "metricoolVerifiedNetworks": {"instagram": false, "facebook": false},
+  "metricoolVerifiedNetworks": {
+    "instagram": false,
+    "facebook": false
+  },
   "instagramBioVerified": false,
-  "countryCodes": {"France": "FR", "Denmark": "DK", "Danemark": "DK", "Kuwait": "KW", "Koweït": "KW"}
+  "countryCodes": {
+    "France": "FR",
+    "Denmark": "DK",
+    "Danemark": "DK",
+    "Kuwait": "KW",
+    "Koweït": "KW"
+  },
+  "october9EnglishReceiptsVerified": true,
+  "runtimeBlockers": [
+    {
+      "stage": "openai_api_key_invalid_401"
+    },
+    {
+      "stage": "metricool_server_credentials_missing"
+    }
+  ]
 }

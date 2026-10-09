@@ -66,7 +66,8 @@ def content(f,phase,lang,test=False):
     title=('SURVEILLANCE' if fr else 'WATCHLIST') if phase=='before' else ('BILAN' if fr else 'REVIEW')
     label=('Observation positive' if fr else 'Positive observation') if f.get('classification')=='observation_positive' else ('Observation négative' if fr else 'Negative observation')
     if f.get('classification') in ['WIN','LOSS']:label=f['classification']+' · '+('signal officiel diffusé' if fr else 'delivered official signal')
-    lines=[title,f['targetTeam'],f['home']+' — '+f['away'],flag+' '+f['country']+' · '+f['competition'],at+' Paris',
+    country={'DK':('Danemark','Denmark'),'KW':('Koweït','Kuwait'),'FR':('France','France')}.get(f['countryCode'],(f['country'],f['country']))[0 if fr else 1]
+    lines=[title,f['targetTeam'],f['home']+' — '+f['away'],flag+' '+country+' · '+f['competition'],at+' Paris',
            ('Cible : +0,5 but — au moins 1 but' if fr else 'Target: +0.5 team goals — at least 1 goal'),
            f"Top {f['targetRank']} / {f['total']} · {f['opponentRank']} / {f['total']}"]
     if phase=='before':lines+=['Surveillance uniquement — aucun signal jouable.' if fr else 'Watchlist only — no playable signal.',
@@ -74,7 +75,7 @@ def content(f,phase,lang,test=False):
     else:lines+=[label,f"{f['result']['home']} — {f['result']['away']}",
                 (('Résultat officiel, sans calcul de profit.' if fr else 'Official result, no profit calculation.') if f.get('classification') in ['WIN','LOSS'] else ('Aucun gain déduit de cette observation.' if fr else 'No profit inferred from this observation.'))]
     lines+=['Carte reconstituée · TousLesMatchs' if fr else 'Reconstructed card · TousLesMatchs',
-            'Premium · 14,90 EUR/mois' if fr else 'Premium · 14.90 EUR/month',
+            'Rejoindre Premium — 14,90 EUR/mois' if fr else 'Join Premium — 14.90 EUR/month',
             '18+ · joueurs-info-service.fr',
             'Aucun gain garanti.' if fr else 'No guaranteed returns.']
     if test:lines.insert(0,'TEST NE PAS DIFFUSER')
@@ -150,6 +151,23 @@ def seed_october9(store):
                            ('facebook',{'id':391683938,'url':'https://facebook.com/122103473883500089/posts/122103525045500089'})]:
             key=f'{fixture}:before:fr:{dest}'
             if store.claim(key):store.finish(key,'published',{**proof,'provenance':'owner_handoff_2026-10-09','scope':'shared_FR_card'})
+
+def seed_verified_bilingual(store,cfg):
+    if cfg.get('october9EnglishReceiptsVerified') is not True:return
+    for fid in ['1549031','1622650']:
+        before=store.before(fid)
+        if not before:continue
+        for lang in ['fr','en']:
+            c=content(before['facts'],'before',lang)
+            c['imageUrl']='/media/social/tlm-watchlist-20261009'+('-en' if lang=='en' else '')+'.png'
+            store.save_card(c,stamp('2026-10-09T02:23:00Z'))
+            key=f'{fid}:before:{lang}'
+            row=store.db.execute('SELECT body FROM cards WHERE key=?',(key,)).fetchone()
+            body=json.loads(row['body']);body['imageUrl']=c['imageUrl']
+            store.db.execute('UPDATE cards SET body=? WHERE key=?',(json.dumps(body,ensure_ascii=False),key))
+        for dest,proof in [('telegram_free',{'message_id':624}),('telegram_premium',{'message_id':211}),('instagram',{'id':391699655,'url':'https://www.instagram.com/p/DeQbstXnL50/'}),('facebook',{'id':391699655,'url':'https://facebook.com/122103473883500089/posts/122103541821500089'})]:
+            key=f'{fid}:before:en:{dest}'
+            if store.claim(key):store.finish(key,'published',{**proof,'provenance':'owner_handoff_2026-10-09','scope':'shared_EN_card'})
 
 class HttpFailure(Exception):
     def __init__(self,status):self.status=status
@@ -231,7 +249,7 @@ def telegram(c,png,target,buttons):
     if not token:raise ValueError('telegram_runtime_missing')
     caption=html.escape(c['caption']).replace(html.escape(c['facts']['targetTeam']),'<b>'+html.escape(c['facts']['targetTeam'])+'</b>',1)
     if len(caption)>1024:raise ValueError('telegram_caption_limit')
-    keyboard=[[{'text':'Premium · 14,90 EUR/mois','url':CTA}]]
+    keyboard=[[{'text':'⭐ Rejoindre Premium — 14,90 EUR/mois' if c['lang']=='fr' else '⭐ Join Premium — 14.90 EUR/month','url':CTA}]]
     keyboard+=[[{'text':'Bilans / Reviews','url':'https://www.touslesmatchs.com/social/'}]]
     keyboard+=[[{'text':'Sponsored · '+b['text'],'url':b['url']} for b in buttons[i:i+2]] for i in range(0,len(buttons),2)]
     boundary='tlm-'+os.urandom(12).hex();parts=[]
@@ -264,7 +282,9 @@ def site(store,webroot,test=False):
         for c in cards:
             if c['lang']!=lang:continue
             archive='<p>Archive pré-match / Pre-match archive</p>' if c['phase']=='before' and time.time()>=stamp(c['facts']['kickoff']) else ''
-            articles.append(archive+'<article id="'+c['fixtureId']+'-'+c['phase']+'"><h2>'+html.escape(c['facts']['targetTeam'])+'</h2>'+''.join('<p>'+html.escape(x)+'</p>' for x in c['lines'])+'</article>')
+            visual=''; asset=c.get('imageUrl','')
+            if asset.startswith('/media/social/') and (Path(webroot)/asset.lstrip('/')).is_file():visual='<img style="max-width:100%;height:auto;border-radius:12px" src="'+html.escape(asset,quote=True)+'" alt="'+html.escape(c['facts']['home']+' — '+c['facts']['away'],quote=True)+'">'
+            articles.append(archive+'<article id="'+c['fixtureId']+'-'+c['phase']+'"><h2>'+html.escape(c['facts']['targetTeam'])+'</h2>'+visual+''.join('<p>'+html.escape(x)+'</p>' for x in c['lines'])+'</article>')
         page='<!doctype html><html lang="'+lang+'"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+title+' | TousLesMatchs</title><meta name="description" content="'+title+' — observations datées, séparées des résultats officiels."><link rel="alternate" hreflang="fr" href="https://www.touslesmatchs.com/social/current/fr.html"><link rel="alternate" hreflang="en" href="https://www.touslesmatchs.com/social/current/en.html"><style>body{font:18px/1.6 system-ui;background:#0b1426;color:#f5f7fa;max-width:720px;margin:auto;padding:20px}article{border:1px solid #506080;border-radius:16px;padding:20px;margin:24px 0}a{color:#ffdc80}</style><nav><a href="fr.html">Français</a> · <a href="en.html">English</a> · <a href="/app">App</a></nav><h1>'+title+'</h1><p>'+iso()+'</p>'+(''.join(articles) or '<p>Aucune publication vérifiée / No verified publication.</p>')+'<a href="'+CTA+'">Premium · 14,90 EUR/mois</a><p>18+ · joueurs-info-service.fr</p></html>'
         atomic(out/(lang+'.html'),page)
     tmp=root/('.current-'+version);tmp.symlink_to(version,target_is_directory=True);os.replace(tmp,root/'current')
@@ -337,7 +357,7 @@ def reconcile_metricool(store):
         except Exception:pass # no POST retry; admin sees persisted pending
 
 def process(source,store,cfg,output,now,dry_run=True,offline=False,review=True):
-    cards=[];report={'createdAt':iso(),'mode':'TEST NE PAS DIFFUSER' if dry_run else 'production','blocked':[],'deliveries':[]}
+    cards=[];report={'createdAt':iso(),'mode':'TEST NE PAS DIFFUSER' if dry_run else 'production','blocked':list(cfg.get('runtimeBlockers',[])),'deliveries':[]}
     if source.get('schema')!=1:raise ValueError('source_schema')
     for raw in source.get('matches',{}).values():
         fid=str(raw.get('fixtureId',''));prior=store.before(fid)
@@ -419,7 +439,9 @@ def main():
         if args.command=='status':
             print(json.dumps({'deliveryStates':[dict(r) for r in store.db.execute('SELECT state,count(*) count FROM delivery GROUP BY state')],
                               'imageBreaker':bool(store.db.execute("SELECT 1 FROM settings WHERE key='image_breaker'").fetchone())}));return
-        if live:seed_october9(store)
+        if live:
+            seed_october9(store)
+            seed_verified_bilingual(store,cfg)
         now=time.time()
         if args.command=='offline':
             now=datetime(2030,1,1,12,tzinfo=timezone.utc).timestamp()
