@@ -523,3 +523,5 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Decision utilisateur : annoncer les affiches Top5/Bottom5 avant match sur les reseaux, puis attendre une cote live >=1,60 et la validation officielle avant de jouer. Surveillance et signal jouable restent separes.
 - Nordsjaelland/Odense et Kazma/Al Arabi reverifies via fixtures + standings API-Sports a 03h45 Paris ; horaires 19h00/19h05, classements 4e/9e et 1er/10e sur 12.
 - Publication Metricool 391683938 ; image et texte archives sans vote ni cote invente, aucune entree dans les statistiques de pronostics joues.
+
+- Surveillance livree : Facebook 122103525045500089 et Instagram DeQXlLFjTAQ, statuts PUBLISHED ; lien Premium Stripe inclus. Suivi apres match programme a 21h15/22h15/23h15 Paris pour cartes bilan et page SEO, sans assimiler une observation a un pari joue.

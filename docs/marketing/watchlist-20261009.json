@@ -47,8 +47,28 @@
       "verifiedAt": "2026-10-09T01:45:05Z"
     }
   ],
-  "status": "PENDING",
+  "status": "PUBLISHED",
   "excludedAccount": "@parrainagebanque",
   "youtube": "not connected",
-  "tiktok": "awaiting eSIM"
+  "tiktok": "awaiting eSIM",
+  "providers": {
+    "facebook": {
+      "status": "PUBLISHED",
+      "id": "122103525045500089",
+      "url": "https://facebook.com/122103473883500089/posts/122103525045500089"
+    },
+    "instagram": {
+      "status": "PUBLISHED",
+      "url": "https://www.instagram.com/p/DeQXlLFjTAQ/"
+    }
+  },
+  "afterMatchFollowup": {
+    "automationId": "bilan-des-matchs-surveill-s-du-9-octobre",
+    "checkTimesParis": [
+      "2026-10-09T21:15:00+02:00",
+      "2026-10-09T22:15:00+02:00",
+      "2026-10-09T23:15:00+02:00"
+    ],
+    "scope": "verified results cards plus dated SEO page, both outcomes, Stripe Premium EUR14.90"
+  }
 }
