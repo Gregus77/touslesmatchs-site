@@ -38,6 +38,8 @@ const rows=[
  {created_at:'2026-10-09 11:10:00',utm_source:'youtube',ip_hash:'three'},
  {created_at:'2026-10-09 11:15:00',referrer:'https://www.tiktok.com/',ip_hash:'four'},
  {created_at:'2026-10-09 11:17:00',referrer:'https://t.me/',ip_hash:'five'},
+ {created_at:'2026-10-09 11:18:00',page:'/go/tiktok',utm_source:'tiktok',ip_hash:'redirect-only'},
+ {created_at:'2026-10-09 11:18:30',page:'/admin/dashboard',utm_source:'facebook',ip_hash:'admin-only'},
  {created_at:'2026-10-09 11:19:00',referrer:'https://facebook.com.evil.com/',ip_hash:'attacker'},
  {created_at:'2026-10-08 17:00:00',utm_source:'facebook',ip_hash:'six'},
  {created_at:'2026-09-01 10:00:00',utm_source:'instagram',ip_hash:'old'}
@@ -55,4 +57,7 @@ assert.equal(result.trend.length,7);
 assert(result.campaigns.some(x=>x.network==='facebook'&&x.campaign==='promo1'&&x.arrivals===2));
 assert(!JSON.stringify(result).includes('"ip_hash"'),'raw visitor hashes cannot be returned');
 assert(!JSON.stringify(result).includes('attacker'));
+assert(!JSON.stringify(result).includes('redirect-only'));
+assert(!JSON.stringify(result).includes('admin-only'));
+assert(source.includes("page.startsWith('/go/')"),'redirects must be excluded from site traffic');
 console.log('SOCIAL_TRAFFIC_ATTRIBUTION_OK');
