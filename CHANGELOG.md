@@ -526,3 +526,10 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Shadow vainqueur multisport séparé du registre officiel, sous quotas existants, sans diffusion client.
 - Supervision en lecture seule et rapport propriétaire ; télécommande préparée mais inactive sans utilisateur explicitement autorisé.
 - Tests hors réseau Football, Jev, budgets, Shadow, résolution et contrôle d’accès.
+
+
+## 2026-10-10 - [Codex] Social diagnosis and safe cron launcher
+
+- Confirm publication_disabled; report allowlisted reasons without secrets.
+- Parse dotenv as data, preserve other cron entries and create log.
+- 30 tests; isolated dry runs send nothing. Full automation remains incomplete.
