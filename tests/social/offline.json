@@ -1,0 +1,1 @@
+{"schema":1,"matches":{"999001":{"fixtureId":"999001","home":"TEST Alpha","away":"TEST Beta","targetTeam":"TEST Alpha","targetSide":"home","targetRank":1,"opponentRank":12,"total":12,"country":"France","competition":"TEST League","kickoff":"2030-01-01T15:00:00Z","verifiedAt":"2030-01-01T11:59:00Z","whitelist":true,"source":"canonical_scanner","test":true}}}
