@@ -32,6 +32,7 @@ def main(source_b64,test_b64):
     originalimage=active['Image']
     rollback=backup/'rollback.compose.json';rollback.write_text(json.dumps({'services':{'api':{'image':originalimage,'environment':oldenv}}}));os.chmod(rollback,0o600)
     changed=False
+    stage="candidate_test"
     try:
         with tempfile.TemporaryDirectory(prefix='tlm-telegram-build-') as tmp:
             tmp=Path(tmp);(tmp/'telegram_client.js').write_bytes(source)
@@ -40,7 +41,9 @@ def main(source_b64,test_b64):
             run(['node',str(tmp/'test.js')])
             (tmp/'Dockerfile').write_text('FROM '+originalimage+'\nCOPY telegram_client.js /app/telegram_client.js\n')
             image='tlm-api-telegram-campaign:'+stamp.lower()
+            stage='image_build'
             run(['docker','build','--network=none','-t',image,str(tmp)])
+        stage='configuration'
         values={'GOAL05_ENABLED':'1','GOAL05_PUSH_ENABLED':'1','TLM_LAUNCH_ALL_ACCESS':'1','TLM_FREE_OFFER_CONFIRMED':'1','TLM_FREE_OFFER_ENDS_AT':END}
         lines=envpath.read_text().splitlines();lines=[x for x in lines if x.partition('=')[0].strip() not in values]
         lines += [k+'='+v for k,v in values.items()]
@@ -51,7 +54,9 @@ def main(source_b64,test_b64):
         compose=['docker','compose','-f',str(ROOT/'docker-compose.yml'),'-f',str(override)]
         changed=True
         run(compose+['config','--quiet'],cwd=ROOT)
+        stage='api_recreate'
         run(compose+['up','-d','--no-build','--no-deps','--force-recreate','api'],cwd=ROOT)
+        stage="health_validation"
         success=False
         for _ in range(18):
             try:
@@ -63,6 +68,7 @@ def main(source_b64,test_b64):
             except Exception:pass
             time.sleep(3)
         assert success,'post_deploy_health_or_hash_failed'
+        stage="observer_validation"
         observer=False
         for _ in range(12):
             logs=run(['docker','logs','touslesmatchs-api','--since',started.isoformat()],merge=True)
@@ -71,7 +77,7 @@ def main(source_b64,test_b64):
         assert observer,'goal05_observer_not_confirmed'
         proof={'deployed_at':stamp,'module_sha256':digest,'campaign_end':END,'goal05_observer_active':True,'test_message_ids':{r[0].split(':')[-1]:r[2] for r in rows},'image':image,'backup':str(backup),'automatic_topup_performed':False}
         (deployroot/'checkpoint.json').write_text(json.dumps(proof));print('TELEGRAM_CAMPAIGN_DEPLOYED '+json.dumps(proof))
-    except Exception:
+    except Exception as error:
         shutil.copy2(backup/'.env',envpath);shutil.copy2(backup/'telegram_client.js',module)
         if changed:run(['docker','compose','-f',str(ROOT/'docker-compose.yml'),'-f',str(rollback),'up','-d','--no-build','--no-deps','--force-recreate','api'],cwd=ROOT)
-        raise RuntimeError('activation_failed_original_configuration_restored') from None
+        raise RuntimeError('activation_failed_original_configuration_restored:'+stage+':'+str(error)[:120]) from None
