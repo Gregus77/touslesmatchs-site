@@ -1,0 +1,39 @@
+name: Test Social Traffic Attribution
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/api_server.js
+      - scripts/social_traffic.inc.js
+      - scripts/test_social_traffic_20261009.js
+      - public/admin-dashboard.html
+      - public/app.html
+      - public/performances.html
+      - public/js/social-visit.js
+      - .github/workflows/test-social-traffic-attribution.yml
+  push:
+    branches: [codex/social-traffic-attribution-20261009]
+
+permissions:
+  contents: read
+
+jobs:
+  social-traffic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate API, attribution, and dashboard wiring
+        run: |
+          set -euo pipefail
+          node --check scripts/api_server.js
+          node --check scripts/social_traffic.inc.js
+          node --check scripts/test_social_traffic_20261009.js
+          node --check public/js/social-visit.js
+          node scripts/test_social_traffic_20261009.js
+          node scripts/test_goal05_policy_20261005.js
+          echo TLM_SOCIAL_TRAFFIC_TESTS_OK
