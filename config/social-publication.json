@@ -1,5 +1,5 @@
 {
-  "enabled": false,
+  "enabled": true,
   "sourceFile": "/opt/touslesmatchs/data/social-source.json",
   "officialDb": "/opt/touslesmatchs/data/tlm.db",
   "stateDir": "/opt/touslesmatchs/data/social-publication",
@@ -14,19 +14,53 @@
   },
   "instagramBioVerified": false,
   "countryCodes": {
-    "France": "FR",
-    "Denmark": "DK",
+    "Espagne": "ES",
+    "Spain": "ES",
+    "Italie": "IT",
+    "Italy": "IT",
+    "Pays-Bas": "NL",
+    "Netherlands": "NL",
+    "Belgique": "BE",
+    "Belgium": "BE",
+    "Angleterre": "GB",
+    "England": "GB",
+    "Écosse": "GB",
+    "Scotland": "GB",
+    "Irlande": "IE",
+    "Ireland": "IE",
     "Danemark": "DK",
-    "Kuwait": "KW",
-    "Koweït": "KW"
+    "Denmark": "DK",
+    "Brésil": "BR",
+    "Brazil": "BR",
+    "Argentine": "AR",
+    "Argentina": "AR",
+    "Japon": "JP",
+    "Japan": "JP",
+    "Norvège": "NO",
+    "Norway": "NO",
+    "Chili": "CL",
+    "Chile": "CL",
+    "Uruguay": "UY",
+    "Paraguay": "PY",
+    "Colombie": "CO",
+    "Colombia": "CO",
+    "Corée du Sud": "KR",
+    "South Korea": "KR",
+    "USA": "US",
+    "United States": "US",
+    "Canada": "CA"
   },
   "october9EnglishReceiptsVerified": true,
   "runtimeBlockers": [
     {
-      "stage": "openai_api_key_invalid_401"
+      "stage": "metricool_server_credentials_missing"
     },
     {
-      "stage": "metricool_server_credentials_missing"
+      "stage": "social_tipster_marketing_legal_review"
     }
-  ]
+  ],
+  "imageMode": "deterministic",
+  "publicationMode": "facts_only",
+  "telegramEnabled": false,
+  "notifyOwner": true
 }
