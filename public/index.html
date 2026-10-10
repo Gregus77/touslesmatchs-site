@@ -1119,6 +1119,20 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 }
 </style>
 
+<!-- TLM Lens–Lyon visual: score and minute remain real DOM text, never baked into an AI image. -->
+<style id="tlm-lens-lyon-poster-style">
+.tlm-match-stage{position:relative;isolation:isolate;overflow:hidden}
+.tlm-stage-poster{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center;opacity:0;pointer-events:none;transition:opacity .35s}
+.tlm-match-stage.has-poster{min-height:430px;border-color:rgba(88,197,255,.7)}
+.tlm-match-stage.has-poster .tlm-stage-poster{opacity:.95}
+.tlm-match-stage.has-poster:before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+ background:linear-gradient(180deg,rgba(2,7,28,.8),rgba(2,8,28,.24) 33%,rgba(2,8,28,.44) 65%,rgba(2,8,28,.92))}
+.tlm-match-stage>.tlm-stage-head,.tlm-match-stage>.tlm-stage-teams,.tlm-match-stage>.tlm-goal05-current-box{position:relative;z-index:2}
+.tlm-match-stage.has-poster .tlm-stage-teams{margin-top:140px;padding:14px 4px;border-radius:14px;background:rgba(2,7,28,.65);text-shadow:0 1px 6px #000}
+.tlm-match-stage.has-poster .tlm-goal05-current-box{background:rgba(2,9,29,.9)}
+@media(max-width:650px){.tlm-match-stage.has-poster{min-height:350px}.tlm-match-stage.has-poster .tlm-stage-teams{margin-top:90px}}
+@media(prefers-reduced-motion:reduce){.tlm-stage-poster{transition:none}}
+</style>
 <script src="/js/social-source-session.js?v=20261009-1"></script>
 </head>
 <body class="tlm-wow tlm-page-home">
@@ -1204,6 +1218,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
         </div>
         <div class="tlm-match-stage" id="hero-live-match" aria-live="polite">
+          <img class="tlm-stage-poster" id="hero-match-poster" alt="" aria-hidden="true" decoding="async" loading="lazy" hidden>
           <div class="tlm-stage-head"><div><span class="tlm-stage-live" id="hero-live-status">Recherche du match en direct</span> <span id="hero-live-date"></span></div><strong class="tlm-stage-minute" id="hero-live-minute">—</strong></div>
           <div class="tlm-stage-teams">
             <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-home-logo" src="/logo192.png" alt="TousLesMatchs"><strong id="hero-home-name">En attente</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-home-flag" alt="" hidden><span id="hero-home-country">—</span></span></div>
@@ -1964,7 +1979,23 @@ function compareHeroMatches(a,b){
   return String(a.id||a.home+'|'+a.away).localeCompare(String(b.id||b.home+'|'+b.away));
 }
 function heroWasSent(m){return !!(m&&m.telegram_delivery_proven===true);}
+function setHeroPoster(match){
+  var stage=document.getElementById('hero-live-match'),img=document.getElementById('hero-match-poster');
+  if(!stage||!img)return;
+  var key=match&&(match.fixtureId||match.fixture_id||match.id||match.sourceId);
+  var id=String(key||'');
+  // Fixture ID is a stable key. Never use third-party or arbitrary poster URLs.
+  var url=/^[0-9]{1,14}$/.test(id)?'/media/matches/'+id+'.png':'';
+  if(!url){img.removeAttribute('src');img.hidden=true;stage.classList.remove('has-poster');return;}
+  if(img.dataset.posterId===id&&img.getAttribute('src')===url)return;
+  stage.classList.remove('has-poster');
+  img.hidden=true;img.dataset.posterId=id;
+  img.onload=function(){if(img.dataset.posterId===id){img.hidden=false;stage.classList.add('has-poster');}};
+  img.onerror=function(){if(img.dataset.posterId===id){img.hidden=true;stage.classList.remove('has-poster');}};
+  img.src=url;
+}
 function renderHeroLive(m){
+  setHeroPoster(m);
   var status=document.getElementById('hero-live-status');
   var voteState=heroGoal05State(m),votes=voteState.voteCount,sent=heroWasSent(m),minute=tlmHeroMinuteOf(m),consensus=heroConsensusDetail(m);
   var country=heroCountry(m);
@@ -2047,6 +2078,7 @@ function renderHeroLive(m){
   var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/Math.max(1,(tlmSignalWindowEnd||45)-15)*100)):12;progress.style.width=pct+'%';}
 }
 function renderHeroWatchlist(p){
+  setHeroPoster(p);
   if(!p){renderHeroLive(null);return;}
   var status=document.getElementById('hero-live-status');
   var kickoff=new Date(p.kickoff),country=String(p.country||splitComp(p.competition||'').country||'').trim();
