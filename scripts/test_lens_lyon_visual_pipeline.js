@@ -27,7 +27,7 @@ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'tlm-poster-test-'));
   const msg=telegram.render('scanner',{rows:[{
     home:'Lens',away:'Lyon',targetTeam:'Lens',targetRank:'3/20',opponentRank:'16/20',rating:8.1,
     country:'France',sport:'Football',kickoffLabel:'10/10 20:00',
-    posterUrl:'https://www.touslesmatchs.com/media/matches/123456789.png'
+    posterUrl:'https://www.touslesmatchs.com/media/matches/123456789.png',posterReviewed:true
   }]},{channel:'free',lang:'fr',tier:'free'});
   assert.equal(msg.photo,'https://www.touslesmatchs.com/media/matches/123456789.png');
   assert.equal(msg.caption,msg.text);
