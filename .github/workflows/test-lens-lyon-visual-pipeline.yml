@@ -1,0 +1,33 @@
+name: Test TLM Lens-Lyon visual pipeline
+on:
+  pull_request:
+    paths:
+      - 'scripts/generate_lens_lyon_poster.js'
+      - 'scripts/telegram_client.js'
+      - 'scripts/test_lens_lyon_visual_pipeline.js'
+      - 'public/index.html'
+      - '.github/workflows/test-lens-lyon-visual-pipeline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax validation
+        run: |
+          node --check scripts/generate_lens_lyon_poster.js
+          node --check scripts/telegram_client.js
+          node --check scripts/test_lens_lyon_visual_pipeline.js
+      - name: Poster and Telegram non-regression
+        run: node scripts/test_lens_lyon_visual_pipeline.js
+      - name: HTML visual contract
+        run: |
+          grep -q 'id="hero-match-poster"' public/index.html
+          grep -q "setHeroPoster(m)" public/index.html
+          grep -q "setHeroPoster(p)" public/index.html

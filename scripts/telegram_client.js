@@ -6,6 +6,16 @@ const CTA = {fr:'Passer à Premium — 14,90 €/mois, sans engagement',ru:'Оф
 const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const legal = lang => lang === 'ru' ? '⚠️ 18+ — Ответственная игра. Выигрыш не гарантирован. joueurs-info-service.fr' : '⚠️ 18+ — Jeu responsable. Aucun gain garanti. joueurs-info-service.fr';
 const payment = lang => `${PAYMENT}?lang=${lang}`;
+// Only approved public poster assets from our own domain may be supplied to Telegram.
+function posterPhotoUrl(value) {
+  try {
+    const url=new URL(String(value||''));
+    if(url.protocol!=='https:'||!['www.touslesmatchs.com','touslesmatchs.com'].includes(url.hostname)||
+       url.port||url.username||url.password||url.search||url.hash||
+       !/^\/media\/matches\/[0-9]{1,14}\.png$/.test(url.pathname))return null;
+    return url.href;
+  } catch {return null;}
+}
 function destinations(env) {
   const all = [
     {channel:'free',lang:'fr',tier:'free',id:env.TELEGRAM_CHANNEL_ID || env.TELEGRAM_FREE_CHANNEL_ID || env.TELEGRAM_CHAT_ID},
@@ -218,13 +228,25 @@ function render(kind,data,dest) {
   // Le lien Stripe n'est jamais actif tant que le tarif et la session LIVE ne sont pas confirmés.
   const infoRow=[{text:ru?'💎 Premium — детали':'💎 Premium — 14,90 €/mois',url:'https://www.touslesmatchs.com/#plans'}];
   const linkRows=paymentVerified?[ [{text:CTA[dest.lang],url:payment(dest.lang)}], ...partnerRows ]:[infoRow,...partnerRows];
+  const candidatePoster=(kind==='scanner'&&Array.isArray(data.rows)&&data.rows.length===1)?
+    data.rows[0]:data;
+  // A generated image is never sent before editorial/technical review.
+  const photo=candidatePoster&&candidatePoster.posterReviewed===true?
+    posterPhotoUrl(candidatePoster.posterUrl):null;
+  const usePhoto=photo&&text.length<=1024;
   return {chat_id:dest.id,text,parse_mode:'HTML',disable_web_page_preview:true,
+    ...(usePhoto?{photo,caption:text}:{}),
     ...(scannerPlain?{}:{reply_markup:{inline_keyboard:linkRows}})};
 }
 function request(token,payload) {
   return new Promise(resolve=>{
-    const body=JSON.stringify(payload);
-    const req=https.request({hostname:'api.telegram.org',path:`/bot${token}/sendMessage`,method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)},timeout:15000},res=>{
+    const usePhoto=!!posterPhotoUrl(payload.photo)&&typeof payload.caption==='string'&&payload.caption.length<=1024;
+    const body=JSON.stringify(usePhoto?{
+      chat_id:payload.chat_id,photo:payload.photo,caption:payload.caption,parse_mode:payload.parse_mode,
+      ...(payload.reply_markup?{reply_markup:payload.reply_markup}:{})
+    }:payload);
+    const method=usePhoto?'sendPhoto':'sendMessage';
+    const req=https.request({hostname:'api.telegram.org',path:'/bot'+token+'/'+method,method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(body)},timeout:15000},res=>{
       let raw='';res.on('data',x=>raw+=x);res.on('end',()=>{try{
         const p=JSON.parse(raw),ok=res.statusCode===200 && p.ok===true && Number.isInteger(p.result?.message_id) && p.result.message_id>0;
         resolve({ok,messageId:ok?p.result.message_id:null,uncertain:p.ok===true&&!ok,retryAfter:Number(p.parameters?.retry_after)||60});
@@ -319,6 +341,18 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
   db.prepare("UPDATE client_telegram_outbox SET state='uncertain' WHERE state='sending' AND next_at<?").run(now());
   let busy=false;
   function enqueue(kind,data,dest,key,expiresAt=now()+7*86400000) {
+    // Opt-in only. One reviewed poster per scanner match, deterministic delivery keys.
+    // If any media is missing/unreviewed, preserve the existing text-only behavior.
+    if(kind==='scanner'&&env.TLM_VISUAL_PUBLISH_ENABLED==='1'&&
+       Array.isArray(data.rows)&&data.rows.length>1&&
+       data.rows.every(row=>row.posterReviewed===true&&posterPhotoUrl(row.posterUrl)&&
+         /^[0-9]{1,14}$/.test(String(row.fixtureId||'')))) {
+      let created=false;
+      for(const row of data.rows) {
+        if(enqueue('scanner',{rows:[row]},dest,String(key)+':'+row.fixtureId,expiresAt))created=true;
+      }
+      return created;
+    }
     return db.transaction(()=>{
       const deliveryKey=`${kind}:${key}:${dest.id}`;
       if(db.prepare('SELECT 1 FROM client_telegram_outbox WHERE delivery_key=?').get(deliveryKey))return false;
@@ -398,4 +432,4 @@ async function verifiedCheckout(stripe,priceId,lang) {
     success_url:'https://www.touslesmatchs.com/merci?session_id={CHECKOUT_SESSION_ID}',
     cancel_url:'https://www.touslesmatchs.com/#plans'});
 }
-module.exports={sqliteUtcMs,parisParts,parisDayBounds,recapDue,initSignalSnapshots,freezeSignal,recapRows,verifiedPrice,verifiedCheckout,CTA,PAYMENT,payment,legal,esc,destinations,marketRu,render,request,createPublisher};
+module.exports={sqliteUtcMs,parisParts,parisDayBounds,recapDue,initSignalSnapshots,freezeSignal,recapRows,verifiedPrice,verifiedCheckout,CTA,PAYMENT,payment,legal,esc,destinations,marketRu,posterPhotoUrl,render,request,createPublisher};
